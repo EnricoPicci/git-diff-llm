@@ -2,23 +2,23 @@ import fs from 'fs';
 import { toArray } from 'rxjs';
 
 import { expect } from 'chai';
-import {  allDiffsForProjectWithExplanation$ } from './cloc-git-diff-rel-between-tag-branch-commit';
+import {  allDiffsForProjectWithExplanation$, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
 import { PromptTemplates } from '../git/explain-diffs';
 import path from 'path';
 import { ComparisonParams } from './cloc-diff-rel';
 
-describe(`allDiffsForProjectWithExplanation$`, () => {
-    const repoRootFolder = './'
-    const executedCommands: string[] = []
-    const languages = ['Markdown', "TypeScript"]
-    const promptTemplates = readPromptTemplates()
+const repoRootFolder = './'
+const executedCommands: string[] = []
+const languages = ['Markdown', "TypeScript"]
+const promptTemplates = readPromptTemplates()
 
+describe(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
-            from_tag_branch_commit: 'tags/first-tag',
-            to_tag_branch_commit: 'tags/second-tag',
+            from_tag_branch_commit: 'tags/second-tag',
+            to_tag_branch_commit: 'tags/first-tag',
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -31,20 +31,25 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         ).subscribe({
             next: (diffs) => {
                 // there is a difference of 2 files between the 2 tags 
-                // https://github.com/EnricoPicci/gitlab-tools/compare/first-tag...second-tag
-                // for a likely bug in the command cloc --git-diff-rel the files changed are 3 and not 2 (the file README.md is counted twice)
-                expect(diffs.length).equal(3)
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
+                //
+                // if we switch the tags, the github web client does not show any change
+                // https://github.com/EnricoPicci/git-diff-llm/compare/second-tag...first-tag
+                // the git diff command shows the changes correctly in both cases
+                // git diff first-tag second-tag --name-only
+                // git diff first-tag second-tag --name-only
+                expect(diffs.length).equal(1)
             },
             error: (error: any) => done(error),
             complete: () => done()
         })
     }).timeout(100000);
 
-    it(`should return the diffs between a tag and a branch of the local repo`, (done) => {
+    it(`should return the diffs between a branch and a tag of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
-            from_tag_branch_commit: 'tags/first-tag',
-            to_tag_branch_commit: 'one-branch-on-upstream',
+            from_tag_branch_commit: 'first-branch-on-upstream',  // older branch
+            to_tag_branch_commit: 'tags/first-tag',  // newer tag
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -58,9 +63,8 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             next: (diffs) => {
                 // there is a difference of 3 files of type TypeScript or Markdown between the tag and the branch
                 // there is a fourth file changed but this is with extension .txt and is not counted
-                // https://github.com/EnricoPicci/gitlab-tools/compare/first-tag...one-branch-on-upstream
-                // for a likely bug in the command cloc --git-diff-rel the files changed are 4 and not 3 (the file README.md is counted twice)
-                expect(diffs.length).equal(4)
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-branch-on-upstream...first-tag
+                expect(diffs.length).equal(1)
             },
             error: (error: any) => {
                 done(error)
@@ -69,11 +73,11 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         })
     }).timeout(100000);
 
-    it.only(`should return the diffs between 2 branches of the local repo`, (done) => {
+    it(`should return the diffs between 2 branches of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
-            from_tag_branch_commit: 'second-branch-on-upstream',
-            to_tag_branch_commit: 'first-branch-on-upstream',
+            from_tag_branch_commit: 'first-branch-on-upstream',
+            to_tag_branch_commit: 'second-branch-on-upstream',
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -88,10 +92,13 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // there is a second file changed but this is with extension .txt and is not counted
                 // If you check on GitHub web client with the url 
-                // https://github.com/EnricoPicci/gitlab-tools/compare/one-branch-on-upstream...ef0f4d45543313067ba84926102b8fa013a98932
-                // no changes are shown, but if we switch the base and the head of the comparison we see the changes
-                // https://github.com/EnricoPicci/gitlab-tools/compare/ef0f4d45543313067ba84926102b8fa013a98932...one-branch-on-upstream
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-branch-on-upstream...second-branch-on-upstream
+                //
+                // if we switch the branches, the github web client does not show any change
+                // https://github.com/EnricoPicci/git-diff-llm/compare/second-branch-on-upstream...first-branch-on-upstream
                 // the git diff command shows the changes correctly in both cases
+                // git diff first-branch-on-upstream second-branch-on-upstream --name-only
+                // git diff second-branch-on-upstream first-branch-on-upstream --name-only
                 expect(diffs.length).equal(1)
             },
             error: (error: any) => {
@@ -104,8 +111,8 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a older commit and a newer branch of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
-            from_tag_branch_commit: 'second-branch-on-upstream',  // branch newer than the commit
-            to_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
+            from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b',  // older commit
+            to_tag_branch_commit: 'second-branch-on-upstream', // branch newer than the commit
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -118,7 +125,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         ).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
-                // https://github.com/EnricoPicci/git-diff-llm/compare/first-branch-on-upstream...4fd71654b5d044e67c6fc1c1f0fa06155036152f
+                // https://github.com/EnricoPicci/git-diff-llm/compare/965e1e43ca3b1e834d1146f90e60bf6fb42ed88b...second-branch-on-upstream
                 expect(diffs.length).equal(1)
                 expect(diffs[0].File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
             },
@@ -190,12 +197,16 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
 
     //===================== TESTS ON REMOTE REPO =====================
     // Comparison between tags, branches and commits of the local repo and the remote repo
-    const url_to_remote_forked_repo = 'https://github.com/codemotion-2018-rome-rxjs-node/gitlab-tools'
+
+    // the name of the forked repo is the same as the upstream repo but the owner is different
+    // the owner of the upstream repo is EnricoPicci while the owner of the forked repo is git-diff-llm
+    const url_to_remote_forked_repo = 'https://github.com/git-diff-llm/git-diff-llm'  // repo forked from the github.com/EnricoPicci/git-diff-llm
+
     it(`should return the diffs between a tag of the local repo and a tag on the remote repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
             from_tag_branch_commit: 'tags/first-tag',
-            to_tag_branch_commit: 'tags/tag-on-the-forked-repo',
+            to_tag_branch_commit: 'tags/first-tag-on-fork',
             url_to_remote_repo: url_to_remote_forked_repo,
         }
         allDiffsForProjectWithExplanation$(
@@ -208,9 +219,10 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             toArray()
         ).subscribe({
             next: (diffs) => {
-                // there is a difference of 5 files between the 2 tags 
-                // https://github.com/EnricoPicci/gitlab-tools/compare/first-tag...codemotion-2018-rome-rxjs-node:gitlab-tools:tag-on-the-forked-repo
-                expect(diffs.length).equal(5)
+                // there is a difference of 4 files between the 2 tags, but one of these files is a txt file and 
+                // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...git-diff-llm:git-diff-llm:first-tag-on-fork
+                expect(diffs.length).equal(3)
             },
             error: (error: any) => done(error),
             complete: () => done()
@@ -220,8 +232,8 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a branch of the local repo and a branch on the remote repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
-            from_tag_branch_commit: 'one-branch-on-upstream',
-            to_tag_branch_commit: 'one-branch',
+            from_tag_branch_commit: 'tags/first-tag',
+            to_tag_branch_commit: 'first-branch-on-fork',
             url_to_remote_repo: url_to_remote_forked_repo,
         }
         allDiffsForProjectWithExplanation$(
@@ -234,19 +246,34 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             toArray()
         ).subscribe({
             next: (diffs) => {
-                // there is a difference of 4 files between the 2 branches 
-                // the follwoing command shows the differences correctly (5 files, but only 4 are of type TypeScript or Markdown)
-                // git diff origin/one-branch-on-upstream base/one-branch --name-only
-                // If we run the diff with the GitHub web client we see only 3 files of differences, which seems not correct
-                // https://github.com/EnricoPicci/gitlab-tools/compare/one-branch-on-upstream...codemotion-2018-rome-rxjs-node:gitlab-tools:one-branch
-                // The file with diffs that is missing from the view of the GitHub web client is the file "ts-file-added-to-second-branch.ts"
-                // which is though present NOT present in the branch "one-branch" of the remote repo
-                // https://github.com/codemotion-2018-rome-rxjs-node/gitlab-tools/tree/one-branch
-                // but is present in the branch "one-branch-on-upstream" of the local repo
-                // https://github.com/EnricoPicci/gitlab-tools/tree/one-branch-on-upstream
-                // which would bring us to expect 4 files of differences
+                // there is a difference of 5 files between the upstream branch and the remote tag, but one of these files is a txt file and 
+                // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...git-diff-llm:git-diff-llm:first-branch-on-fork
                 expect(diffs.length).equal(4)
             },
+            error: (error: any) => done(error),
+            complete: () => done()
+        })
+    }).timeout(100000);
+});
+
+
+describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
+    it(`should produce a markdown report - the test just tests that function completes without errors`, (done) => {
+        const comparisonParams: ComparisonParams = {
+            projectDir: './',
+            from_tag_branch_commit: 'tags/second-tag',
+            to_tag_branch_commit: 'tags/first-tag',
+        }
+
+        const outDir = './temp'
+        writeAllDiffsForProjectWithExplanationToMarkdown$(
+            comparisonParams,
+            repoRootFolder,
+            promptTemplates,
+            outDir,
+            languages
+        ).subscribe({
             error: (error: any) => done(error),
             complete: () => done()
         })

@@ -123,8 +123,8 @@ export function allDiffsForProjectWithExplanation$(
 
 export function writeAllDiffsForProjectWithExplanationToCsv$(
     comparisonParams: ComparisonParams,
-    promptTemplates: PromptTemplates,
     repoFolder: string,
+    promptTemplates: PromptTemplates,
     outdir: string,
     languages?: string[]
 ) {
@@ -156,8 +156,8 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
 export function writeAllDiffsForProjectWithExplanationToMarkdown$(
     comparisonParams: ComparisonParams,
-    promptTemplates: PromptTemplates,
     repoFolder: string,
+    promptTemplates: PromptTemplates,
     outdir: string,
     languages?: string[]
 ) {
