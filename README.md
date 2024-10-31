@@ -14,7 +14,7 @@ The `src` folder has the following structure:
 
 -   `lib` folder containing the command
 -   `core` folder containing `exec-command.ts` which implements the logic to execute the command
--   `core/internals` folder containing the internals of the logic of the command
+-   `internals` folder containing the internals of the logic of the command
 
 ## test
 
@@ -26,7 +26,7 @@ Run the tests using the command
 
 ### Commit changes
 
-Before publishin a version of the command, make sure all the changes are committed.
+Before publishing a version of the command, make sure all the changes are committed.
 
 The publishing procedure will ensure that a new "patch" version will be created and a new tag added.
 
