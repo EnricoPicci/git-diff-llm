@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
-import { execCommand } from '../core/exec-command';
+import { startWebServer } from '../core/start-web-server';
 
-execCommand();
+startWebServer();
+
+
+// npm run tsc && node dist/lib/command.js
