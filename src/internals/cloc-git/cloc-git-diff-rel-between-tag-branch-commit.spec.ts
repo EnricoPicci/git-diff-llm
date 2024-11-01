@@ -2,7 +2,7 @@ import fs from 'fs';
 import { toArray } from 'rxjs';
 
 import { expect } from 'chai';
-import {  allDiffsForProjectWithExplanation$, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
+import {  allDiffsForProjectWithExplanation$, GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
 import { PromptTemplates } from '../git/explain-diffs';
 import path from 'path';
 import { ComparisonParams } from './cloc-diff-rel';
@@ -265,15 +265,16 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             from_tag_branch_commit: 'tags/second-tag',
             to_tag_branch_commit: 'tags/first-tag',
         }
-
         const outDir = './temp'
-        writeAllDiffsForProjectWithExplanationToMarkdown$(
+
+        const params: GenerateMdReportParams = {
             comparisonParams,
-            repoRootFolder,
+            repoFolder: repoRootFolder,
             promptTemplates,
-            outDir,
+            outdir: outDir,
             languages
-        ).subscribe({
+        }
+        writeAllDiffsForProjectWithExplanationToMarkdown$(params).subscribe({
             error: (error: any) => done(error),
             complete: () => done()
         })

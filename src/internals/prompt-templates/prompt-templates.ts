@@ -1,5 +1,9 @@
 import fs from 'fs';
 
+export function readPromptTemplateFromFile(templateFile: string) {
+    return fs.readFileSync(templateFile, 'utf-8');
+}
+
 export type ExplainDiffPromptTemplateData = {
     language: string;
     fileName: string;

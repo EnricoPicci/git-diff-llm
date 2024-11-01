@@ -1,6 +1,6 @@
 import { of, catchError, map } from "rxjs"
 import { getFullCompletion$ } from "../openai/openai"
-import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, languageFromExtension } from "../openai/prompt-templates"
+import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, languageFromExtension } from "../prompt-templates/prompt-templates"
 
 
 export type PromptTemplates = {

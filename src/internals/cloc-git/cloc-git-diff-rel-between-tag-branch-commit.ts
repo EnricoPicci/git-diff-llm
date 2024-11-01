@@ -33,11 +33,10 @@ export type FileDiffWithGitDiffsAndFileContent = ClocGitDiffRec & FileStatus & {
 
 export function allDiffsForProject$(
     comparisonParams: ComparisonParams,
-    repoRootFolder: string,
     executedCommands: string[],
     languages?: string[]
 ): Observable<FileDiffWithGitDiffsAndFileContent> {
-    return comparisonResultFromClocDiffRelForProject$(comparisonParams, repoRootFolder, executedCommands, languages).pipe(
+    return comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages).pipe(
         // we MUST use concatMap here to ensure that gitDiff$ is not streaming concurrently but only sequentially
         // in other words gitDiff$ must return the bufferDiffLines value before starting for the next one
         // gitDiffs$ eventually calls the command "git diff" which outputs on the stdout - gitDiffs$ Obsrvable accumulates the output
@@ -102,14 +101,13 @@ export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus & {
 }
 export function allDiffsForProjectWithExplanation$(
     comparisonParams: ComparisonParams,
-    repoFolder: string,
     promptTemplates: PromptTemplates,
     executedCommands: string[],
     languages?: string[],
     concurrentLLMCalls = 5
 ): Observable<FileDiffWithExplanation> {
     const startExecTime = new Date()
-    return allDiffsForProject$(comparisonParams, repoFolder, executedCommands, languages).pipe(
+    return allDiffsForProject$(comparisonParams, executedCommands, languages).pipe(
         mergeMap(comparisonResult => {
             return explainGitDiffs$(comparisonResult, promptTemplates, executedCommands)
         }, concurrentLLMCalls),
@@ -123,7 +121,6 @@ export function allDiffsForProjectWithExplanation$(
 
 export function writeAllDiffsForProjectWithExplanationToCsv$(
     comparisonParams: ComparisonParams,
-    repoFolder: string,
     promptTemplates: PromptTemplates,
     outdir: string,
     languages?: string[]
@@ -134,7 +131,7 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
         // replace any ',' in the explanation with a '-'
         map((diffWithExplanation) => {
             diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-')
@@ -154,22 +151,28 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
     )
 }
 
-export function writeAllDiffsForProjectWithExplanationToMarkdown$(
+export type GenerateMdReportParams = {
     comparisonParams: ComparisonParams,
     repoFolder: string,
     promptTemplates: PromptTemplates,
     outdir: string,
     languages?: string[]
-) {
+}
+export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: GenerateMdReportParams) {
+    const comparisonParams = params.comparisonParams
+    const promptTemplates = params.promptTemplates
+    const outdir = params.outdir
+    const languages = params.languages
+
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0]
 
     const executedCommands: string[] = []
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    const mdJson = initializeMarkdown(comparisonParams, repoFolder, languages)
+    const mdJson = initializeMarkdown(comparisonParams, languages)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
         toArray(),
         concatMap((diffWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffWithExplanation.length)
@@ -236,10 +239,9 @@ const writeExecutedCommands$ = (executedCommands: string[], projectDirName: stri
 
 function initializeMarkdown(
     comparisonParams: ComparisonParams,
-    repoFolder: string,
     languages?: string[]
 ) {
-    const projectDir = path.join(repoFolder, comparisonParams.projectDir)
+    const projectDir = comparisonParams.projectDir
     const inRemoteRepoMsg = comparisonParams.url_to_remote_repo ?
         ` in remote repo ${comparisonParams.url_to_remote_repo}` :
         ''

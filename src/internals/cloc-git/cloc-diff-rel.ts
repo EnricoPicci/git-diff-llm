@@ -34,9 +34,9 @@ export type ComparisonParams = {
     use_ssh?: boolean
 }
 export function comparisonResultFromClocDiffRelForProject$(
-    comparisonParams: ComparisonParams, repoRootFolder: string, executedCommands: string[], languages?: string[]
+    comparisonParams: ComparisonParams, executedCommands: string[], languages?: string[]
 ) {
-    const projectDir = path.join(repoRootFolder, comparisonParams.projectDir)
+    const projectDir = comparisonParams.projectDir
     const header = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed'
     return clocDiffRel$(
         projectDir,
