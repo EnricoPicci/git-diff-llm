@@ -22,7 +22,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -53,7 +52,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -81,7 +79,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -116,7 +113,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -144,7 +140,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -172,7 +167,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -211,7 +205,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages
@@ -238,7 +231,6 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
-            repoRootFolder,
             promptTemplates,
             executedCommands,
             languages

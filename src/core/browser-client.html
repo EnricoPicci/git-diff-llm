@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>git-diff-llm web client</title>
+</head>
+<body>
+    <form>
+        <label for="repo-url">Repo URL:</label>
+        <input type="text" id="repo-url" name="repo-url">
+        <button type="button" onclick="cloneRepo()">Clone</button>
+    </form>
+
+    <script>
+        async function cloneRepo() {
+            const repoUrl = document.getElementById('repo-url').value;
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/clone-repo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ repoUrl })
+                });
+                const data = await response.json();
+                console.log('TempDir:', data.tempDir);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
