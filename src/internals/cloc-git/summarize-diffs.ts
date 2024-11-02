@@ -1,5 +1,5 @@
 import { catchError, of } from "rxjs";
-import { FileDiffWithExplanation } from "../cloc-git/cloc-git-diff-rel-between-tag-branch-commit";
+import { FileDiffWithExplanation } from "./cloc-git-diff-rel-between-tag-branch-commit";
 import { getFullCompletion$ } from "../openai/openai";
 import { fillPromptTemplateSummarizeDiffs, SummarizeDiffsPromptTemplateData } from "../prompt-templates/prompt-templates";
 

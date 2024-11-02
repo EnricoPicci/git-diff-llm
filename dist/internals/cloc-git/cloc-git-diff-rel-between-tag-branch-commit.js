@@ -14,10 +14,10 @@ const csv_tools_1 = require("@enrico.piccinin/csv-tools");
 const observable_fs_1 = require("observable-fs");
 const git_diffs_1 = require("../git/git-diffs");
 const explain_diffs_1 = require("../git/explain-diffs");
-const summarize_diffs_1 = require("../git/summarize-diffs");
+const summarize_diffs_1 = require("./summarize-diffs");
 const cloc_diff_rel_1 = require("./cloc-diff-rel");
-function allDiffsForProject$(comparisonParams, repoRootFolder, executedCommands, languages) {
-    return (0, cloc_diff_rel_1.comparisonResultFromClocDiffRelForProject$)(comparisonParams, repoRootFolder, executedCommands, languages).pipe(
+function allDiffsForProject$(comparisonParams, executedCommands, languages) {
+    return (0, cloc_diff_rel_1.comparisonResultFromClocDiffRelForProject$)(comparisonParams, executedCommands, languages).pipe(
     // we MUST use concatMap here to ensure that gitDiff$ is not streaming concurrently but only sequentially
     // in other words gitDiff$ must return the bufferDiffLines value before starting for the next one
     // gitDiffs$ eventually calls the command "git diff" which outputs on the stdout - gitDiffs$ Obsrvable accumulates the output
@@ -65,9 +65,9 @@ function allDiffsForProject$(comparisonParams, repoRootFolder, executedCommands,
         }));
     }));
 }
-function allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, promptTemplates, executedCommands, languages, concurrentLLMCalls = 5) {
+function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages, concurrentLLMCalls = 5) {
     const startExecTime = new Date();
-    return allDiffsForProject$(comparisonParams, repoFolder, executedCommands, languages).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
+    return allDiffsForProject$(comparisonParams, executedCommands, languages).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
         return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, executedCommands);
     }, concurrentLLMCalls), (0, rxjs_1.tap)({
         complete: () => {
@@ -75,11 +75,11 @@ function allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, prompt
         }
     }));
 }
-function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, repoFolder, promptTemplates, outdir, languages) {
+function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, promptTemplates, outdir, languages) {
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
-    return allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
     // replace any ',' in the explanation with a '-'
     (0, rxjs_1.map)((diffWithExplanation) => {
         diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-');
@@ -93,12 +93,16 @@ function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, repoFold
         return writeExecutedCommands$(executedCommands, projectDirName, outFile);
     }));
 }
-function writeAllDiffsForProjectWithExplanationToMarkdown$(comparisonParams, repoFolder, promptTemplates, outdir, languages) {
+function writeAllDiffsForProjectWithExplanationToMarkdown$(params) {
+    const comparisonParams = params.comparisonParams;
+    const promptTemplates = params.promptTemplates;
+    const outdir = params.outdir;
+    const languages = params.languages;
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
-    const mdJson = initializeMarkdown(comparisonParams, repoFolder, languages);
-    return allDiffsForProjectWithExplanation$(comparisonParams, repoFolder, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffWithExplanation) => {
+    const mdJson = initializeMarkdown(comparisonParams, languages);
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffWithExplanation) => {
         appendNumFilesWithDiffsToMdJson(mdJson, diffWithExplanation.length);
         return (0, summarize_diffs_1.summarizeDiffs$)(diffWithExplanation, languages, projectDirName, executedCommands).pipe((0, rxjs_1.map)(summary => {
             appendSummaryToMdJson(mdJson, summary);
@@ -140,8 +144,8 @@ const writeExecutedCommands$ = (executedCommands, projectDirName, outFile) => {
         next: () => console.log(`====>>>> Commands executed to calculate comparisons for project "${projectDirName}" written in txt file: ${outFile}`),
     }));
 };
-function initializeMarkdown(comparisonParams, repoFolder, languages) {
-    const projectDir = path_1.default.join(repoFolder, comparisonParams.projectDir);
+function initializeMarkdown(comparisonParams, languages) {
+    const projectDir = comparisonParams.projectDir;
     const inRemoteRepoMsg = comparisonParams.url_to_remote_repo ?
         ` in remote repo ${comparisonParams.url_to_remote_repo}` :
         '';

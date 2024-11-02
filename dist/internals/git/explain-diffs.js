@@ -14,7 +14,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.explainGitDiffs$ = explainGitDiffs$;
 const rxjs_1 = require("rxjs");
 const openai_1 = require("../openai/openai");
-const prompt_templates_1 = require("../openai/prompt-templates");
+const prompt_templates_1 = require("../prompt-templates/prompt-templates");
 // The type returned by explanationsFromComparisonResult$ is this
 // Omit<T & FileInfo & {
 //     explanation: string | null;

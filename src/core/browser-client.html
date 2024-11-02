@@ -4,15 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>git-diff-llm web client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .dropdown-container {
+            margin-bottom: 20px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <form>
         <label for="repo-url">Repo URL:</label>
         <input type="text" id="repo-url" name="repo-url">
         <button type="button" onclick="cloneRepo()">Clone</button>
-    </form>
+    </form>    
+    
+    <div class="dropdown-container">
+        <label for="tags">Tags:</label>
+        <select id="tags" name="tags"></select>
+    </div>
+
+    <div class="dropdown-container">
+        <label for="branches">Branches:</label>
+        <select id="branches" name="branches"></select>
+    </div>
+
+    <div class="dropdown-container">
+        <label for="commits">Commits:</label>
+        <select id="commits" name="commits"></select>
+    </div>
 
     <script>
+        // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
+        let tempDir = '';
+        // remote is a global variable to store the git remote name (e.g. origin) pointing to a repo we want
+        // to diff against - remote is set by the server when a remote repo url is provided
+        // remote is empty when we are diffing against a tags, branches or commit of the cloned repo
+        let remote = '';
+
         async function cloneRepo() {
             const repoUrl = document.getElementById('repo-url').value;
             try {
@@ -24,10 +63,66 @@
                     body: JSON.stringify({ repoUrl })
                 });
                 const data = await response.json();
+                tempDir = data.tempDir;
                 console.log('TempDir:', data.tempDir);
+                await populateDropdownsAndSetupInterations();
             } catch (error) {
                 console.error('Error:', error);
             }
+        }
+        
+        async function populateDropdownsAndSetupInterations() {
+            // Dropdown elements
+            const tagsDropdown = document.getElementById('tags');
+            const branchesDropdown = document.getElementById('branches');
+            const commitsDropdown = document.getElementById('commits');
+
+            // Function to populate a dropdown
+            async function populateDropdown(dropdown, url, dataKey) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+
+                    // Clear existing options
+                    dropdown.innerHTML = '<option value="">Select an option</option>';
+                    
+                    // Add new options
+                    data[dataKey].forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        option.textContent = item;
+                        dropdown.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error fetching dropdown data:', error);
+                    dropdown.innerHTML = '<option value="">Error loading data</option>';
+                }
+            }
+
+            // Initial population of dropdowns
+            const remoteParam = remote ? `&remote=${remote}` : '';
+            const params = `?tempDir=${tempDir}${remoteParam}`;
+            populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
+            populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
+            populateDropdown(commitsDropdown, `http://localhost:3000/api/v1/list-commits${params}`, 'commits');
+
+            // Setup dropdown interactions
+            setupDropdownInteraction(tagsDropdown, [branchesDropdown, commitsDropdown]);
+            setupDropdownInteraction(branchesDropdown, [tagsDropdown, commitsDropdown]);
+            setupDropdownInteraction(commitsDropdown, [tagsDropdown, branchesDropdown]);
+        }
+
+        // Function to reset other dropdowns when a selection is made
+        function setupDropdownInteraction(dropdown, otherDropdowns) {
+            dropdown.addEventListener('change', (event) => {
+                // Reset other dropdowns
+                otherDropdowns.forEach(otherDropdown => {
+                    otherDropdown.selectedIndex = 0;
+                });
+            });
         }
     </script>
 </body>

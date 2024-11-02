@@ -16,4 +16,4 @@ function cloneRepo$(url, repoPath) {
         return rxjs_1.EMPTY;
     }));
 }
-//# sourceMappingURL=repo.js.map
+//# sourceMappingURL=git-clone.js.map

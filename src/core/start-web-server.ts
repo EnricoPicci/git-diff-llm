@@ -1,7 +1,8 @@
 import fs from 'fs';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { cloneRepo$ } from '../internals/git/repo';
+import { cloneRepo$ } from '../internals/git/git-clone';
+import { listBranches$, listCommits$, listTags$ } from '../internals/git/git-list-tags-branches-commits';
 
 const app = express();
 const port = 3000;
@@ -54,6 +55,54 @@ export function startWebServer() {
       },
     });
     
+  });
+
+  app.get('/api/v1/list-tags', (req: Request, res: Response) => {
+    const tempDir = req.query.tempDir as string;
+    const remote = req.query.remote as string;
+    // read the tags
+    listTags$(tempDir, remote).subscribe({
+      next: (tags) => {
+        console.log(`Tags for ${remote} read`);
+        res.send({ tags, remote });
+      },
+      error: (err) => {
+        console.error(`Error listing tags: ${err}`);
+        res.status(500).send(`Error listing tags: ${err}`);
+      },
+    });
+  });
+
+  app.get('/api/v1/list-branches', (req: Request, res: Response) => {
+    const tempDir = req.query.tempDir as string;
+    const remote = req.query.remote as string;
+    // read the branches
+    listBranches$(tempDir, remote).subscribe({
+      next: (branches) => {
+        console.log(`Branches for ${remote} read`);
+        res.send({ branches, remote });
+      },
+      error: (err) => {
+        console.error(`Error listing branches: ${err}`);
+        res.status(500).send(`Error listing branches: ${err}`);
+      },
+    });
+  });
+
+  app.get('/api/v1/list-commits', (req: Request, res: Response) => {
+    const tempDir = req.query.tempDir as string;
+    const remote = req.query.remote as string;
+    // read the commits
+    listCommits$(tempDir, remote).subscribe({
+      next: (commits) => {
+        console.log(`Commits for ${remote} read`);
+        res.send({ commits, remote });
+      },
+      error: (err) => {
+        console.error(`Error listing commits: ${err}`);
+        res.status(500).send(`Error listing commits: ${err}`);
+      },
+    });
   });
 
   app.listen(port, () => {

@@ -10,8 +10,8 @@ const csv_tools_1 = require("@enrico.piccinin/csv-tools");
 const execute_command_1 = require("../execute-command/execute-command");
 const add_remote_1 = require("../git/add-remote");
 const git_diffs_1 = require("../git/git-diffs");
-function comparisonResultFromClocDiffRelForProject$(comparisonParams, repoRootFolder, executedCommands, languages) {
-    const projectDir = path_1.default.join(repoRootFolder, comparisonParams.projectDir);
+function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages) {
+    const projectDir = comparisonParams.projectDir;
     const header = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed';
     return clocDiffRel$(projectDir, {
         from_tag_or_branch: comparisonParams.from_tag_branch_commit,

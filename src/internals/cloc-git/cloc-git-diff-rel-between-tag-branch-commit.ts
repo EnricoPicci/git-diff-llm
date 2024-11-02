@@ -8,7 +8,7 @@ import { readLinesObs, writeFileObs } from "observable-fs"
 
 import { gitDiff$ } from "../git/git-diffs"
 import { explainGitDiffs$, PromptTemplates } from "../git/explain-diffs"
-import { summarizeDiffs$ } from "../git/summarize-diffs"
+import { summarizeDiffs$ } from "./summarize-diffs"
 import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
 
 //********************************************************************************************************************** */
