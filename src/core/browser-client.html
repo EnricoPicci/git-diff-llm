@@ -20,6 +20,13 @@
             padding: 10px;
             margin-top: 5px;
         }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -29,28 +36,56 @@
         <button type="button" onclick="cloneRepo()">Clone</button>
     </form>    
     
-    <div class="dropdown-container">
-        <label for="tags">Tags:</label>
-        <select id="tags" name="tags"></select>
-    </div>
+    
+    <p>FROM Tag, Branch or Commit</p>
+    <div id="fromTagBranchCommit">
+        <div class="dropdown-container">
+            <label for="fromTags">Tags:</label>
+            <select id="fromTags" name="tags"></select>
+        </div>
 
-    <div class="dropdown-container">
-        <label for="branches">Branches:</label>
-        <select id="branches" name="branches"></select>
-    </div>
+        <div class="dropdown-container">
+            <label for="fromBranches">Branches:</label>
+            <select id="fromBranches" name="branches"></select>
+        </div>
 
-    <div class="dropdown-container">
-        <label for="commits">Commits:</label>
-        <select id="commits" name="commits"></select>
+        <div class="dropdown-container">
+            <label for="fromCommits">Commits:</label>
+            <select id="fromCommits" name="commits"></select>
+        </div>
+    </div>
+    
+    
+    <p>TO Tag, Branch or Commit</p>
+    <div>
+        <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
+        <label for="compareRepo">Compare with other remote repo</label>
+    </div>
+    <div id="remoteUrlContainer" style="display: none;">
+        <label for="remotetUrl">Project url:</label>
+        <input type="text" id="remotetUrl" name="remotetUrl">
+    </div>
+    <button id="confirm" type="button" onclick="addRemote()" style="display: none;">confirm</button>
+    <div  id="toTagBranchCommit"  style="display: block;">
+        <div class="dropdown-container">
+            <label for="toTags">Tags:</label>
+            <select id="toTags" name="tags"></select>
+        </div>
+
+        <div class="dropdown-container">
+            <label for="toBranches">Branches:</label>
+            <select id="toBranches" name="branches"></select>
+        </div>
+
+        <div class="dropdown-container">
+            <label for="toCommits">Commits:</label>
+            <select id="toCommits" name="commits"></select>
+        </div>
     </div>
 
     <script>
         // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
         let tempDir = '';
-        // remote is a global variable to store the git remote name (e.g. origin) pointing to a repo we want
-        // to diff against - remote is set by the server when a remote repo url is provided
-        // remote is empty when we are diffing against a tags, branches or commit of the cloned repo
-        let remote = '';
 
         async function cloneRepo() {
             const repoUrl = document.getElementById('repo-url').value;
@@ -65,45 +100,39 @@
                 const data = await response.json();
                 tempDir = data.tempDir;
                 console.log('TempDir:', data.tempDir);
-                await populateDropdownsAndSetupInterations();
+                await populate_From_DropdownsAndSetupInterations();
+                await populate_To_DropdownsAndSetupInterations();
             } catch (error) {
                 console.error('Error:', error);
             }
         }
         
-        async function populateDropdownsAndSetupInterations() {
+        async function populate_From_DropdownsAndSetupInterations() {
             // Dropdown elements
-            const tagsDropdown = document.getElementById('tags');
-            const branchesDropdown = document.getElementById('branches');
-            const commitsDropdown = document.getElementById('commits');
-
-            // Function to populate a dropdown
-            async function populateDropdown(dropdown, url, dataKey) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-
-                    // Clear existing options
-                    dropdown.innerHTML = '<option value="">Select an option</option>';
-                    
-                    // Add new options
-                    data[dataKey].forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item;
-                        option.textContent = item;
-                        dropdown.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Error fetching dropdown data:', error);
-                    dropdown.innerHTML = '<option value="">Error loading data</option>';
-                }
-            }
+            const tagsDropdown = document.getElementById('fromTags');
+            const branchesDropdown = document.getElementById('fromBranches');
+            const commitsDropdown = document.getElementById('fromCommits');
 
             // Initial population of dropdowns
-            const remoteParam = remote ? `&remote=${remote}` : '';
+            const params = `?tempDir=${tempDir}`;
+            populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
+            populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
+            populateDropdown(commitsDropdown, `http://localhost:3000/api/v1/list-commits${params}`, 'commits');
+
+            // Setup dropdown interactions
+            setupDropdownInteraction(tagsDropdown, [branchesDropdown, commitsDropdown]);
+            setupDropdownInteraction(branchesDropdown, [tagsDropdown, commitsDropdown]);
+            setupDropdownInteraction(commitsDropdown, [tagsDropdown, branchesDropdown]);
+        }
+        
+        async function populate_To_DropdownsAndSetupInterations(gitRemote) {
+            // Dropdown elements
+            const tagsDropdown = document.getElementById('toTags');
+            const branchesDropdown = document.getElementById('toBranches');
+            const commitsDropdown = document.getElementById('toCommits');
+
+            // Initial population of dropdowns
+            const remoteParam = gitRemote ? `&remote=${gitRemote}` : '';
             const params = `?tempDir=${tempDir}${remoteParam}`;
             populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
             populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
@@ -115,6 +144,31 @@
             setupDropdownInteraction(commitsDropdown, [tagsDropdown, branchesDropdown]);
         }
 
+        // Function to populate a dropdown
+        async function populateDropdown(dropdown, url, dataKey) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Clear existing options
+                dropdown.innerHTML = '<option value="">Select an option</option>';
+                
+                // Add new options
+                data[dataKey].forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching dropdown data:', error);
+                dropdown.innerHTML = '<option value="">Error loading data</option>';
+            }
+        }
+
         // Function to reset other dropdowns when a selection is made
         function setupDropdownInteraction(dropdown, otherDropdowns) {
             dropdown.addEventListener('change', (event) => {
@@ -123,6 +177,48 @@
                     otherDropdown.selectedIndex = 0;
                 });
             });
+        }
+
+        function toggleRemoteRemoteUrl() {
+            const remoteUrlContainer = document.getElementById('remoteUrlContainer');
+            const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+            const compareRepoCheckbox = document.getElementById('compareRepo');
+            const confirmButton = document.getElementById('confirm');
+            if (compareRepoCheckbox.checked) {
+                remoteUrlContainer.style.display = 'block';
+                toTagBranchCommitContainer.style.display = 'none';
+                confirmButton.style.display = 'block';
+            } else {
+                remoteUrlContainer.style.display = 'none';
+                toTagBranchCommitContainer.style.display = 'block';
+                confirmButton.style.display = 'none';
+                populate_To_DropdownsAndSetupInterations();
+            }
+        }
+
+        async function addRemote() {
+            const remotetUrl = document.getElementById('remotetUrl').value;
+            // the remote name is the last part of the URL
+            const remoteUrlParts = remotetUrl.split('/');
+            const remoteName = remoteUrlParts[remoteUrlParts.length - 1]; 
+            const _body = { tempDir, remoteName };
+            _body.remoteUrl = remotetUrl;
+            console.log('Body:', _body);
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/add-remote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(_body)
+                });
+                const data = await response.json();
+                await populate_To_DropdownsAndSetupInterations(remoteName);
+                const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+                toTagBranchCommitContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
     </script>
 </body>

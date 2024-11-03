@@ -8,7 +8,7 @@ const path_1 = __importDefault(require("path"));
 const rxjs_1 = require("rxjs");
 const csv_tools_1 = require("@enrico.piccinin/csv-tools");
 const execute_command_1 = require("../execute-command/execute-command");
-const add_remote_1 = require("../git/add-remote");
+const git_remote_1 = require("../git/git-remote");
 const git_diffs_1 = require("../git/git-diffs");
 function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages) {
     const projectDir = comparisonParams.projectDir;
@@ -44,7 +44,7 @@ function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCo
 // this stream is not safe in concurrent execution and therefore shouls NOT be called by operators that work concurrently
 // e.g. mergeMap
 function clocDiffRel$(projectDir, fromToParams, executedCommands) {
-    return (0, add_remote_1.cdToProjectDirAndAddRemote$)(projectDir, fromToParams, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+    return (0, git_remote_1.addRemote$)(projectDir, fromToParams, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
         var _a;
         const to_tag_branch_commit = fromToParams.to_tag_or_branch;
         const from_tag_branch_commit = fromToParams.from_tag_or_branch;

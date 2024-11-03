@@ -57,6 +57,9 @@ function listCommits$(gitRepoPath, remote = 'origin') {
     const command = `cd ${gitRepoPath} && git log --pretty=format:"%H" --remotes=${remote}`;
     return (0, execute_command_1.executeCommandObs$)('read commits', command).pipe((0, rxjs_1.map)((out) => {
         return out.split('\n').filter((line) => line.trim().length > 0);
+    }), (0, rxjs_1.map)((lines) => {
+        lines[0] = lines[0].replace('from stdout: ', '');
+        return lines;
     }));
 }
 //# sourceMappingURL=git-list-tags-branches-commits.js.map

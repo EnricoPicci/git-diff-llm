@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai");
 const git_diffs_1 = require("./git-diffs");
+const git_remote_1 = require("./git-remote");
 describe(`toFromTagBranchCommitPrefix`, () => {
     it(`should return the prefix when 2 tags are passed in as arguments`, () => {
         const from_tag_branch_commit = 'tags/first-tag';
@@ -22,7 +23,7 @@ describe(`toFromTagBranchCommitPrefix`, () => {
         const to_tag_branch_commit = 'remote-branch';
         let remote = true;
         let expected_from_tag_branch_commit_prefix = 'origin/';
-        let expected_to_tag_branch_commit_prefix = 'base/';
+        let expected_to_tag_branch_commit_prefix = `${git_remote_1.DefaultNameOfGitRemote}/`;
         let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
         (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
         (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
@@ -52,7 +53,7 @@ describe(`toFromTagBranchCommitPrefix`, () => {
         const to_tag_branch_commit = 'a-branch';
         let remote = true;
         let expected_from_tag_branch_commit_prefix = '';
-        let expected_to_tag_branch_commit_prefix = 'base/';
+        let expected_to_tag_branch_commit_prefix = `${git_remote_1.DefaultNameOfGitRemote}/`;
         let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
         (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
         (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);

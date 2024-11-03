@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { listBranches$, listCommits$, listTags$ } from './git-list-tags-branches-commits';
-import { AddRemoteParams, cdToProjectDirAndAddRemote$ } from './add-remote';
+import { AddRemoteParams, addRemote$ } from './git-remote';
 import { concatMap } from 'rxjs';
 
 
@@ -30,7 +30,7 @@ describe(`tests list tags, branches and commits on remote origin`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000)
     });
     describe(`listBranches$`, () => {
         it(`should return a list of branches for the 'origin' of this repo of this project`, (done) => {
@@ -56,7 +56,7 @@ describe(`tests list tags, branches and commits on remote origin`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000)
     });
     describe(`listCommits$`, () => {
         it(`should return a list of commits for the 'origin' of this repo of this project`, (done) => {
@@ -81,7 +81,7 @@ describe(`tests list tags, branches and commits on remote origin`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000);
     });
 })
 
@@ -89,7 +89,7 @@ describe(`tests list tags, branches and commits on remote origin`, () => {
 describe(`tests list tags, branches and commits on remote base_test`, () => {
     const remote = 'base_test';
     const addRemoteParams: AddRemoteParams = {
-        remote,
+        name_of_git_remote: remote,
         url_to_remote_repo: 'https://github.com/EnricoPicci/git-diff-llm'
     }
     describe(`listTags$`, () => {
@@ -100,7 +100,7 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
     
             // first add the remote to make sure it exists 
             // the remote is the same as the repo, just to be sure that we know the remote exists and has tags (because this repo has tags)
-            cdToProjectDirAndAddRemote$(repoPath, addRemoteParams, []).pipe(
+            addRemote$(repoPath, addRemoteParams, []).pipe(
                 concatMap(() => {
                     return listTags$(repoPath, remote)
                 }),
@@ -118,7 +118,7 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000)
     });
     describe(`listBranches$`, () => {
         it(`should return a list of branches for the 'base_test' remote of this repo of this project`, (done) => {
@@ -128,7 +128,7 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
 
             // first add the remote to make sure it exists 
             // the remote is the same as the repo, just to be sure that we know the remote exists and has branches (because this repo has branches)
-            cdToProjectDirAndAddRemote$(repoPath, addRemoteParams, []).pipe(
+            addRemote$(repoPath, addRemoteParams, []).pipe(
                 concatMap(() => {
                     return listBranches$(repoPath, remote)
                 }),
@@ -150,7 +150,7 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000)
     });
     describe(`listCommits$`, () => {
         it(`should return a list of commits for the 'base_test' remote of this repo of this project`, (done) => {
@@ -160,7 +160,7 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
 
             // first add the remote to make sure it exists 
             // the remote is the same as the repo, just to be sure that we know the remote exists and has commits (because this repo has commits)
-            cdToProjectDirAndAddRemote$(repoPath, addRemoteParams, []).pipe(
+            addRemote$(repoPath, addRemoteParams, []).pipe(
                 concatMap(() => {
                     return listCommits$(repoPath, remote)
                 }),
@@ -178,6 +178,6 @@ describe(`tests list tags, branches and commits on remote base_test`, () => {
                     done();
                 }
             })
-        });
+        }).timeout(10000)
     });
 })

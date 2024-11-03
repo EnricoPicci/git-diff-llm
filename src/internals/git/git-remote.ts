@@ -1,19 +1,20 @@
-import { catchError, last, of} from "rxjs"
+import { catchError, last} from "rxjs"
 import { executeCommandObs$ } from "../execute-command/execute-command"
 import { convertHttpsToSshUrl } from "./convert-ssh-https-url"
 
+export const DefaultNameOfGitRemote = 'default_name_of_git_remote'
 export type AddRemoteParams = {
     url_to_remote_repo?: string
-    remote?: string
+    name_of_git_remote?: string
     use_ssh?: boolean
 }
 // cd to project directory and add a remote to the project if the remote url is provided
-export function cdToProjectDirAndAddRemote$(
+export function addRemote$(
     projectDir: string,
     params: AddRemoteParams,
     executedCommands: string[]
 ) {
-    const baseRemoteName = params.remote ? params.remote : 'base'
+    const baseRemoteName = params.name_of_git_remote ? params.name_of_git_remote : DefaultNameOfGitRemote
     const url_to_remote_repo = params.url_to_remote_repo
     let commandIfRemoteExists = ''
     if (url_to_remote_repo) {
@@ -36,9 +37,25 @@ export function cdToProjectDirAndAddRemote$(
         catchError((err) => {
             // if the remote base already exists, we can ignore the error
             if (err.message.includes(`remote ${baseRemoteName} already exists`)) {
-                return of(null)
+                // remove the remote if it already exists and add it again with the new url
+                const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${url_to_remote_repo} && git fetch ${baseRemoteName} --tags`
+                return executeCommandObs$('remove remote and add it again with new url', command, executedCommands).pipe(
+                    last()
+                )
             }
             throw (err)
         }),
     )
+}
+
+export function listRemotes$(gitRepoPath: string, executedCommands: string[]) {
+    const command = `cd ${gitRepoPath} && git remote -v`
+    return executeCommandObs$('read remotes', command, executedCommands).pipe(
+        last(),
+    )
+}
+
+export function removeRemote$(gitRepoPath: string, remoteName: string, executedCommands: string[]) {
+    const command = `cd ${gitRepoPath} && git remote remove ${remoteName}`
+    return executeCommandObs$('remove remote', command, executedCommands)
 }

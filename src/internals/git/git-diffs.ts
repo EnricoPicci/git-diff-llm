@@ -1,6 +1,6 @@
 import { concatMap, reduce } from "rxjs"
 import { executeCommandNewProcessObs } from "../execute-command/execute-command"
-import { cdToProjectDirAndAddRemote$ } from "./add-remote"
+import { addRemote$, DefaultNameOfGitRemote } from "./git-remote"
 import { isInGitCommitHashFormat } from "./git-commit-hash"
 
 export function gitDiff$(
@@ -9,7 +9,7 @@ export function gitDiff$(
     file: string,
     executedCommands: string[]
 ) {
-    return cdToProjectDirAndAddRemote$(
+    return addRemote$(
         projectDir,
         fromToParams,
         executedCommands
@@ -58,6 +58,6 @@ function tagBranchCommitPrefix(tagBranchCommit: string, compareWithRemote = fals
     if (isInGitCommitHashFormat(tagBranchCommit)) {
         return ''
     }
-    const base_or_origin_for_to_tagBranchCommit = compareWithRemote ? 'base/' : 'origin/'
+    const base_or_origin_for_to_tagBranchCommit = compareWithRemote ? `${DefaultNameOfGitRemote}/` : 'origin/'
     return base_or_origin_for_to_tagBranchCommit
 }

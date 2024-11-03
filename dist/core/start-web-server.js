@@ -9,6 +9,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
+const git_remote_1 = require("../internals/git/git-remote");
 const app = (0, express_1.default)();
 const port = 3000;
 app.use((0, cors_1.default)());
@@ -95,6 +96,25 @@ function startWebServer() {
             error: (err) => {
                 console.error(`Error listing commits: ${err}`);
                 res.status(500).send(`Error listing commits: ${err}`);
+            },
+        });
+    });
+    app.post('/api/v1/add-remote', (req, res) => {
+        const { tempDir, remoteUrl, remoteName } = req.body;
+        // add the remote
+        const executedCommands = [];
+        const addRemoteParams = {
+            url_to_remote_repo: remoteUrl,
+            name_of_git_remote: remoteName,
+        };
+        (0, git_remote_1.addRemote$)(tempDir, addRemoteParams, executedCommands).subscribe({
+            next: () => {
+                console.log(`Remote "${remoteName}" with url "${remoteUrl}" added`);
+                res.send({ remoteName });
+            },
+            error: (err) => {
+                console.error(`Error adding remote: ${err}`);
+                res.status(500).send(`Error adding remote: ${err}`);
             },
         });
     });

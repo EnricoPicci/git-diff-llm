@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { toFromTagBranchCommitPrefix } from './git-diffs';
+import { DefaultNameOfGitRemote } from './git-remote';
 
 describe(`toFromTagBranchCommitPrefix`, () => {
     it(`should return the prefix when 2 tags are passed in as arguments`, () => {
@@ -26,7 +27,7 @@ describe(`toFromTagBranchCommitPrefix`, () => {
 
         let remote = true
         let expected_from_tag_branch_commit_prefix = 'origin/'
-        let expected_to_tag_branch_commit_prefix = 'base/'
+        let expected_to_tag_branch_commit_prefix = `${DefaultNameOfGitRemote}/`
         let resp = toFromTagBranchCommitPrefix(to_tag_branch_commit, from_tag_branch_commit, remote)
         expect(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix)
         expect(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix)
@@ -64,7 +65,7 @@ describe(`toFromTagBranchCommitPrefix`, () => {
 
         let remote = true
         let expected_from_tag_branch_commit_prefix = ''
-        let expected_to_tag_branch_commit_prefix = 'base/'
+        let expected_to_tag_branch_commit_prefix = `${DefaultNameOfGitRemote}/`
         let resp = toFromTagBranchCommitPrefix(to_tag_branch_commit, from_tag_branch_commit, remote)
         expect(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix)
         expect(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix)

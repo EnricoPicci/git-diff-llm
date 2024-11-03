@@ -5,7 +5,7 @@ import { filter, skip, startWith, map, concatMap } from "rxjs"
 import { fromCsvObs } from "@enrico.piccinin/csv-tools"
 
 import { executeCommandNewProcessToLinesObs } from "../execute-command/execute-command"
-import { cdToProjectDirAndAddRemote$ } from "../git/add-remote"
+import { addRemote$ } from "../git/git-remote"
 import { toFromTagBranchCommitPrefix } from "../git/git-diffs"
 
 export type ClocGitDiffRec = {
@@ -84,7 +84,7 @@ function clocDiffRel$(
     fromToParams: { from_tag_or_branch: string, to_tag_or_branch: string, url_to_remote_repo?: string, languages?: string[] },
     executedCommands: string[]
 ) {
-    return cdToProjectDirAndAddRemote$(
+    return addRemote$(
         projectDir,
         fromToParams,
         executedCommands
