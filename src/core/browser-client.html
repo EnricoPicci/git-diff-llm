@@ -82,7 +82,7 @@
             <label for="secondRepoUrl">Project url:</label>
             <input type="text" id="secondRepoUrl" name="secondRepoUrl">
         </div>
-        <button id="confirm" type="button" onclick="addRemote()" style="display: none;">confirm</button>
+        <button id="confirm" type="button" onclick="addSecondRepo()" style="display: none;">confirm</button>
     </div>
 
     <div  id="toTagBranchCommit"  style="display: none;">
@@ -127,6 +127,9 @@
         // isFromTag and isToTag are global variables to store if the selected option is a tag
         let isFromTag = false;
         let isToTag = false;
+        // second_repo_used_as_from_repo and second_repo_used_as_to_repo are global variables to store if the second repo is used as from or to repo
+        let second_repo_used_as_from_repo;
+        let second_repo_used_as_to_repo;
 
         startWebsocketConnection();
 
@@ -307,7 +310,7 @@
             }
         }
 
-        async function addRemote() {
+        async function addSecondRepo() {
             const secondRepoUrl = document.getElementById('secondRepoUrl').value;
             // the remote name is the last part of the URL
             const remoteUrlParts = secondRepoUrl.split('/');
@@ -329,6 +332,8 @@
                 toTagBranchCommitContainer.style.display = 'block';
                 const launchReportForm = document.getElementById('launchReport');
                 launchReportForm.style.display = 'block';
+                second_repo_used_as_from_repo = false;
+                second_repo_used_as_to_repo = true;
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -360,6 +365,8 @@
                 from_tag_branch_commit,
                 to_tag_branch_commit,
                 url_to_second_repo: document.getElementById('secondRepoUrl').value,
+                second_repo_used_as_from_repo,
+                second_repo_used_as_to_repo,
                 use_ssh: false,
                 promptTemplates: null,
                 outdir: tempDir,

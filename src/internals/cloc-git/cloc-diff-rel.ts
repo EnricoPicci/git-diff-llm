@@ -26,12 +26,19 @@ export type ClocGitDiffRec = {
     fullFilePath: string
     extension: string
 }
+
+export type SecondRepoParams = {
+    url_to_repo: string,
+    used_as_from_repo: boolean,
+    used_as_to_repo: boolean
+}
 export type ComparisonParams = {
     projectDir: string
     url_to_repo: string
     from_tag_branch_commit: string
     to_tag_branch_commit: string
     url_to_second_repo?: string
+    second_repo_params?: SecondRepoParams,
     use_ssh?: boolean
 }
 export function comparisonResultFromClocDiffRelForProject$(

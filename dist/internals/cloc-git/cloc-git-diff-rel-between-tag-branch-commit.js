@@ -107,7 +107,8 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
     const repoUrl = comparisonParams.url_to_repo;
-    const gitWebClientCommandUrl = gitWebClientCommand(repoUrl, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, comparisonParams.url_to_second_repo);
+    const secondRepoParams = comparisonParams.second_repo_params;
+    const gitWebClientCommandUrl = gitWebClientCommand(repoUrl, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, secondRepoParams);
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages);
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         var _a;
@@ -206,14 +207,26 @@ function appendSummaryToMdJson(mdJson, summary) {
     mdJson.push({ p: '==========================================================================' });
     mdJson.push({ p: '==================  Differences in files' });
 }
-function gitWebClientCommand(repoUrl, fromTagBranchCommit, toTagBranchCommit, _secondRepoUrl) {
+function gitWebClientCommand(repoUrl, fromTagBranchCommit, toTagBranchCommit, secondRepoParams) {
     if (fromTagBranchCommit.includes('/')) {
         const fromTagBranchCommitParts = fromTagBranchCommit.split('/');
         fromTagBranchCommit = fromTagBranchCommitParts[fromTagBranchCommitParts.length - 1];
+        if (secondRepoParams && secondRepoParams.used_as_from_repo) {
+            const secondRepoUrl = secondRepoParams.url_to_repo;
+            const secondRepoUrlParts = secondRepoUrl.split('/');
+            const secondRepoName = secondRepoUrlParts[secondRepoUrlParts.length - 1];
+            fromTagBranchCommit = `${secondRepoName}:${secondRepoName}:${fromTagBranchCommit}`;
+        }
     }
     if (toTagBranchCommit.includes('/')) {
         const toTagBranchCommitParts = toTagBranchCommit.split('/');
         toTagBranchCommit = toTagBranchCommitParts[toTagBranchCommitParts.length - 1];
+        if (secondRepoParams && secondRepoParams.used_as_to_repo) {
+            const secondRepoUrl = secondRepoParams.url_to_repo;
+            const secondRepoUrlParts = secondRepoUrl.split('/');
+            const secondRepoName = secondRepoUrlParts[secondRepoUrlParts.length - 1];
+            toTagBranchCommit = `${secondRepoName}:${secondRepoName}:${toTagBranchCommit}`;
+        }
     }
     return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
 }

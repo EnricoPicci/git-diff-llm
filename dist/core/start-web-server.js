@@ -158,9 +158,16 @@ function launchGenerateReport(webSocket, data) {
         url_to_repo: data.url_to_repo,
         from_tag_branch_commit: data.from_tag_branch_commit,
         to_tag_branch_commit: data.to_tag_branch_commit,
-        url_to_second_repo: data.url_to_remote_repo,
         use_ssh: data.use_ssh
     };
+    if (data.url_to_second_repo) {
+        const second_repo_params = {
+            url_to_repo: data.url_to_second_repo,
+            used_as_from_repo: data.second_repo_used_as_from_repo,
+            used_as_to_repo: data.second_repo_used_as_to_repo
+        };
+        comparisonParams.second_repo_params = second_repo_params;
+    }
     const inputParams = {
         comparisonParams: comparisonParams,
         promptTemplates: data.promptTemplates,
