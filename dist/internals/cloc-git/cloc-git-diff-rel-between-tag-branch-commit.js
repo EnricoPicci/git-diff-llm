@@ -65,21 +65,21 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages) {
         }));
     }));
 }
-function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages, concurrentLLMCalls = 5) {
+function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages, concurrentLLMCalls = 5) {
     const startExecTime = new Date();
     return allDiffsForProject$(comparisonParams, executedCommands, languages).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
-        return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, executedCommands);
+        return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands);
     }, concurrentLLMCalls), (0, rxjs_1.tap)({
         complete: () => {
             console.log(`\n\nCompleted all diffs with explanations in ${new Date().getTime() - startExecTime.getTime()} ms\n\n`);
         }
     }));
 }
-function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, promptTemplates, outdir, languages) {
+function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, promptTemplates, outdir, model, languages) {
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages).pipe(
     // replace any ',' in the explanation with a '-'
     (0, rxjs_1.map)((diffWithExplanation) => {
         diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-');
@@ -97,28 +97,33 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params) {
     const comparisonParams = params.comparisonParams;
     const promptTemplates = params.promptTemplates;
     const outdir = params.outdir;
+    const llmModel = params.llmModel;
     const languages = params.languages;
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
     const mdJson = initializeMarkdown(comparisonParams, languages);
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffWithExplanation) => {
-        appendNumFilesWithDiffsToMdJson(mdJson, diffWithExplanation.length);
-        return (0, summarize_diffs_1.summarizeDiffs$)(diffWithExplanation, languages, projectDirName, executedCommands).pipe((0, rxjs_1.map)(summary => {
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
+        appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
+        return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe((0, rxjs_1.map)(summary => {
             appendSummaryToMdJson(mdJson, summary);
-            return diffWithExplanation;
+            return diffsWithExplanation;
         }));
     }), (0, rxjs_1.concatMap)(diffs => diffs), (0, rxjs_1.reduce)((mdJson, diffWithExplanation) => {
         appendCompResultToMdJson(mdJson, diffWithExplanation);
         return mdJson;
     }, mdJson), (0, rxjs_1.tap)(mdJson => {
-        appendPromptsToMdJson(mdJson, promptTemplates);
+        const _promptTemplates = promptTemplates || (0, explain_diffs_1.getDefaultPromptTemplates)();
+        appendPromptsToMdJson(mdJson, _promptTemplates);
     }), (0, rxjs_1.concatMap)((mdJson) => {
-        const outFile = path_1.default.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
-        return writeCompareResultsToMarkdown$(mdJson, projectDirName, outFile);
-    }), (0, rxjs_1.concatMap)(() => {
-        const outFile = path_1.default.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
-        return writeExecutedCommands$(executedCommands, projectDirName, outFile);
+        const outMarkdownFile = path_1.default.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
+        const outExecutedCommandsFile = path_1.default.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
+        return (0, rxjs_1.forkJoin)([
+            writeCompareResultsToMarkdown$(mdJson, projectDirName, outMarkdownFile),
+            writeExecutedCommands$(executedCommands, projectDirName, outExecutedCommandsFile),
+        ]).pipe((0, rxjs_1.map)(([markdownFilePath, executedCommandFilePath]) => {
+            return { markdownFilePath, executedCommandFilePath };
+        }));
     }));
 }
 //********************************************************************************************************************** */

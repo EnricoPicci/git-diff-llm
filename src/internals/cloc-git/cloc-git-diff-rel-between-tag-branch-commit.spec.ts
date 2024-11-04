@@ -1,15 +1,13 @@
-import fs from 'fs';
 import { toArray } from 'rxjs';
 
 import { expect } from 'chai';
 import {  allDiffsForProjectWithExplanation$, GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
-import { PromptTemplates } from '../git/explain-diffs';
-import path from 'path';
 import { ComparisonParams } from './cloc-diff-rel';
+import {getDefaultPromptTemplates} from '../git/explain-diffs'
 
 const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
-const promptTemplates = readPromptTemplates()
+const promptTemplates = getDefaultPromptTemplates()
 const llmModel = 'gpt-3.5-turbo'
 
 describe(`allDiffsForProjectWithExplanation$`, () => {
@@ -280,25 +278,3 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
         })
     }).timeout(100000);
 });
-
-function readPromptTemplates() {
-    const promptTemplateFileChanged = "/prompts/explain-diff.txt";
-    const promptTemplateFileAdded = "/prompts/explain-added.txt";
-    const promptTemplateFileRemoved = "/prompts/explain-removed.txt";
-    const currentDir = process.cwd();
-
-    console.log(`currentDir: ${currentDir}`);
-    const _promptTemplateFileChanged = path.join(currentDir, promptTemplateFileChanged);
-    const promptChanged = fs.readFileSync(_promptTemplateFileChanged, 'utf-8');
-    const _promptTemplateFileAdded = path.join(currentDir, promptTemplateFileAdded);
-    const promptAdded = fs.readFileSync(_promptTemplateFileAdded, 'utf-8');
-    const _promptTemplateFileRemoved = path.join(currentDir, promptTemplateFileRemoved);
-    const promptRemoved = fs.readFileSync(_promptTemplateFileRemoved, 'utf-8');
-
-    const promptTemplates: PromptTemplates = {
-        changedFile: { prompt: promptChanged, description: 'Prompt to summarize the changes in a file' },
-        addedFile: { prompt: promptAdded, description: 'Prompt to summarize a file that has been added' },
-        removedFile: { prompt: promptRemoved, description: 'Prompt to summarize a file that has been removed' }
-    }
-    return promptTemplates
-}

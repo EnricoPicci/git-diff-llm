@@ -4,7 +4,7 @@ exports.summarizeDiffs$ = summarizeDiffs$;
 const rxjs_1 = require("rxjs");
 const openai_1 = require("../openai/openai");
 const prompt_templates_1 = require("../prompt-templates/prompt-templates");
-function summarizeDiffs$(compareResults, languages, project, executedCommands) {
+function summarizeDiffs$(compareResults, languages, project, llmModel, executedCommands) {
     const diffs = [];
     compareResults.forEach(compareResult => {
         const changeType = compareResult.added ? 'added' : compareResult.deleted ? 'removed' : compareResult.renamed ? 'renamed' : 'changed';
@@ -14,17 +14,17 @@ function summarizeDiffs$(compareResults, languages, project, executedCommands) {
         diffs.push('---------------------------------------------------------------------------------------------');
         diffs.push('');
     });
-    let languageSpeciliation = '';
+    let languageSpecilization = '';
     if (languages) {
-        languageSpeciliation = languages.join(', ');
+        languageSpecilization = languages.join(', ');
     }
     const templateData = {
-        languages: languageSpeciliation,
+        languages: languageSpecilization,
         diffs: diffs.join('\n')
     };
     const promptForSummary = (0, prompt_templates_1.fillPromptTemplateSummarizeDiffs)(promptForSummaryTemplate, templateData);
     console.log(`Calling LLM to summarize all diffs for the project ${project}`);
-    return (0, openai_1.getFullCompletion$)(promptForSummary).pipe((0, rxjs_1.catchError)(err => {
+    return (0, openai_1.getFullCompletion$)(promptForSummary, llmModel).pipe((0, rxjs_1.catchError)(err => {
         const errMsg = `===>>> Error calling LLM to summarize all diffs for the project ${project} - ${err.message}`;
         console.log(errMsg);
         executedCommands.push(errMsg);

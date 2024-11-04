@@ -101,6 +101,9 @@
         let ws = null;
         // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
         let tempDir = '';
+        // isFromTag and isToTag are global variables to store if the selected option is a tag
+        let isFromTag = false;
+        let isToTag = false;
 
         startWebsocketConnection();
 
@@ -223,6 +226,21 @@
         // Function to reset other dropdowns when a selection is made
         function setupDropdownInteraction(dropdown, otherDropdowns) {
             dropdown.addEventListener('change', (event) => {
+                const srcEl = event.target;
+                if (srcEl.id === 'fromTags') {
+                    isFromTag = true;
+                } else if (srcEl.id === 'toTags') {
+                    isToTag = true;
+                } else {
+                    // If the selection is not a tag and comes from the "from" dropdown, reset the isFromTag flag
+                    if (srcEl.id === 'fromBranches' || srcEl.id === 'fromCommits') {
+                        isFromTag = false;
+                    }
+                    // If the selection is not a tag and comes from the "to" dropdown, reset the isToTag flag
+                    if (srcEl.id === 'toBranches' || srcEl.id === 'toCommits') {
+                        isToTag = false;
+                    }
+                }
                 // Reset other dropdowns
                 otherDropdowns.forEach(otherDropdown => {
                     otherDropdown.selectedIndex = 0;
@@ -280,12 +298,21 @@
         function generateReport() {
             const action = 'generate-report';
 
-            const from_tag_branch_commit = document.getElementById('fromTags').value || 
+            let from_tag_branch_commit = document.getElementById('fromTags').value || 
                                             document.getElementById('fromBranches').value || 
                                             document.getElementById('fromCommits').value;
-            const to_tag_branch_commit = document.getElementById('toTags').value ||
+            let to_tag_branch_commit = document.getElementById('toTags').value ||
                                             document.getElementById('toBranches').value ||
                                             document.getElementById('toCommits').value;
+            if (isFromTag) {
+                from_tag_branch_commit = `tags/${from_tag_branch_commit}`;
+            }
+            if (isToTag) {
+                to_tag_branch_commit = `tags/${to_tag_branch_commit}`;
+            }
+
+            const llmModelEl = document.getElementById('llm-model')
+            const llmModel = llmModelEl.value
                                             
             const data = {
                 tempDir,
@@ -295,9 +322,11 @@
                 use_ssh: false,
                 promptTemplates: null,
                 outdir: tempDir,
-                llmModel: document.getElementById('llm-model').value,
+                llmModel,
                 languages: document.getElementById('languages').value
             }
+            const message = JSON.stringify({ action, data });
+            sendWebsocketMessage(message);
         }
     </script>
 </body>

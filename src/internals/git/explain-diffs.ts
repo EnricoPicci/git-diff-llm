@@ -1,3 +1,5 @@
+import fs from "fs"
+import path from "path"
 import { of, catchError, map } from "rxjs"
 import { getFullCompletion$ } from "../openai/openai"
 import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, languageFromExtension } from "../prompt-templates/prompt-templates"
@@ -37,15 +39,16 @@ export type ExplanationRec = FileInfo & {
 export function explainGitDiffs$<T>(
     explanationInput: T & ExplanationInput, promptTemplates: PromptTemplates, llmModel: string, executedCommands: string[]
 ) {
+    const _promptTemplates = promptTemplates || getDefaultPromptTemplates()
     const language = languageFromExtension(explanationInput.extension)
 
     let promptTemplate = ''
     if (explanationInput.deleted) {
-        promptTemplate = promptTemplates.removedFile.prompt
+        promptTemplate = _promptTemplates.removedFile.prompt
     } else if (explanationInput.added) {
-        promptTemplate = promptTemplates.addedFile.prompt
+        promptTemplate = _promptTemplates.addedFile.prompt
     } else {
-        promptTemplate = promptTemplates.changedFile.prompt
+        promptTemplate = _promptTemplates.changedFile.prompt
     }
     if (promptTemplate === '') {
         let fileStatus = ''
@@ -95,4 +98,26 @@ export function explainGitDiffs$<T>(
             return _rec
         })
     )
+}
+
+export function getDefaultPromptTemplates() {
+    const promptTemplateFileChanged = "/prompts/explain-diff.txt";
+    const promptTemplateFileAdded = "/prompts/explain-added.txt";
+    const promptTemplateFileRemoved = "/prompts/explain-removed.txt";
+    const currentDir = process.cwd();
+
+    console.log(`currentDir: ${currentDir}`);
+    const _promptTemplateFileChanged = path.join(currentDir, promptTemplateFileChanged);
+    const promptChanged = fs.readFileSync(_promptTemplateFileChanged, 'utf-8');
+    const _promptTemplateFileAdded = path.join(currentDir, promptTemplateFileAdded);
+    const promptAdded = fs.readFileSync(_promptTemplateFileAdded, 'utf-8');
+    const _promptTemplateFileRemoved = path.join(currentDir, promptTemplateFileRemoved);
+    const promptRemoved = fs.readFileSync(_promptTemplateFileRemoved, 'utf-8');
+
+    const promptTemplates: PromptTemplates = {
+        changedFile: { prompt: promptChanged, description: 'Prompt to summarize the changes in a file' },
+        addedFile: { prompt: promptAdded, description: 'Prompt to summarize a file that has been added' },
+        removedFile: { prompt: promptRemoved, description: 'Prompt to summarize a file that has been removed' }
+    }
+    return promptTemplates
 }

@@ -20,12 +20,12 @@ export function summarizeDiffs$(
         diffs.push('')
     })
 
-    let languageSpeciliation = ''
+    let languageSpecilization = ''
     if (languages) {
-        languageSpeciliation = languages.join(', ')
+        languageSpecilization = languages.join(', ')
     }
     const templateData: SummarizeDiffsPromptTemplateData = {
-        languages: languageSpeciliation,
+        languages: languageSpecilization,
         diffs: diffs.join('\n')
     }
 

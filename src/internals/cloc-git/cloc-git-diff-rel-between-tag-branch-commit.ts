@@ -1,5 +1,5 @@
 import path from "path"
-import { map, concatMap, catchError, of, Observable, mergeMap, tap, toArray, reduce } from "rxjs"
+import { map, concatMap, catchError, of, Observable, mergeMap, tap, toArray, reduce, forkJoin } from "rxjs"
 
 import json2md from 'json2md'
 
@@ -7,7 +7,7 @@ import { toCsvObs } from "@enrico.piccinin/csv-tools"
 import { readLinesObs, writeFileObs } from "observable-fs"
 
 import { gitDiff$ } from "../git/git-diffs"
-import { explainGitDiffs$, PromptTemplates } from "../git/explain-diffs"
+import { explainGitDiffs$, getDefaultPromptTemplates, PromptTemplates } from "../git/explain-diffs"
 import { summarizeDiffs$ } from "./summarize-diffs"
 import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
 
@@ -177,12 +177,12 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
 
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe(
         toArray(),
-        concatMap((diffWithExplanation) => {
-            appendNumFilesWithDiffsToMdJson(mdJson, diffWithExplanation.length)
-            return summarizeDiffs$(diffWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe(
+        concatMap((diffsWithExplanation) => {
+            appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
+            return summarizeDiffs$(diffsWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe(
                 map(summary => {
                     appendSummaryToMdJson(mdJson, summary)
-                    return diffWithExplanation
+                    return diffsWithExplanation
                 })
             )
         }),
@@ -192,16 +192,21 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
             return mdJson
         }, mdJson),
         tap(mdJson => {
-            appendPromptsToMdJson(mdJson, promptTemplates)
+            const _promptTemplates = promptTemplates || getDefaultPromptTemplates()
+            appendPromptsToMdJson(mdJson, _promptTemplates)
         }),
         concatMap((mdJson) => {
-            const outFile = path.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
-            return writeCompareResultsToMarkdown$(mdJson, projectDirName, outFile)
+            const outMarkdownFile = path.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
+            const outExecutedCommandsFile = path.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
+            return forkJoin([
+                writeCompareResultsToMarkdown$(mdJson, projectDirName, outMarkdownFile),
+                writeExecutedCommands$(executedCommands, projectDirName, outExecutedCommandsFile),
+            ]).pipe(
+                map(([markdownFilePath, executedCommandFilePath]) => {
+                    return { markdownFilePath, executedCommandFilePath }
+                })
+            )
         }),
-        concatMap(() => {
-            const outFile = path.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
-            return writeExecutedCommands$(executedCommands, projectDirName, outFile)
-        })
     )
 }
 

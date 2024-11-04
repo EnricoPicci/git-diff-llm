@@ -6,8 +6,10 @@ import cors from 'cors';
 import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
-import { GenerateMdReportParams } from '../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit';
+import { GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from '../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit';
 import { ComparisonParams } from '../internals/cloc-git/cloc-diff-rel';
+import { readLinesObs } from 'observable-fs';
+import { concatMap, tap } from 'rxjs';
 
 const app = express();
 const port = 3000;
@@ -179,10 +181,30 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
     comparisonParams: comparisonParams,
     promptTemplates: data.promptTemplates,
     outdir: data.tempDir,
-    llmModel: data.model,
+    llmModel: data.llmModel,
     languages
   }
-  console.log('Generating report with params:', inputParams, webSocket);
+  console.log('Generating report with params:', inputParams);
+  writeAllDiffsForProjectWithExplanationToMarkdown$(inputParams).pipe(
+    concatMap(({ markdownFilePath }) => { 
+      return readLinesObs(markdownFilePath)
+    }),
+    tap({
+      next: lines => {
+        const mdContent = lines.join('\n');
+        webSocket.clients.forEach(client => {
+          client.send(JSON.stringify({ messageId: 'report-generated', data: mdContent }));
+        });
+      }
+    })
+  ).subscribe({
+      error: (err) => {
+        console.error(`Error generating report: ${err}`);
+        webSocket.clients.forEach(client => {
+          client.send(JSON.stringify({ messageId: 'error', data: err }));
+        });
+      }
+    });
 }
 
 // npm run tsc && node dist/lib/command.js

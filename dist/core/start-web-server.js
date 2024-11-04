@@ -12,6 +12,9 @@ const cors_1 = __importDefault(require("cors"));
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
 const git_remote_1 = require("../internals/git/git-remote");
+const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit");
+const observable_fs_1 = require("observable-fs");
+const rxjs_1 = require("rxjs");
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
@@ -40,10 +43,18 @@ function startWebServer() {
         res.send(`git-diff-llm server started. Version: ${version}`);
     });
     // WebSocket connection
+    const actions = {
+        "generate-report": launchGenerateReport
+    };
     wss.on('connection', (ws) => {
         console.log('New client connected');
-        ws.on('message', (message) => {
-            console.log(`Received message: ${message}`);
+        ws.on('message', (messageData) => {
+            console.log(`Received message: ${messageData}`);
+            const message = JSON.parse(messageData.toString());
+            const action = message.action;
+            const actionFunction = actions[action];
+            // const actionFunction: any = actions[action];
+            actionFunction(wss, message.data);
             ws.send(`You said: ${message}`);
         });
         ws.on('error', (error) => {
@@ -141,6 +152,40 @@ function startWebServer() {
         console.log(`git-diff-llm server is running at http://localhost:${port}`);
     });
 }
-startWebServer();
-// npm run tsc && node dist/core/ws.js
+function launchGenerateReport(webSocket, data) {
+    const languages = data.languages.split(',');
+    const comparisonParams = {
+        projectDir: data.tempDir,
+        from_tag_branch_commit: data.from_tag_branch_commit,
+        to_tag_branch_commit: data.to_tag_branch_commit,
+        url_to_remote_repo: data.url_to_remote_repo,
+        use_ssh: data.use_ssh
+    };
+    const inputParams = {
+        comparisonParams: comparisonParams,
+        promptTemplates: data.promptTemplates,
+        outdir: data.tempDir,
+        llmModel: data.llmModel,
+        languages
+    };
+    console.log('Generating report with params:', inputParams);
+    (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
+        return (0, observable_fs_1.readLinesObs)(markdownFilePath);
+    }), (0, rxjs_1.tap)({
+        next: lines => {
+            const mdContent = lines.join('\n');
+            webSocket.clients.forEach(client => {
+                client.send(JSON.stringify({ messageId: 'report-generated', data: mdContent }));
+            });
+        }
+    })).subscribe({
+        error: (err) => {
+            console.error(`Error generating report: ${err}`);
+            webSocket.clients.forEach(client => {
+                client.send(JSON.stringify({ messageId: 'error', data: err }));
+            });
+        }
+    });
+}
+// npm run tsc && node dist/lib/command.js
 //# sourceMappingURL=start-web-server.js.map

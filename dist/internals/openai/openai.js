@@ -7,10 +7,10 @@ const apiKey = process.env.OPENAI_API_KEY; // Store your API key in environment 
 const client = new openai_1.OpenAI({
     apiKey
 });
-function getFullCompletion$(prompt, model = 'gpt-4o', temperature = 0) {
+function getFullCompletion$(prompt, llmModel, temperature = 0) {
     const _completion = client.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model,
+        model: llmModel,
         temperature,
     });
     return (0, rxjs_1.from)(_completion).pipe((0, rxjs_1.map)((completion) => {

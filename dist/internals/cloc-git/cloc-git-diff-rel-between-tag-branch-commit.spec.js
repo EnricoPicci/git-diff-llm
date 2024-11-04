@@ -1,17 +1,13 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
 const rxjs_1 = require("rxjs");
 const chai_1 = require("chai");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("./cloc-git-diff-rel-between-tag-branch-commit");
-const path_1 = __importDefault(require("path"));
-const repoRootFolder = './';
+const explain_diffs_1 = require("../git/explain-diffs");
 const executedCommands = [];
 const languages = ['Markdown', "TypeScript"];
-const promptTemplates = readPromptTemplates();
+const promptTemplates = (0, explain_diffs_1.getDefaultPromptTemplates)();
+const llmModel = 'gpt-3.5-turbo';
 describe(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo`, (done) => {
@@ -20,7 +16,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: 'tags/second-tag',
             to_tag_branch_commit: 'tags/first-tag',
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 2 files between the 2 tags 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
@@ -42,7 +38,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: 'first-branch-on-upstream', // older branch
             to_tag_branch_commit: 'tags/first-tag', // newer tag
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 3 files of type TypeScript or Markdown between the tag and the branch
                 // there is a fourth file changed but this is with extension .txt and is not counted
@@ -61,7 +57,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: 'first-branch-on-upstream',
             to_tag_branch_commit: 'second-branch-on-upstream',
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // there is a second file changed but this is with extension .txt and is not counted
@@ -87,7 +83,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
             to_tag_branch_commit: 'second-branch-on-upstream', // branch newer than the commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // https://github.com/EnricoPicci/git-diff-llm/compare/965e1e43ca3b1e834d1146f90e60bf6fb42ed88b...second-branch-on-upstream
@@ -106,7 +102,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: 'first-branch-on-upstream', // branch older than the commit
             to_tag_branch_commit: '4fd71654b5d044e67c6fc1c1f0fa06155036152f', // newer commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-branch-on-upstream...4fd71654b5d044e67c6fc1c1f0fa06155036152f
@@ -125,7 +121,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
             to_tag_branch_commit: '5e8d5278ec8fb203adfcca33d5bbc15fb626d71f', // newer commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the 2 commits
                 // https://github.com/EnricoPicci/git-diff-llm/compare/965e1e43ca3b1e834d1146f90e60bf6fb42ed88b...5e8d5278ec8fb203adfcca33d5bbc15fb626d71f
@@ -153,7 +149,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             to_tag_branch_commit: 'tags/first-tag-on-fork',
             url_to_remote_repo: url_to_remote_forked_repo,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 4 files between the 2 tags, but one of these files is a txt file and 
                 // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
@@ -171,7 +167,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             to_tag_branch_commit: 'first-branch-on-fork',
             url_to_remote_repo: url_to_remote_forked_repo,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 5 files between the upstream branch and the remote tag, but one of these files is a txt file and 
                 // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
@@ -193,8 +189,8 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
         const outDir = './temp';
         const params = {
             comparisonParams,
-            repoFolder: repoRootFolder,
             promptTemplates,
+            llmModel: llmModel,
             outdir: outDir,
             languages
         };
@@ -204,23 +200,4 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
         });
     }).timeout(100000);
 });
-function readPromptTemplates() {
-    const promptTemplateFileChanged = "/prompts/explain-diff.txt";
-    const promptTemplateFileAdded = "/prompts/explain-added.txt";
-    const promptTemplateFileRemoved = "/prompts/explain-removed.txt";
-    const currentDir = process.cwd();
-    console.log(`currentDir: ${currentDir}`);
-    const _promptTemplateFileChanged = path_1.default.join(currentDir, promptTemplateFileChanged);
-    const promptChanged = fs_1.default.readFileSync(_promptTemplateFileChanged, 'utf-8');
-    const _promptTemplateFileAdded = path_1.default.join(currentDir, promptTemplateFileAdded);
-    const promptAdded = fs_1.default.readFileSync(_promptTemplateFileAdded, 'utf-8');
-    const _promptTemplateFileRemoved = path_1.default.join(currentDir, promptTemplateFileRemoved);
-    const promptRemoved = fs_1.default.readFileSync(_promptTemplateFileRemoved, 'utf-8');
-    const promptTemplates = {
-        changedFile: { prompt: promptChanged, description: 'Prompt to summarize the changes in a file' },
-        addedFile: { prompt: promptAdded, description: 'Prompt to summarize a file that has been added' },
-        removedFile: { prompt: promptRemoved, description: 'Prompt to summarize a file that has been removed' }
-    };
-    return promptTemplates;
-}
 //# sourceMappingURL=cloc-git-diff-rel-between-tag-branch-commit.spec.js.map
