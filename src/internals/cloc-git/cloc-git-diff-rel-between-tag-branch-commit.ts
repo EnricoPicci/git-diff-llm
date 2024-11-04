@@ -102,6 +102,7 @@ export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus & {
 export function allDiffsForProjectWithExplanation$(
     comparisonParams: ComparisonParams,
     promptTemplates: PromptTemplates,
+    model: string,
     executedCommands: string[],
     languages?: string[],
     concurrentLLMCalls = 5
@@ -109,7 +110,7 @@ export function allDiffsForProjectWithExplanation$(
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages).pipe(
         mergeMap(comparisonResult => {
-            return explainGitDiffs$(comparisonResult, promptTemplates, executedCommands)
+            return explainGitDiffs$(comparisonResult, promptTemplates, model, executedCommands)
         }, concurrentLLMCalls),
         tap({
             complete: () => {
@@ -123,6 +124,7 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
     comparisonParams: ComparisonParams,
     promptTemplates: PromptTemplates,
     outdir: string,
+    model: string,
     languages?: string[]
 ) {
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0]
@@ -131,7 +133,7 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages).pipe(
         // replace any ',' in the explanation with a '-'
         map((diffWithExplanation) => {
             diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-')
@@ -153,15 +155,16 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
 export type GenerateMdReportParams = {
     comparisonParams: ComparisonParams,
-    repoFolder: string,
     promptTemplates: PromptTemplates,
     outdir: string,
+    llmModel: string,
     languages?: string[]
 }
 export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: GenerateMdReportParams) {
     const comparisonParams = params.comparisonParams
     const promptTemplates = params.promptTemplates
     const outdir = params.outdir
+    const llmModel = params.llmModel
     const languages = params.languages
 
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0]
@@ -172,11 +175,11 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
 
     const mdJson = initializeMarkdown(comparisonParams, languages)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe(
         toArray(),
         concatMap((diffWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffWithExplanation.length)
-            return summarizeDiffs$(diffWithExplanation, languages, projectDirName, executedCommands).pipe(
+            return summarizeDiffs$(diffWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe(
                 map(summary => {
                     appendSummaryToMdJson(mdJson, summary)
                     return diffWithExplanation

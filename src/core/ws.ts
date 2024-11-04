@@ -6,8 +6,6 @@ import cors from 'cors';
 import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
-import { GenerateMdReportParams } from '../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit';
-import { ComparisonParams } from '../internals/cloc-git/cloc-diff-rel';
 
 const app = express();
 const port = 3000;
@@ -44,20 +42,11 @@ export function startWebServer() {
     });
 
   // WebSocket connection
-  const actions: {[key: string]: (webSocket: ws.Server, data: any) => void} = {
-    "generate-report": launchGenerateReport
-  }
   wss.on('connection', (ws: ws.WebSocket) => {
     console.log('New client connected');
   
-    ws.on('message', (messageData: ws.Data) => {
-      console.log(`Received message: ${messageData}`);
-      const message = JSON.parse(messageData.toString());
-      const action: string = message.action;
-      const actionFunction = actions[action];
-      // const actionFunction: any = actions[action];
-      actionFunction(wss, message.data);
-
+    ws.on('message', (message: ws.Data) => {
+      console.log(`Received message: ${message}`);
       ws.send(`You said: ${message}`);
     });
 
@@ -166,23 +155,6 @@ export function startWebServer() {
   });
 }
 
-function launchGenerateReport(webSocket: ws.Server, data: any) {
-  const languages: string[] = data.languages.split(',');
-  const comparisonParams: ComparisonParams = {
-    projectDir: data.tempDir,
-    from_tag_branch_commit: data.from_tag_branch_commit,
-    to_tag_branch_commit: data.to_tag_branch_commit,
-    url_to_remote_repo: data.url_to_remote_repo,
-    use_ssh: data.use_ssh
-  };
-  const inputParams: GenerateMdReportParams = {
-    comparisonParams: comparisonParams,
-    promptTemplates: data.promptTemplates,
-    outdir: data.tempDir,
-    llmModel: data.model,
-    languages
-  }
-  console.log('Generating report with params:', inputParams, webSocket);
-}
+startWebServer();
 
-// npm run tsc && node dist/lib/command.js
+// npm run tsc && node dist/core/ws.js

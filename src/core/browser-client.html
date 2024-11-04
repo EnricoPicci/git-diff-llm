@@ -37,41 +37,44 @@
     </form>    
     
     
-    <p>FROM Tag, Branch or Commit</p>
-    <div id="fromTagBranchCommit">
-        <div class="dropdown-container">
-            <label for="fromTags">Tags:</label>
-            <select id="fromTags" name="tags"></select>
-        </div>
+    <div  id="fromTagBranchCommit"  style="display: none;">
+        <p>FROM Tag, Branch or Commit</p>
+        <div id="fromTagBranchCommit">
+            <div class="dropdown-container">
+                <label for="fromTags">Tags:</label>
+                <select id="fromTags" name="tags"></select>
+            </div>
 
-        <div class="dropdown-container">
-            <label for="fromBranches">Branches:</label>
-            <select id="fromBranches" name="branches"></select>
-        </div>
+            <div class="dropdown-container">
+                <label for="fromBranches">Branches:</label>
+                <select id="fromBranches" name="branches"></select>
+            </div>
 
-        <div class="dropdown-container">
-            <label for="fromCommits">Commits:</label>
-            <select id="fromCommits" name="commits"></select>
+            <div class="dropdown-container">
+                <label for="fromCommits">Commits:</label>
+                <select id="fromCommits" name="commits"></select>
+            </div>
         </div>
     </div>
     
-    
-    <p>TO Tag, Branch or Commit</p>
-    <div>
-        <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
-        <label for="compareRepo">Compare with other remote repo</label>
+    <div  id="compareRepoContainer"  style="display: none;">
+        <div>
+            <label for="compareRepo">Compare with other remote repo</label>
+            <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
+        </div>
+        <div id="remoteUrlContainer" style="display: none;">
+            <label for="remotetUrl">Project url:</label>
+            <input type="text" id="remotetUrl" name="remotetUrl">
+        </div>
+        <button id="confirm" type="button" onclick="addRemote()" style="display: none;">confirm</button>
     </div>
-    <div id="remoteUrlContainer" style="display: none;">
-        <label for="remotetUrl">Project url:</label>
-        <input type="text" id="remotetUrl" name="remotetUrl">
-    </div>
-    <button id="confirm" type="button" onclick="addRemote()" style="display: none;">confirm</button>
-    <div  id="toTagBranchCommit"  style="display: block;">
+
+    <div  id="toTagBranchCommit"  style="display: none;">
+        <p>TO Tag, Branch or Commit</p>
         <div class="dropdown-container">
             <label for="toTags">Tags:</label>
             <select id="toTags" name="tags"></select>
         </div>
-
         <div class="dropdown-container">
             <label for="toBranches">Branches:</label>
             <select id="toBranches" name="branches"></select>
@@ -83,9 +86,47 @@
         </div>
     </div>
 
+    <form id="launchReport" style="display: none;">
+        <label for="llm-model">LLM Model:</label>
+        <input type="text" id="llm-model" name="llm-model" placeholder="LLM model to use, e.g. gpt-4o" value="gpt-3.5-turbo">
+        <p>
+        <label for="languages">Programming languanges:</label>
+        <input type="text" id="languages" name="languages" placeholder="programming languages to consider, e.g. TypeScript, Java" value="TypeScript, Java, Python">
+        <p>
+        <button type="button" onclick="generateReport()">Generate Report</button>
+    </form> 
+
     <script>
+        // ws is a global variable to store the websocket connection
+        let ws = null;
         // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
         let tempDir = '';
+
+        startWebsocketConnection();
+
+        function startWebsocketConnection() {
+            ws = new WebSocket('ws://localhost:3000');
+            ws.onopen = function() {
+                console.log('Websocket connection opened');
+            };
+            ws.onmessage = function(event) {
+                console.log('Message received:', event.data);
+            };
+            ws.onerror = function(error) {
+                console.error('Websocket error:', error);
+            };
+            ws.onclose = function() {
+                console.log('Websocket connection closed');
+            };
+        }
+
+        function sendWebsocketMessage(msg) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(msg);
+            } else {
+                console.error('Websocket connection is not open');
+            }
+        }
 
         async function cloneRepo() {
             const repoUrl = document.getElementById('repo-url').value;
@@ -102,6 +143,16 @@
                 console.log('TempDir:', data.tempDir);
                 await populate_From_DropdownsAndSetupInterations();
                 await populate_To_DropdownsAndSetupInterations();
+                const fromTagBranchCommitContainer = document.getElementById('fromTagBranchCommit');
+                fromTagBranchCommitContainer.style.display = 'block';
+                const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+                toTagBranchCommitContainer.style.display = 'block';
+                const compareRepoContainer = document.getElementById('compareRepoContainer');
+                compareRepoContainer.style.display = 'block';
+                const compareRepoCheckbox = document.getElementById('compareRepo');
+                compareRepoCheckbox.checked = false;
+                const launchReportForm = document.getElementById('launchReport');
+                launchReportForm.style.display = 'block';
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -184,14 +235,17 @@
             const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
             const compareRepoCheckbox = document.getElementById('compareRepo');
             const confirmButton = document.getElementById('confirm');
+            const launchReportForm = document.getElementById('launchReport');
             if (compareRepoCheckbox.checked) {
                 remoteUrlContainer.style.display = 'block';
                 toTagBranchCommitContainer.style.display = 'none';
                 confirmButton.style.display = 'block';
+                launchReportForm.style.display = 'none';
             } else {
                 remoteUrlContainer.style.display = 'none';
                 toTagBranchCommitContainer.style.display = 'block';
                 confirmButton.style.display = 'none';
+                launchReportForm.style.display = 'block';
                 populate_To_DropdownsAndSetupInterations();
             }
         }
@@ -216,8 +270,33 @@
                 await populate_To_DropdownsAndSetupInterations(remoteName);
                 const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
                 toTagBranchCommitContainer.style.display = 'block';
+                const launchReportForm = document.getElementById('launchReport');
+                launchReportForm.style.display = 'block';
             } catch (error) {
                 console.error('Error:', error);
+            }
+        }
+
+        function generateReport() {
+            const action = 'generate-report';
+
+            const from_tag_branch_commit = document.getElementById('fromTags').value || 
+                                            document.getElementById('fromBranches').value || 
+                                            document.getElementById('fromCommits').value;
+            const to_tag_branch_commit = document.getElementById('toTags').value ||
+                                            document.getElementById('toBranches').value ||
+                                            document.getElementById('toCommits').value;
+                                            
+            const data = {
+                tempDir,
+                from_tag_branch_commit,
+                to_tag_branch_commit,
+                url_to_remote_repo: document.getElementById('remotetUrl').value,
+                use_ssh: false,
+                promptTemplates: null,
+                outdir: tempDir,
+                llmModel: document.getElementById('llm-model').value,
+                languages: document.getElementById('languages').value
             }
         }
     </script>

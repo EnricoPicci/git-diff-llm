@@ -7,6 +7,7 @@ export function summarizeDiffs$(
     compareResults: FileDiffWithExplanation[],
     languages: string[] | undefined,
     project: string,
+    llmModel: string,
     executedCommands: string[]
 ) {
     const diffs: string[] = []
@@ -31,7 +32,7 @@ export function summarizeDiffs$(
     const promptForSummary = fillPromptTemplateSummarizeDiffs(promptForSummaryTemplate, templateData)
 
     console.log(`Calling LLM to summarize all diffs for the project ${project}`)
-    return getFullCompletion$(promptForSummary).pipe(
+    return getFullCompletion$(promptForSummary, llmModel).pipe(
         catchError(err => {
             const errMsg = `===>>> Error calling LLM to summarize all diffs for the project ${project} - ${err.message}`
             console.log(errMsg)

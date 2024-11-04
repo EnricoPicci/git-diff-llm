@@ -6,10 +6,10 @@ const client = new OpenAI({
     apiKey
 });
 
-export function getFullCompletion$(prompt: string, model = 'gpt-4o', temperature = 0) {
+export function getFullCompletion$(prompt: string, llmModel: string, temperature = 0) {
     const _completion = client.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model,
+        model: llmModel,
         temperature,
     });
 

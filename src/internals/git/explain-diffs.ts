@@ -35,7 +35,7 @@ export type ExplanationRec = FileInfo & {
 // which means that it returns an object that is T & FileInfo & {explanation: string | null}
 // since it omits the properties 'fileContent' and 'diffLines'
 export function explainGitDiffs$<T>(
-    explanationInput: T & ExplanationInput, promptTemplates: PromptTemplates, executedCommands: string[]
+    explanationInput: T & ExplanationInput, promptTemplates: PromptTemplates, llmModel: string, executedCommands: string[]
 ) {
     const language = languageFromExtension(explanationInput.extension)
 
@@ -68,7 +68,7 @@ export function explainGitDiffs$<T>(
     }
     const prompt = fillPromptTemplateExplainDiff(promptTemplate, promptData)
     console.log(`Calling LLM to explain diffs for file ${explanationInput.fullFilePath}`)
-    return getFullCompletion$(prompt).pipe(
+    return getFullCompletion$(prompt, llmModel).pipe(
         catchError(err => {
             const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`
             console.log(errMsg)

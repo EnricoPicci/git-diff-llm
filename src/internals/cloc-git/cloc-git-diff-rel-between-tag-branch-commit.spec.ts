@@ -7,10 +7,10 @@ import { PromptTemplates } from '../git/explain-diffs';
 import path from 'path';
 import { ComparisonParams } from './cloc-diff-rel';
 
-const repoRootFolder = './'
 const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
 const promptTemplates = readPromptTemplates()
+const llmModel = 'gpt-3.5-turbo'
 
 describe(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
@@ -23,6 +23,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -53,6 +54,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -80,6 +82,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -114,6 +117,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -141,6 +145,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -168,6 +173,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -206,6 +212,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -232,6 +239,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         allDiffsForProjectWithExplanation$(
             comparisonParams,
             promptTemplates,
+            llmModel,
             executedCommands,
             languages
         ).pipe(
@@ -261,8 +269,8 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
 
         const params: GenerateMdReportParams = {
             comparisonParams,
-            repoFolder: repoRootFolder,
             promptTemplates,
+            llmModel: llmModel,
             outdir: outDir,
             languages
         }
