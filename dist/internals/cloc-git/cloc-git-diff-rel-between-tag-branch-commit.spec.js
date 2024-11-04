@@ -3,10 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const rxjs_1 = require("rxjs");
 const chai_1 = require("chai");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("./cloc-git-diff-rel-between-tag-branch-commit");
-const explain_diffs_1 = require("../git/explain-diffs");
+const prompt_templates_1 = require("../prompt-templates/prompt-templates");
+const message_writer_1 = require("../message-writer/message-writer");
 const executedCommands = [];
 const languages = ['Markdown', "TypeScript"];
-const promptTemplates = (0, explain_diffs_1.getDefaultPromptTemplates)();
+const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
 const llmModel = 'gpt-3.5-turbo';
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm';
 describe(`allDiffsForProjectWithExplanation$`, () => {
@@ -204,7 +205,7 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             outdir: outDir,
             languages
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(params).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(params, message_writer_1.DefaultMessageWriter).subscribe({
             error: (error) => done(error),
             complete: () => done()
         });

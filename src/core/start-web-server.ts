@@ -10,6 +10,7 @@ import { GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdow
 import { ComparisonParams } from '../internals/cloc-git/cloc-diff-rel';
 import { readLinesObs } from 'observable-fs';
 import { concatMap, tap } from 'rxjs';
+import { MessageWriter } from '../internals/message-writer/message-writer';
 
 const app = express();
 const port = 3000;
@@ -184,7 +185,15 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
     languages
   }
   console.log('Generating report with params:', inputParams);
-  writeAllDiffsForProjectWithExplanationToMarkdown$(inputParams).pipe(
+  const messageWriterToRemoteClient: MessageWriter = {
+    write: (msg) => {
+      console.log(`Message to client: ${JSON.stringify(msg)}`);
+      webSocket.clients.forEach(client => {
+        client.send(JSON.stringify({ messageId: 'info', data: msg }));
+      });
+    }
+  }
+  writeAllDiffsForProjectWithExplanationToMarkdown$(inputParams, messageWriterToRemoteClient).pipe(
     concatMap(({ markdownFilePath }) => { 
       return readLinesObs(markdownFilePath)
     }),

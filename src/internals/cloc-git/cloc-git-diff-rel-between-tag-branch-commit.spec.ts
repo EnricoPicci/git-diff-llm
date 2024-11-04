@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import {  allDiffsForProjectWithExplanation$, GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
 import { ComparisonParams } from './cloc-diff-rel';
 import { getDefaultPromptTemplates } from '../prompt-templates/prompt-templates';
+import { DefaultMessageWriter } from '../message-writer/message-writer';
 
 const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
@@ -282,7 +283,7 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             outdir: outDir,
             languages
         }
-        writeAllDiffsForProjectWithExplanationToMarkdown$(params).subscribe({
+        writeAllDiffsForProjectWithExplanationToMarkdown$(params, DefaultMessageWriter).subscribe({
             error: (error: any) => done(error),
             complete: () => done()
         })

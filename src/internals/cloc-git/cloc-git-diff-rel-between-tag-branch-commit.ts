@@ -11,6 +11,7 @@ import { explainGitDiffs$ } from "../git/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
 import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
+import { DefaultMessageWriter, MessageToClient, MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
 //********************************************************************************************************************** */
 //****************************   APIs                               **************************************************** */
@@ -35,7 +36,8 @@ export type FileDiffWithGitDiffsAndFileContent = ClocGitDiffRec & FileStatus & {
 export function allDiffsForProject$(
     comparisonParams: ComparisonParams,
     executedCommands: string[],
-    languages?: string[]
+    languages?: string[],
+    messageWriter: MessageWriter = DefaultMessageWriter
 ): Observable<FileDiffWithGitDiffsAndFileContent> {
     return comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages).pipe(
         // we MUST use concatMap here to ensure that gitDiff$ is not streaming concurrently but only sequentially
@@ -45,7 +47,9 @@ export function allDiffsForProject$(
         // Using concatMap (which just mergeMap with concurrency set to 1) ensures that the command "git diff" 
         // is not executed concurrently for different projects
         concatMap(rec => {
-            console.log(`Calculating git diff for ${rec.fullFilePath}`)
+            const msgText = `Calculating git diff for ${rec.fullFilePath}`
+            const msg: MessageToClient = newInfoMessage(msgText)
+            messageWriter.write(msg)
             return gitDiff$(
                 rec.projectDir!,
                 {
@@ -106,12 +110,13 @@ export function allDiffsForProjectWithExplanation$(
     model: string,
     executedCommands: string[],
     languages?: string[],
+    messageWriter: MessageWriter = DefaultMessageWriter,
     concurrentLLMCalls = 5
 ): Observable<FileDiffWithExplanation> {
     const startExecTime = new Date()
-    return allDiffsForProject$(comparisonParams, executedCommands, languages).pipe(
+    return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
         mergeMap(comparisonResult => {
-            return explainGitDiffs$(comparisonResult, promptTemplates, model, executedCommands)
+            return explainGitDiffs$(comparisonResult, promptTemplates, model, executedCommands, messageWriter)
         }, concurrentLLMCalls),
         tap({
             complete: () => {
@@ -161,7 +166,9 @@ export type GenerateMdReportParams = {
     llmModel: string,
     languages?: string[]
 }
-export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: GenerateMdReportParams) {
+export function writeAllDiffsForProjectWithExplanationToMarkdown$(
+    params: GenerateMdReportParams, messageWriter: MessageWriter
+) {
     const comparisonParams = params.comparisonParams
     const promptTemplates = params.promptTemplates
     const outdir = params.outdir
@@ -183,13 +190,21 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
     )
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(
+        comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter
+    ).pipe(
         toArray(),
         concatMap((diffsWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
             const promptForSummaryTemplate = promptTemplates?.summary?.prompt
             return summarizeDiffs$(
-                diffsWithExplanation, languages, projectDirName, llmModel, promptForSummaryTemplate, executedCommands
+                diffsWithExplanation, 
+                languages, 
+                projectDirName, 
+                llmModel, 
+                promptForSummaryTemplate, 
+                executedCommands,
+                messageWriter
             ).pipe(
                 map(summary => {
                     appendSummaryToMdJson(mdJson, summary)

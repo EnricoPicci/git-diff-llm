@@ -2,6 +2,7 @@ import { catchError, of } from "rxjs";
 import { FileDiffWithExplanation } from "./cloc-git-diff-rel-between-tag-branch-commit";
 import { getFullCompletion$ } from "../openai/openai";
 import { fillPromptTemplateSummarizeDiffs, getDefaultPromptTemplates, SummarizeDiffsPromptTemplateData } from "../prompt-templates/prompt-templates";
+import { DefaultMessageWriter, MessageWriter, newInfoMessage } from "../message-writer/message-writer";
 
 export function summarizeDiffs$(
     compareResults: FileDiffWithExplanation[],
@@ -9,7 +10,8 @@ export function summarizeDiffs$(
     project: string,
     llmModel: string,
     promptForSummaryTemplate:  string,
-    executedCommands: string[]
+    executedCommands: string[],
+    messageWriter: MessageWriter = DefaultMessageWriter
 ) {
     const diffs: string[] = []
     compareResults.forEach(compareResult => {
@@ -33,7 +35,9 @@ export function summarizeDiffs$(
     const _promptForSummaryTemplate = promptForSummaryTemplate || getDefaultPromptTemplates().summary.prompt
     const promptForSummary = fillPromptTemplateSummarizeDiffs(_promptForSummaryTemplate, templateData)
 
-    console.log(`Calling LLM to summarize all diffs for the project ${project}`)
+    const msgText = `Calling LLM to summarize all diffs for the project ${project}`
+    const msg = newInfoMessage(msgText)
+    messageWriter.write(msg)
     return getFullCompletion$(promptForSummary, llmModel).pipe(
         catchError(err => {
             const errMsg = `===>>> Error calling LLM to summarize all diffs for the project ${project} - ${err.message}`

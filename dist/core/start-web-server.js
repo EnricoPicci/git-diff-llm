@@ -169,7 +169,15 @@ function launchGenerateReport(webSocket, data) {
         languages
     };
     console.log('Generating report with params:', inputParams);
-    (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
+    const messageWriterToRemoteClient = {
+        write: (msg) => {
+            console.log(`Message to client: ${JSON.stringify(msg)}`);
+            webSocket.clients.forEach(client => {
+                client.send(JSON.stringify({ messageId: 'info', data: msg }));
+            });
+        }
+    };
+    (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams, messageWriterToRemoteClient).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
         return (0, observable_fs_1.readLinesObs)(markdownFilePath);
     }), (0, rxjs_1.tap)({
         next: lines => {

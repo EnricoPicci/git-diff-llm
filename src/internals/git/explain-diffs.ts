@@ -1,6 +1,7 @@
 import { of, catchError, map } from "rxjs"
 import { getFullCompletion$ } from "../openai/openai"
 import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, getDefaultPromptTemplates, languageFromExtension, PromptTemplates } from "../prompt-templates/prompt-templates"
+import { MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
 
 export type FileInfo = {
@@ -30,7 +31,11 @@ export type ExplanationRec = FileInfo & {
 // which means that it returns an object that is T & FileInfo & {explanation: string | null}
 // since it omits the properties 'fileContent' and 'diffLines'
 export function explainGitDiffs$<T>(
-    explanationInput: T & ExplanationInput, promptTemplates: PromptTemplates, llmModel: string, executedCommands: string[]
+    explanationInput: T & ExplanationInput, 
+    promptTemplates: PromptTemplates, 
+    llmModel: string, 
+    executedCommands: string[],
+    messageWriter: MessageWriter
 ) {
     const _promptTemplates = promptTemplates || getDefaultPromptTemplates()
     const language = languageFromExtension(explanationInput.extension)
@@ -63,7 +68,9 @@ export function explainGitDiffs$<T>(
         diffs: explanationInput.diffLines,
     }
     const prompt = fillPromptTemplateExplainDiff(promptTemplate, promptData)
-    console.log(`Calling LLM to explain diffs for file ${explanationInput.fullFilePath}`)
+    const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath}`
+    const msg = newInfoMessage(msgText)
+    messageWriter.write(msg)
     return getFullCompletion$(prompt, llmModel).pipe(
         catchError(err => {
             const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`
