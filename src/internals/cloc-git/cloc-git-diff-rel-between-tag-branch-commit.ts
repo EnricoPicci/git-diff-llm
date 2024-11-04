@@ -7,7 +7,8 @@ import { toCsvObs } from "@enrico.piccinin/csv-tools"
 import { readLinesObs, writeFileObs } from "observable-fs"
 
 import { gitDiff$ } from "../git/git-diffs"
-import { explainGitDiffs$, getDefaultPromptTemplates, PromptTemplates } from "../git/explain-diffs"
+import { explainGitDiffs$ } from "../git/explain-diffs"
+import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
 import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
 
@@ -186,7 +187,10 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
         toArray(),
         concatMap((diffsWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
-            return summarizeDiffs$(diffsWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe(
+            const promptForSummaryTemplate = promptTemplates?.summary?.prompt
+            return summarizeDiffs$(
+                diffsWithExplanation, languages, projectDirName, llmModel, promptForSummaryTemplate, executedCommands
+            ).pipe(
                 map(summary => {
                     appendSummaryToMdJson(mdJson, summary)
                     return diffsWithExplanation

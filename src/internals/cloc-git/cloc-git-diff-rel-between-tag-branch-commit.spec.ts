@@ -3,7 +3,7 @@ import { toArray } from 'rxjs';
 import { expect } from 'chai';
 import {  allDiffsForProjectWithExplanation$, GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
 import { ComparisonParams } from './cloc-diff-rel';
-import {getDefaultPromptTemplates} from '../git/explain-diffs'
+import { getDefaultPromptTemplates } from '../prompt-templates/prompt-templates';
 
 const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
