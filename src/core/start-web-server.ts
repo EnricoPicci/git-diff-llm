@@ -189,7 +189,7 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
     write: (msg) => {
       console.log(`Message to client: ${JSON.stringify(msg)}`);
       webSocket.clients.forEach(client => {
-        client.send(JSON.stringify({ messageId: 'info', data: msg }));
+        client.send(JSON.stringify(msg));
       });
     }
   }
