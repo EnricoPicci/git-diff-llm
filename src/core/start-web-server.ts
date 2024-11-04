@@ -59,8 +59,6 @@ export function startWebServer() {
       const actionFunction = actions[action];
       // const actionFunction: any = actions[action];
       actionFunction(wss, message.data);
-
-      ws.send(`You said: ${message}`);
     });
 
     ws.on('error', (error: Error) => {
@@ -193,7 +191,7 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
       next: lines => {
         const mdContent = lines.join('\n');
         webSocket.clients.forEach(client => {
-          client.send(JSON.stringify({ messageId: 'report-generated', data: mdContent }));
+          client.send(JSON.stringify({ messageId: 'report-generated', mdReport: mdContent }));
         });
       }
     })

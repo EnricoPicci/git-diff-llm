@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,7 +33,7 @@
 <body>
     <form>
         <label for="repo-url">Repo URL:</label>
-        <input type="text" id="repo-url" name="repo-url">
+        <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm">
         <button type="button" onclick="cloneRepo()">Clone</button>
     </form>    
     
@@ -96,7 +97,10 @@
         <button type="button" onclick="generateReport()">Generate Report</button>
     </form> 
 
+    <div id="report"></div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
+
         // ws is a global variable to store the websocket connection
         let ws = null;
         // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
@@ -113,7 +117,14 @@
                 console.log('Websocket connection opened');
             };
             ws.onmessage = function(event) {
-                console.log('Message received:', event.data);
+                const data = JSON.parse(event.data);
+                console.log('Message received:', data);
+
+                const messageId = data.messageId;
+                if (messageId === 'report-generated') {
+                    const report = data.mdReport;
+                    fillReport(report);
+                }
             };
             ws.onerror = function(error) {
                 console.error('Websocket error:', error);
@@ -327,6 +338,11 @@
             }
             const message = JSON.stringify({ action, data });
             sendWebsocketMessage(message);
+        }
+        
+        function fillReport(report) {
+            document.getElementById('report').innerHTML =
+                marked.parse(report);
         }
     </script>
 </body>
