@@ -64,8 +64,8 @@
             <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
         </div>
         <div id="remoteUrlContainer" style="display: none;">
-            <label for="remotetUrl">Project url:</label>
-            <input type="text" id="remotetUrl" name="remotetUrl">
+            <label for="secondRepoUrl">Project url:</label>
+            <input type="text" id="secondRepoUrl" name="secondRepoUrl">
         </div>
         <button id="confirm" type="button" onclick="addRemote()" style="display: none;">confirm</button>
     </div>
@@ -280,12 +280,12 @@
         }
 
         async function addRemote() {
-            const remotetUrl = document.getElementById('remotetUrl').value;
+            const secondRepoUrl = document.getElementById('secondRepoUrl').value;
             // the remote name is the last part of the URL
-            const remoteUrlParts = remotetUrl.split('/');
+            const remoteUrlParts = secondRepoUrl.split('/');
             const remoteName = remoteUrlParts[remoteUrlParts.length - 1]; 
             const _body = { tempDir, remoteName };
-            _body.remoteUrl = remotetUrl;
+            _body.remoteUrl = secondRepoUrl;
             console.log('Body:', _body);
             try {
                 const response = await fetch('http://localhost:3000/api/v1/add-remote', {
@@ -309,6 +309,7 @@
         function generateReport() {
             const action = 'generate-report';
 
+            const url_to_repo = document.getElementById('repo-url').value;
             let from_tag_branch_commit = document.getElementById('fromTags').value || 
                                             document.getElementById('fromBranches').value || 
                                             document.getElementById('fromCommits').value;
@@ -327,9 +328,10 @@
                                             
             const data = {
                 tempDir,
+                url_to_repo,
                 from_tag_branch_commit,
                 to_tag_branch_commit,
-                url_to_remote_repo: document.getElementById('remotetUrl').value,
+                url_to_second_repo: document.getElementById('secondRepoUrl').value,
                 use_ssh: false,
                 promptTemplates: null,
                 outdir: tempDir,
@@ -339,7 +341,7 @@
             const message = JSON.stringify({ action, data });
             sendWebsocketMessage(message);
         }
-        
+
         function fillReport(report) {
             document.getElementById('report').innerHTML =
                 marked.parse(report);

@@ -170,9 +170,10 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
   const languages: string[] = data.languages.split(',');
   const comparisonParams: ComparisonParams = {
     projectDir: data.tempDir,
+    url_to_repo: data.url_to_repo,
     from_tag_branch_commit: data.from_tag_branch_commit,
     to_tag_branch_commit: data.to_tag_branch_commit,
-    url_to_remote_repo: data.url_to_remote_repo,
+    url_to_second_repo: data.url_to_remote_repo,
     use_ssh: data.use_ssh
   };
   const inputParams: GenerateMdReportParams = {

@@ -9,12 +9,14 @@ const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
 const promptTemplates = getDefaultPromptTemplates()
 const llmModel = 'gpt-3.5-turbo'
+const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm'
 
 describe(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'tags/second-tag',
             to_tag_branch_commit: 'tags/first-tag',
         }
@@ -46,6 +48,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a branch and a tag of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'first-branch-on-upstream',  // older branch
             to_tag_branch_commit: 'tags/first-tag',  // newer tag
         }
@@ -74,6 +77,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between 2 branches of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'first-branch-on-upstream',
             to_tag_branch_commit: 'second-branch-on-upstream',
         }
@@ -109,6 +113,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a older commit and a newer branch of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b',  // older commit
             to_tag_branch_commit: 'second-branch-on-upstream', // branch newer than the commit
         }
@@ -137,6 +142,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a newer commit and an older branch of the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'first-branch-on-upstream',  // branch older than the commit
             to_tag_branch_commit: '4fd71654b5d044e67c6fc1c1f0fa06155036152f', // newer commit
         }
@@ -165,6 +171,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between 2 commits on the local repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
             to_tag_branch_commit: '5e8d5278ec8fb203adfcca33d5bbc15fb626d71f', // newer commit
         }
@@ -203,9 +210,10 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a tag of the local repo and a tag on the remote repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'tags/first-tag',
             to_tag_branch_commit: 'tags/first-tag-on-fork',
-            url_to_remote_repo: url_to_remote_forked_repo,
+            url_to_second_repo: url_to_remote_forked_repo,
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -230,9 +238,10 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     it(`should return the diffs between a branch of the local repo and a branch on the remote repo`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'tags/first-tag',
             to_tag_branch_commit: 'first-branch-on-fork',
-            url_to_remote_repo: url_to_remote_forked_repo,
+            url_to_second_repo: url_to_remote_forked_repo,
         }
         allDiffsForProjectWithExplanation$(
             comparisonParams,
@@ -260,6 +269,7 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
     it(`should produce a markdown report - the test just tests that function completes without errors`, (done) => {
         const comparisonParams: ComparisonParams = {
             projectDir: './',
+            url_to_repo: url_to_repo,
             from_tag_branch_commit: 'tags/second-tag',
             to_tag_branch_commit: 'tags/first-tag',
         }

@@ -29,7 +29,7 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages) {
         return (0, git_diffs_1.gitDiff$)(rec.projectDir, {
             from_tag_or_branch: comparisonParams.from_tag_branch_commit,
             to_tag_or_branch: comparisonParams.to_tag_branch_commit,
-            url_to_remote_repo: comparisonParams.url_to_remote_repo
+            url_to_remote_repo: comparisonParams.url_to_second_repo
         }, rec.File, executedCommands).pipe((0, rxjs_1.map)(diffLinesString => {
             const diffLines = diffLinesString.toString();
             const _lines = diffLines.split('\n');
@@ -102,7 +102,9 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params) {
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
-    const mdJson = initializeMarkdown(comparisonParams, languages);
+    const repoUrl = comparisonParams.url_to_repo;
+    const gitWebClientCommandUrl = gitWebClientCommand(repoUrl, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, comparisonParams.url_to_second_repo);
+    const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages);
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
         return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectDirName, llmModel, executedCommands).pipe((0, rxjs_1.map)(summary => {
@@ -149,10 +151,10 @@ const writeExecutedCommands$ = (executedCommands, projectDirName, outFile) => {
         next: () => console.log(`====>>>> Commands executed to calculate comparisons for project "${projectDirName}" written in txt file: ${outFile}`),
     }));
 };
-function initializeMarkdown(comparisonParams, languages) {
+function initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages) {
     const projectDir = comparisonParams.projectDir;
-    const inRemoteRepoMsg = comparisonParams.url_to_remote_repo ?
-        ` in remote repo ${comparisonParams.url_to_remote_repo}` :
+    const inRemoteRepoMsg = comparisonParams.url_to_second_repo ?
+        ` in remote repo ${comparisonParams.url_to_second_repo}` :
         '';
     const mdJson = [
         { h1: `Comparing ${comparisonParams.from_tag_branch_commit} with ${comparisonParams.to_tag_branch_commit}` },
@@ -160,6 +162,7 @@ function initializeMarkdown(comparisonParams, languages) {
         { h4: `From Tag Branch or Commit: ${comparisonParams.from_tag_branch_commit}` },
         { h4: `To Tag Branch or Commit: ${comparisonParams.to_tag_branch_commit}${inRemoteRepoMsg}` },
         { h4: `Languages considered: ${languages === null || languages === void 0 ? void 0 : languages.join(', ')}` },
+        { p: ` Git Web Client Command: [${gitWebClientCommandUrl}](${gitWebClientCommandUrl})` },
         { p: '' },
         { p: '------------------------------------------------------------------------------------------------' },
     ];
@@ -196,5 +199,16 @@ function appendSummaryToMdJson(mdJson, summary) {
     mdJson.push({ p: summary });
     mdJson.push({ p: '==========================================================================' });
     mdJson.push({ p: '==================  Differences in files' });
+}
+function gitWebClientCommand(repoUrl, fromTagBranchCommit, toTagBranchCommit, _secondRepoUrl) {
+    if (fromTagBranchCommit.includes('/')) {
+        const fromTagBranchCommitParts = fromTagBranchCommit.split('/');
+        fromTagBranchCommit = fromTagBranchCommitParts[fromTagBranchCommitParts.length - 1];
+    }
+    if (toTagBranchCommit.includes('/')) {
+        const toTagBranchCommitParts = toTagBranchCommit.split('/');
+        toTagBranchCommit = toTagBranchCommitParts[toTagBranchCommitParts.length - 1];
+    }
+    return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
 }
 //# sourceMappingURL=cloc-git-diff-rel-between-tag-branch-commit.js.map

@@ -50,7 +50,7 @@ export function allDiffsForProject$(
                 {
                     from_tag_or_branch: comparisonParams.from_tag_branch_commit,
                     to_tag_or_branch: comparisonParams.to_tag_branch_commit,
-                    url_to_remote_repo: comparisonParams.url_to_remote_repo
+                    url_to_remote_repo: comparisonParams.url_to_second_repo
                 },
                 rec.File,
                 executedCommands
@@ -173,7 +173,14 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(params: Genera
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    const mdJson = initializeMarkdown(comparisonParams, languages)
+    const repoUrl = comparisonParams.url_to_repo
+    const gitWebClientCommandUrl = gitWebClientCommand(
+        repoUrl, 
+        comparisonParams.from_tag_branch_commit, 
+        comparisonParams.to_tag_branch_commit, 
+        comparisonParams.url_to_second_repo
+    )
+    const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages)
 
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe(
         toArray(),
@@ -247,11 +254,12 @@ const writeExecutedCommands$ = (executedCommands: string[], projectDirName: stri
 
 function initializeMarkdown(
     comparisonParams: ComparisonParams,
+    gitWebClientCommandUrl: string,
     languages?: string[]
 ) {
     const projectDir = comparisonParams.projectDir
-    const inRemoteRepoMsg = comparisonParams.url_to_remote_repo ?
-        ` in remote repo ${comparisonParams.url_to_remote_repo}` :
+    const inRemoteRepoMsg = comparisonParams.url_to_second_repo ?
+        ` in remote repo ${comparisonParams.url_to_second_repo}` :
         ''
 
     const mdJson = [
@@ -260,6 +268,7 @@ function initializeMarkdown(
         { h4: `From Tag Branch or Commit: ${comparisonParams.from_tag_branch_commit}` },
         { h4: `To Tag Branch or Commit: ${comparisonParams.to_tag_branch_commit}${inRemoteRepoMsg}` },
         { h4: `Languages considered: ${languages?.join(', ')}` },
+        { p: ` Git Web Client Command: [${gitWebClientCommandUrl}](${gitWebClientCommandUrl})` },
         { p: '' },
         { p: '------------------------------------------------------------------------------------------------' },
     ]
@@ -317,4 +326,18 @@ function appendSummaryToMdJson(
     mdJson.push({ p: summary })
     mdJson.push({ p: '==========================================================================' })
     mdJson.push({ p: '==================  Differences in files' })
+}
+
+function gitWebClientCommand(
+    repoUrl: string, fromTagBranchCommit: string, toTagBranchCommit: string, _secondRepoUrl?: string
+) {
+    if (fromTagBranchCommit.includes('/')) {
+        const fromTagBranchCommitParts = fromTagBranchCommit.split('/')
+        fromTagBranchCommit = fromTagBranchCommitParts[fromTagBranchCommitParts.length - 1]
+    }
+    if (toTagBranchCommit.includes('/')) {
+        const toTagBranchCommitParts = toTagBranchCommit.split('/')
+        toTagBranchCommit = toTagBranchCommitParts[toTagBranchCommitParts.length - 1]
+    }
+    return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
 }

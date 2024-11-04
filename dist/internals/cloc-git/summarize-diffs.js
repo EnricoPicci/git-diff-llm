@@ -34,7 +34,9 @@ function summarizeDiffs$(compareResults, languages, project, llmModel, executedC
 const promptForSummaryTemplate = `
 You are an expert developer with 10 years of experience. You are expert in many programming languages {{languages}}.
 You have to examine the changes that occurred to a Project from one version to the next and write a short summary of these changes.
-Do not add any judgement or opinion, just a summary of the changes.
+Do not add any judgement or opinion.
+Do not repeat the same information. Do not repeat a list of changes for each file.
+Provide a summary of the changes in the project.
 
 This is the list of the files which have been changed, a note on whether the file has been changed, removed, added or renamed, and a short summary of the changes in each file:
 

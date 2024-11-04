@@ -28,9 +28,10 @@ export type ClocGitDiffRec = {
 }
 export type ComparisonParams = {
     projectDir: string
+    url_to_repo: string
     from_tag_branch_commit: string
     to_tag_branch_commit: string
-    url_to_remote_repo?: string
+    url_to_second_repo?: string
     use_ssh?: boolean
 }
 export function comparisonResultFromClocDiffRelForProject$(
@@ -43,7 +44,7 @@ export function comparisonResultFromClocDiffRelForProject$(
         {
             from_tag_or_branch: comparisonParams.from_tag_branch_commit,
             to_tag_or_branch: comparisonParams.to_tag_branch_commit,
-            url_to_remote_repo: comparisonParams.url_to_remote_repo,
+            url_to_remote_repo: comparisonParams.url_to_second_repo,
             languages
         },
         executedCommands
