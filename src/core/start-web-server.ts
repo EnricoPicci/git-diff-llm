@@ -7,10 +7,12 @@ import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
 import { GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from '../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit';
-import { ComparisonParams, SecondRepoParams } from '../internals/cloc-git/cloc-diff-rel';
+import { ComparisonParams } from '../internals/cloc-git/cloc-diff-rel';
 import { readLinesObs } from 'observable-fs';
 import { concatMap, tap } from 'rxjs';
 import { MessageWriter } from '../internals/message-writer/message-writer';
+import { ComparisonEnd } from '../internals/git/git-diffs';
+import { error } from 'console';
 
 const app = express();
 const port = 3000;
@@ -145,8 +147,8 @@ export function startWebServer() {
     // add the remote
     const executedCommands: string[] = [];
     const addRemoteParams: AddRemoteParams = {
-      url_to_remote_repo: remoteUrl,
-      name_of_git_remote: remoteName,
+      url_to_repo: remoteUrl,
+      git_remote_name: remoteName,
     };
 
     addRemote$(tempDir, addRemoteParams, executedCommands).subscribe({
@@ -167,28 +169,60 @@ export function startWebServer() {
   });
 }
 
+const GitRemoteNameForSecondRepo = 'git-diff-llm'
 function launchGenerateReport(webSocket: ws.Server, data: any) {
+  // the client must provide these data - some properties must be undefined but this is the structure expected from the client
+  const projectDir = data.tempDir
+  const url_to_repo = data.url_to_repo
+  const from_tag_branch_commit = data.from_tag_branch_commit
+  const to_tag_branch_commit = data.to_tag_branch_commit
   const languages: string[] = data.languages.split(',');
-  const comparisonParams: ComparisonParams = {
-    projectDir: data.tempDir,
-    url_to_repo: data.url_to_repo,
-    from_tag_branch_commit: data.from_tag_branch_commit,
-    to_tag_branch_commit: data.to_tag_branch_commit,
-    use_ssh: data.use_ssh
-  };
-  if (data.url_to_second_repo) {
-    const second_repo_params: SecondRepoParams = {
-      url_to_repo: data.url_to_second_repo,
-      used_as_from_repo: data.second_repo_used_as_from_repo,
-      used_as_to_repo: data.second_repo_used_as_to_repo
-    }
-    comparisonParams.second_repo_params = second_repo_params;
+  const url_to_second_repo = data.url_to_second_repo
+  const is_second_repo_used_as_from_repo = data.is_second_repo_used_as_from_repo
+  const is_second_repo_used_as_to_repo = data.is_second_repo_used_as_to_repo
+  const use_ssh = data.use_ssh
+  const llmModel = data.llmModel
+
+  // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
+  // if no url_to_second_repo is sent
+  const from: ComparisonEnd = {
+    url_to_repo,
+    git_remote_name: 'origin',
+    tag_branch_commit: from_tag_branch_commit
   }
+  const to: ComparisonEnd = {
+    url_to_repo,
+    git_remote_name: 'origin',
+    tag_branch_commit: to_tag_branch_commit
+  }
+  // if url_to_second_repo is defined, it means that the client has specified a second repo to compare with
+  if (url_to_second_repo) {
+    if (is_second_repo_used_as_from_repo) {
+      from.url_to_repo = url_to_second_repo
+      from.git_remote_name = GitRemoteNameForSecondRepo
+    } else if (is_second_repo_used_as_to_repo) {
+      to.url_to_repo = url_to_second_repo
+      to.git_remote_name = GitRemoteNameForSecondRepo
+    } else {
+      const errMsg = `"url_to_second_repo" set but neither "is_url_to_second_repo_from" nor "is_url_to_second_repo_to" are set to true. 
+Data received:
+${JSON.stringify(data, null, 2)}`
+      throw error(errMsg)
+    }
+  }
+
+  const comparisonParams: ComparisonParams = {
+    projectDir,
+    url_to_repo,
+    from_tag_branch_commit: from,
+    to_tag_branch_commit: to,
+    use_ssh
+  };
   const inputParams: GenerateMdReportParams = {
     comparisonParams: comparisonParams,
     promptTemplates: data.promptTemplates,
-    outdir: data.tempDir,
-    llmModel: data.llmModel,
+    outdir: projectDir,
+    llmModel,
     languages
   }
   console.log('Generating report with params:', inputParams);

@@ -10,8 +10,8 @@ const convert_ssh_https_url_1 = require("./convert-ssh-https-url");
 exports.DefaultNameOfGitRemote = 'default_name_of_git_remote';
 // cd to project directory and add a remote to the project if the remote url is provided
 function addRemote$(projectDir, params, executedCommands) {
-    const baseRemoteName = params.name_of_git_remote ? params.name_of_git_remote : exports.DefaultNameOfGitRemote;
-    const url_to_remote_repo = params.url_to_remote_repo;
+    const baseRemoteName = params.git_remote_name ? params.git_remote_name : exports.DefaultNameOfGitRemote;
+    const url_to_remote_repo = params.url_to_repo;
     let commandIfRemoteExists = '';
     if (url_to_remote_repo) {
         // convert to ssh url if required (e.g. to avoid password prompts)
@@ -23,7 +23,7 @@ function addRemote$(projectDir, params, executedCommands) {
         commandIfRemoteExists = ` && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`;
     }
     const command = `cd ${projectDir} && git fetch --all --tags ${commandIfRemoteExists}`;
-    return (0, execute_command_1.executeCommandObs$)('cd to project directory and add base remote', command, executedCommands).pipe(
+    return (0, execute_command_1.executeCommandObs$)('cd to project directory and add remote', command, executedCommands).pipe(
     // this command can emit both on stderr and stdout
     // the notification on stderr is not an error, so we can ignore it
     // we can also ignore the notification on stdout

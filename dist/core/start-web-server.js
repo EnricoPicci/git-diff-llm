@@ -15,6 +15,7 @@ const git_remote_1 = require("../internals/git/git-remote");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit");
 const observable_fs_1 = require("observable-fs");
 const rxjs_1 = require("rxjs");
+const console_1 = require("console");
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
@@ -132,8 +133,8 @@ function startWebServer() {
         // add the remote
         const executedCommands = [];
         const addRemoteParams = {
-            url_to_remote_repo: remoteUrl,
-            name_of_git_remote: remoteName,
+            url_to_repo: remoteUrl,
+            git_remote_name: remoteName,
         };
         (0, git_remote_1.addRemote$)(tempDir, addRemoteParams, executedCommands).subscribe({
             next: () => {
@@ -151,28 +152,60 @@ function startWebServer() {
         console.log(`git-diff-llm server is running at http://localhost:${port}`);
     });
 }
+const GitRemoteNameForSecondRepo = 'git-diff-llm';
 function launchGenerateReport(webSocket, data) {
+    // the client must provide these data - some properties must be undefined but this is the structure expected from the client
+    const projectDir = data.tempDir;
+    const url_to_repo = data.url_to_repo;
+    const from_tag_branch_commit = data.from_tag_branch_commit;
+    const to_tag_branch_commit = data.to_tag_branch_commit;
     const languages = data.languages.split(',');
-    const comparisonParams = {
-        projectDir: data.tempDir,
-        url_to_repo: data.url_to_repo,
-        from_tag_branch_commit: data.from_tag_branch_commit,
-        to_tag_branch_commit: data.to_tag_branch_commit,
-        use_ssh: data.use_ssh
+    const url_to_second_repo = data.url_to_second_repo;
+    const is_second_repo_used_as_from_repo = data.is_second_repo_used_as_from_repo;
+    const is_second_repo_used_as_to_repo = data.is_second_repo_used_as_to_repo;
+    const use_ssh = data.use_ssh;
+    const llmModel = data.llmModel;
+    // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
+    // if no url_to_second_repo is sent
+    const from = {
+        url_to_repo,
+        git_remote_name: 'origin',
+        tag_branch_commit: from_tag_branch_commit
     };
-    if (data.url_to_second_repo) {
-        const second_repo_params = {
-            url_to_repo: data.url_to_second_repo,
-            used_as_from_repo: data.second_repo_used_as_from_repo,
-            used_as_to_repo: data.second_repo_used_as_to_repo
-        };
-        comparisonParams.second_repo_params = second_repo_params;
+    const to = {
+        url_to_repo,
+        git_remote_name: 'origin',
+        tag_branch_commit: to_tag_branch_commit
+    };
+    // if url_to_second_repo is defined, it means that the client has specified a second repo to compare with
+    if (url_to_second_repo) {
+        if (is_second_repo_used_as_from_repo) {
+            from.url_to_repo = url_to_second_repo;
+            from.git_remote_name = GitRemoteNameForSecondRepo;
+        }
+        else if (is_second_repo_used_as_to_repo) {
+            to.url_to_repo = url_to_second_repo;
+            to.git_remote_name = GitRemoteNameForSecondRepo;
+        }
+        else {
+            const errMsg = `"url_to_second_repo" set but neither "is_url_to_second_repo_from" nor "is_url_to_second_repo_to" are set to true. 
+Data received:
+${JSON.stringify(data, null, 2)}`;
+            throw (0, console_1.error)(errMsg);
+        }
     }
+    const comparisonParams = {
+        projectDir,
+        url_to_repo,
+        from_tag_branch_commit: from,
+        to_tag_branch_commit: to,
+        use_ssh
+    };
     const inputParams = {
         comparisonParams: comparisonParams,
         promptTemplates: data.promptTemplates,
-        outdir: data.tempDir,
-        llmModel: data.llmModel,
+        outdir: projectDir,
+        llmModel,
         languages
     };
     console.log('Generating report with params:', inputParams);

@@ -12,12 +12,23 @@ const llmModel = 'gpt-3.5-turbo';
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm';
 describe(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
-    it(`should return the diffs between 2 tags of the local repo`, (done) => {
+    it(`should return the diffs between 2 tags of the local repo
+        The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
+        const from = {
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'tags/second-tag',
-            to_tag_branch_commit: 'tags/first-tag',
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -35,12 +46,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between a branch and a tag of the local repo`, (done) => {
+    it(`should return the diffs between a branch and a tag of the local repo
+        The git diff should compare "refs/tags/first-tag vs origin/first-branch-on-upstream"`, (done) => {
+        const from = {
+            tag_branch_commit: 'first-branch-on-upstream',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'first-branch-on-upstream', // older branch
-            to_tag_branch_commit: 'tags/first-tag', // newer tag
+            from_tag_branch_commit: from, // older branch
+            to_tag_branch_commit: to, // newer tag
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -55,12 +77,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between 2 branches of the local repo`, (done) => {
+    it(`should return the diffs between 2 branches of the local repo
+        The git diff should compare "origin/second-branch-on-upstream vs origin/first-branch-on-upstream"`, (done) => {
+        const from = {
+            tag_branch_commit: 'first-branch-on-upstream',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'second-branch-on-upstream',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'first-branch-on-upstream',
-            to_tag_branch_commit: 'second-branch-on-upstream',
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -82,12 +115,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between a older commit and a newer branch of the local repo`, (done) => {
+    it(`should return the diffs between a older commit and a newer branch of the local repo
+        The git diff should compare "origin/second-branch-on-upstream vs 965e1e43ca3b1e834d1146f90e60bf6fb42ed88b"`, (done) => {
+        const from = {
+            tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'second-branch-on-upstream',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
-            to_tag_branch_commit: 'second-branch-on-upstream', // branch newer than the commit
+            from_tag_branch_commit: from, // older commit
+            to_tag_branch_commit: to, // branch newer than the commit
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -102,12 +146,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between a newer commit and an older branch of the local repo`, (done) => {
+    it(`should return the diffs between a newer commit and an older branch of the local repo
+        The git diff should compare "4fd71654b5d044e67c6fc1c1f0fa06155036152f vs origin/first-branch-on-upstream"`, (done) => {
+        const from = {
+            tag_branch_commit: 'first-branch-on-upstream',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: '4fd71654b5d044e67c6fc1c1f0fa06155036152f',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'first-branch-on-upstream', // branch older than the commit
-            to_tag_branch_commit: '4fd71654b5d044e67c6fc1c1f0fa06155036152f', // newer commit
+            from_tag_branch_commit: from, // branch older than the commit
+            to_tag_branch_commit: to, // newer commit
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -122,12 +177,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between 2 commits on the local repo`, (done) => {
+    it(`should return the diffs between 2 commits on the local repo
+        The git diff should compare "5e8d5278ec8fb203adfcca33d5bbc15fb626d71f vs 965e1e43ca3b1e834d1146f90e60bf6fb42ed88b"`, (done) => {
+        const from = {
+            tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: '5e8d5278ec8fb203adfcca33d5bbc15fb626d71f',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: '965e1e43ca3b1e834d1146f90e60bf6fb42ed88b', // older commit
-            to_tag_branch_commit: '5e8d5278ec8fb203adfcca33d5bbc15fb626d71f', // newer commit
+            from_tag_branch_commit: from, // older commit
+            to_tag_branch_commit: to, // newer commit
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -150,13 +216,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
     // the name of the forked repo is the same as the upstream repo but the owner is different
     // the owner of the upstream repo is EnricoPicci while the owner of the forked repo is git-diff-llm
     const url_to_remote_forked_repo = 'https://github.com/git-diff-llm/git-diff-llm'; // repo forked from the github.com/EnricoPicci/git-diff-llm
-    it(`should return the diffs between a tag of the local repo and a tag on the remote repo`, (done) => {
+    it(`should return the diffs between a tag of the local repo and a tag on the remote repo
+        The git diff should compare "refs/tags/first-tag-on-fork vs refs/tags/first-tag"`, (done) => {
+        const from = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'tags/first-tag-on-fork',
+            url_to_repo: url_to_remote_forked_repo,
+            git_remote_name: 'fork'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'tags/first-tag',
-            to_tag_branch_commit: 'tags/first-tag-on-fork',
-            url_to_second_repo: url_to_remote_forked_repo,
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -169,13 +245,23 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             complete: () => done()
         });
     }).timeout(100000);
-    it(`should return the diffs between a branch of the local repo and a branch on the remote repo`, (done) => {
+    it(`should return the diffs between a branch of the local repo and a branch on the remote repo
+        The git diff should compare "fork/first-branch-on-fork vs refs/tags/first-tag"`, (done) => {
+        const from = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'first-branch-on-fork',
+            url_to_repo: url_to_remote_forked_repo,
+            git_remote_name: 'fork'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'tags/first-tag',
-            to_tag_branch_commit: 'first-branch-on-fork',
-            url_to_second_repo: url_to_remote_forked_repo,
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
@@ -191,11 +277,21 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
 });
 describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
     it(`should produce a markdown report - the test just tests that function completes without errors`, (done) => {
+        const from = {
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
         const comparisonParams = {
             projectDir: './',
             url_to_repo: url_to_repo,
-            from_tag_branch_commit: 'tags/second-tag',
-            to_tag_branch_commit: 'tags/first-tag',
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
         };
         const outDir = './temp';
         const params = {

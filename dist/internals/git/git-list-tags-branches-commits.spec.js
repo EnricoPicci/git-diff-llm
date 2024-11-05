@@ -82,8 +82,8 @@ describe(`tests list tags, branches and commits on remote origin`, () => {
 describe(`tests list tags, branches and commits on remote base_test`, () => {
     const remote = 'base_test';
     const addRemoteParams = {
-        name_of_git_remote: remote,
-        url_to_remote_repo: 'https://github.com/EnricoPicci/git-diff-llm'
+        git_remote_name: remote,
+        url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm'
     };
     describe(`listTags$`, () => {
         it(`should return a list of tags for the 'base_test' remote of this repo of this project`, (done) => {

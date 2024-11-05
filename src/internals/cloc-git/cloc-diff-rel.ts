@@ -6,7 +6,7 @@ import { fromCsvObs } from "@enrico.piccinin/csv-tools"
 
 import { executeCommandNewProcessToLinesObs } from "../execute-command/execute-command"
 import { addRemote$ } from "../git/git-remote"
-import { toFromTagBranchCommitPrefix } from "../git/git-diffs"
+import { ComparisonEnd, comparisonEndString } from "../git/git-diffs"
 
 export type ClocGitDiffRec = {
     File: string
@@ -27,18 +27,11 @@ export type ClocGitDiffRec = {
     extension: string
 }
 
-export type SecondRepoParams = {
-    url_to_repo: string,
-    used_as_from_repo: boolean,
-    used_as_to_repo: boolean
-}
 export type ComparisonParams = {
     projectDir: string
-    url_to_repo: string
-    from_tag_branch_commit: string
-    to_tag_branch_commit: string
-    url_to_second_repo?: string
-    second_repo_params?: SecondRepoParams,
+    url_to_repo: string,
+    from_tag_branch_commit: ComparisonEnd,
+    to_tag_branch_commit: ComparisonEnd,
     use_ssh?: boolean
 }
 export function comparisonResultFromClocDiffRelForProject$(
@@ -48,12 +41,9 @@ export function comparisonResultFromClocDiffRelForProject$(
     const header = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed'
     return clocDiffRel$(
         projectDir,
-        {
-            from_tag_or_branch: comparisonParams.from_tag_branch_commit,
-            to_tag_or_branch: comparisonParams.to_tag_branch_commit,
-            url_to_remote_repo: comparisonParams.url_to_second_repo,
-            languages
-        },
+        comparisonParams.from_tag_branch_commit,
+        comparisonParams.to_tag_branch_commit,
+        languages,
         executedCommands
     ).pipe(
         filter(line => line.trim().length > 0),
@@ -88,32 +78,36 @@ export function comparisonResultFromClocDiffRelForProject$(
 // this stream is not safe in concurrent execution and therefore shouls NOT be called by operators that work concurrently
 // e.g. mergeMap
 function clocDiffRel$(
-    projectDir: string,
-    fromToParams: { from_tag_or_branch: string, to_tag_or_branch: string, url_to_remote_repo?: string, languages?: string[] },
-    executedCommands: string[]
+    projectDir: string,    
+    from_tag_branch_commit: ComparisonEnd,
+    to_tag_branch_commit: ComparisonEnd,
+    languages?: string[],
+    executedCommands: string[] = []
 ) {
     return addRemote$(
         projectDir,
-        fromToParams,
+        from_tag_branch_commit,
         executedCommands
     ).pipe(
+        concatMap(() => addRemote$(
+            projectDir,
+            to_tag_branch_commit,
+            executedCommands
+        )),
         concatMap(() => {
-            const to_tag_branch_commit = fromToParams.to_tag_or_branch
-            const from_tag_branch_commit = fromToParams.from_tag_or_branch
-            // `cloc --git-diff-rel --csv --by-file base/${upstream_repo_tag_or_branch} origin/${fork_tag_or_branch}`
+            const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
+            const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
             const command = `cloc`
-            const compareWithRemote = fromToParams.url_to_remote_repo ? true : false
-            const prefixes = toFromTagBranchCommitPrefix(to_tag_branch_commit, from_tag_branch_commit, compareWithRemote)
             const args = [
                 '--git-diff-rel',
                 '--csv',
                 '--by-file',
-                `${prefixes.fromTagBranchCommitPrefix}${from_tag_branch_commit}`,
-                `${prefixes.toTagBranchCommitPrefix}${to_tag_branch_commit}`
+                `${_to_tag_branch_commit}`,
+                `${_from_tag_branch_commit}`
             ]
 
-            if (fromToParams.languages && fromToParams.languages?.length > 0) {
-                const languagesString = fromToParams.languages.join(',');
+            if (languages && languages?.length > 0) {
+                const languagesString = languages.join(',');
                 args.push(`--include-lang=${languagesString}`);
             }
             const options = {

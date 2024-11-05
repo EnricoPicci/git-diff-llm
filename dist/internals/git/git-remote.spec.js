@@ -10,8 +10,8 @@ describe(`addRemote$`, () => {
         // use a unique remote name for the test
         const remote_name = 'remote_' + timestamp.toString();
         const addRemoteParams = {
-            url_to_remote_repo: 'https://github.com/git-diff-llm/git-diff-llm',
-            name_of_git_remote: remote_name
+            url_to_repo: 'https://github.com/git-diff-llm/git-diff-llm',
+            git_remote_name: remote_name
         };
         const executedCommands = [];
         (0, git_remote_1.addRemote$)(projectDir, addRemoteParams, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
@@ -34,8 +34,8 @@ describe(`addRemote$`, () => {
         // use a unique remote name for the test
         const remote_name = 'remote_' + timestamp.toString();
         const addRemoteParams = {
-            url_to_remote_repo: 'https://github.com/EnricoPicci/git-diff-llm',
-            name_of_git_remote: remote_name
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm',
+            git_remote_name: remote_name
         };
         const executedCommands = [];
         (0, git_remote_1.addRemote$)(projectDir, addRemoteParams, executedCommands).pipe((0, rxjs_1.concatMap)(() => {

@@ -2,67 +2,59 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai");
 const git_diffs_1 = require("./git-diffs");
-const git_remote_1 = require("./git-remote");
-describe(`toFromTagBranchCommitPrefix`, () => {
-    it(`should return the prefix when 2 tags are passed in as arguments`, () => {
-        const from_tag_branch_commit = 'tags/first-tag';
-        const to_tag_branch_commit = 'tags/tag-on-the-forked-repo';
-        const expected_from_tag_branch_commit_prefix = 'refs/';
-        const expected_to_tag_branch_commit_prefix = 'refs/';
-        let remote = true;
-        let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
-        remote = false;
-        resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
+describe(`tagBranchCommitPrefix`, () => {
+    it(`should return the prefix when a tag passed in as arguments`, () => {
+        const tag_branch_commit = 'tags/first-tag';
+        const gitRemoteName = 'any-name';
+        const expected_prefix = 'refs/';
+        const prefix = (0, git_diffs_1.tagBranchCommitPrefix)(tag_branch_commit, gitRemoteName);
+        (0, chai_1.expect)(prefix).equal(expected_prefix);
     });
-    it(`should return the prefix when 2 branches are passed in as arguments`, () => {
-        const from_tag_branch_commit = 'local-branch';
-        const to_tag_branch_commit = 'remote-branch';
-        let remote = true;
-        let expected_from_tag_branch_commit_prefix = 'origin/';
-        let expected_to_tag_branch_commit_prefix = `${git_remote_1.DefaultNameOfGitRemote}/`;
-        let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
-        remote = false;
-        expected_from_tag_branch_commit_prefix = 'origin/';
-        expected_to_tag_branch_commit_prefix = 'origin/';
-        resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
+    it(`should return the prefix when a branch is passed in as arguments`, () => {
+        const tag_branch_commit = 'any-branch';
+        const gitRemoteName = `any-name`;
+        let expected_prefix = `${gitRemoteName}/`;
+        let prefix = (0, git_diffs_1.tagBranchCommitPrefix)(tag_branch_commit, gitRemoteName);
+        (0, chai_1.expect)(prefix).equal(expected_prefix);
     });
-    it(`should return the prefix when 2 commits are passed in as arguments`, () => {
-        const from_tag_branch_commit = '535f140d6d9d3532e6f4018cd02ea5b4e83c8e39';
-        const to_tag_branch_commit = 'aae72b42ad2a4d6a66f787e7297df455c0a2dfb6';
-        const expected_from_tag_branch_commit_prefix = '';
-        const expected_to_tag_branch_commit_prefix = '';
-        let remote = true;
-        let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
-        remote = false;
-        resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
+    it(`should return the prefix when a commits is passed in as arguments`, () => {
+        const tag_branch_commit = '535f140d6d9d3532e6f4018cd02ea5b4e83c8e39';
+        const gitRemoteName = `any-name`;
+        const expected_prefix = '';
+        let prefix = (0, git_diffs_1.tagBranchCommitPrefix)(tag_branch_commit, gitRemoteName);
+        (0, chai_1.expect)(prefix).equal(expected_prefix);
     });
-    it(`should return the prefix when a commits and a branch are passed in as arguments`, () => {
-        const from_tag_branch_commit = '535f140d6d9d3532e6f4018cd02ea5b4e83c8e39';
-        const to_tag_branch_commit = 'a-branch';
-        let remote = true;
-        let expected_from_tag_branch_commit_prefix = '';
-        let expected_to_tag_branch_commit_prefix = `${git_remote_1.DefaultNameOfGitRemote}/`;
-        let resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
-        remote = false;
-        expected_from_tag_branch_commit_prefix = '';
-        expected_to_tag_branch_commit_prefix = 'origin/';
-        resp = (0, git_diffs_1.toFromTagBranchCommitPrefix)(to_tag_branch_commit, from_tag_branch_commit, remote);
-        (0, chai_1.expect)(resp.fromTagBranchCommitPrefix).equal(expected_from_tag_branch_commit_prefix);
-        (0, chai_1.expect)(resp.toTagBranchCommitPrefix).equal(expected_to_tag_branch_commit_prefix);
+});
+describe(`comparisonEndString`, () => {
+    it(`should return the string to use for comparison when a tag passed in as arguments`, () => {
+        const comparisonEnd = {
+            git_remote_name: 'any-name',
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo: 'any-url'
+        };
+        const expected_string = 'refs/tags/first-tag';
+        const comp_string = (0, git_diffs_1.comparisonEndString)(comparisonEnd);
+        (0, chai_1.expect)(comp_string).equal(expected_string);
+    });
+    it(`should return the prefix when a branch is passed in as arguments`, () => {
+        const comparisonEnd = {
+            git_remote_name: 'remote-name',
+            tag_branch_commit: 'any-branch',
+            url_to_repo: 'any-url'
+        };
+        const expected_string = `${comparisonEnd.git_remote_name}/${comparisonEnd.tag_branch_commit}`;
+        const comp_string = (0, git_diffs_1.comparisonEndString)(comparisonEnd);
+        (0, chai_1.expect)(comp_string).equal(expected_string);
+    });
+    it(`should return the prefix when a commits is passed in as arguments`, () => {
+        const commit = '535f140d6d9d3532e6f4018cd02ea5b4e83c8e39';
+        const comparisonEnd = {
+            git_remote_name: 'remote-name',
+            tag_branch_commit: commit,
+            url_to_repo: 'any-url'
+        };
+        const comp_string = (0, git_diffs_1.comparisonEndString)(comparisonEnd);
+        (0, chai_1.expect)(comp_string).equal(commit);
     });
 });
 //# sourceMappingURL=git-diffs.spec.js.map

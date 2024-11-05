@@ -10,8 +10,8 @@ describe(`addRemote$`, () => {
         const remote_name = 'remote_' + timestamp.toString()
 
         const addRemoteParams: AddRemoteParams = {
-            url_to_remote_repo: 'https://github.com/git-diff-llm/git-diff-llm',
-            name_of_git_remote: remote_name
+            url_to_repo: 'https://github.com/git-diff-llm/git-diff-llm',
+            git_remote_name: remote_name
         }
 
         const executedCommands: string[] = []
@@ -43,8 +43,8 @@ describe(`addRemote$`, () => {
         const remote_name = 'remote_' + timestamp.toString()
 
         const addRemoteParams: AddRemoteParams = {
-            url_to_remote_repo: 'https://github.com/EnricoPicci/git-diff-llm',
-            name_of_git_remote: remote_name
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm',
+            git_remote_name: remote_name
         }
 
         const executedCommands: string[] = []

@@ -1,30 +1,47 @@
 import { concatMap, reduce } from "rxjs"
 import { executeCommandNewProcessObs } from "../execute-command/execute-command"
-import { addRemote$, DefaultNameOfGitRemote } from "./git-remote"
+import { addRemote$, AddRemoteParams } from "./git-remote"
 import { isInGitCommitHashFormat } from "./git-commit-hash"
 
+export type ComparisonEnd = {
+    url_to_repo: string,
+    git_remote_name: string,
+    tag_branch_commit: string
+}
 export function gitDiff$(
     projectDir: string,
-    fromToParams: { from_tag_or_branch: string, to_tag_or_branch: string, url_to_remote_repo?: string },
+    from_tag_branch_commit: ComparisonEnd,
+    to_tag_branch_commit: ComparisonEnd,
     file: string,
     executedCommands: string[]
 ) {
+    const addRemoteParams_from: AddRemoteParams = {
+        url_to_repo: from_tag_branch_commit.url_to_repo,
+        git_remote_name: from_tag_branch_commit.git_remote_name
+    }
+    const addRemoteParams_to: AddRemoteParams = {
+        url_to_repo: to_tag_branch_commit.url_to_repo,
+        git_remote_name: to_tag_branch_commit.git_remote_name
+    }
     return addRemote$(
         projectDir,
-        fromToParams,
+        addRemoteParams_from,
         executedCommands
     ).pipe(
+        concatMap(() => addRemote$(
+            projectDir,
+            addRemoteParams_to,
+            executedCommands
+        )),
         concatMap(() => {
-            const to_tag_branch_commit = fromToParams.to_tag_or_branch
-            const from_tag_branch_commit = fromToParams.from_tag_or_branch
-            // `git diff base/${upstream_repo_tag_or_branch} origin/${fork_tag_or_branch} -- <File>`
+            const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
+            const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
             const command = `git`
-            const compareWithRemote = fromToParams.url_to_remote_repo ? true : false
-            const prefixes = toFromTagBranchCommitPrefix(to_tag_branch_commit, from_tag_branch_commit, compareWithRemote)
+            
             const args = [
                 'diff',
-                `${prefixes.toTagBranchCommitPrefix}${to_tag_branch_commit}`,
-                `${prefixes.fromTagBranchCommitPrefix}${from_tag_branch_commit}`,
+                `${_to_tag_branch_commit}`,
+                `${_from_tag_branch_commit}`,
                 '--',
                 file
             ]
@@ -43,21 +60,18 @@ export function gitDiff$(
     )
 }
 
-export function toFromTagBranchCommitPrefix(toTagBranchCommit: string, fromTagBranchCommit: string, compareWithRemote = false) {
-    const resp = {
-        toTagBranchCommitPrefix: tagBranchCommitPrefix(toTagBranchCommit, compareWithRemote),
-        fromTagBranchCommitPrefix: tagBranchCommitPrefix(fromTagBranchCommit)
-    }
-    return resp
+export function comparisonEndString(comparisonEnd: ComparisonEnd) {
+    const prefix = tagBranchCommitPrefix(comparisonEnd.tag_branch_commit, comparisonEnd.git_remote_name)
+    let _tag_branch_commit = comparisonEnd.tag_branch_commit
+    return `${prefix}${_tag_branch_commit}`
 }
 
-function tagBranchCommitPrefix(tagBranchCommit: string, compareWithRemote = false) {
+export function tagBranchCommitPrefix(tagBranchCommit: string, gitRemoteName: string) {
     if (tagBranchCommit.startsWith('tags/')) {
         return 'refs/'
     }
     if (isInGitCommitHashFormat(tagBranchCommit)) {
         return ''
     }
-    const base_or_origin_for_to_tagBranchCommit = compareWithRemote ? `${DefaultNameOfGitRemote}/` : 'origin/'
-    return base_or_origin_for_to_tagBranchCommit
+    return gitRemoteName + '/'
 }

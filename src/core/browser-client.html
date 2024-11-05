@@ -49,7 +49,30 @@
         <label for="repo-url">Repo URL:</label>
         <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm">
         <button type="button" onclick="cloneRepo()">Clone</button>
-    </form>    
+    </form>
+    
+    <div  id="compareRepoContainer"  style="display: none;">
+        <div>
+            <label for="compareRepo">Compare with other remote repo</label>
+            <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
+        </div>
+        <div id="remoteUrlContainer" style="display: none;">
+            <label for="secondRepoUrl">Project url:</label>
+            <input type="text" id="secondRepoUrl" name="secondRepoUrl">
+        </div>
+        <div id="secondRepoDirectionContainer" style="display: none;">
+            <label>Direction:</label>
+            <div>
+                <input type="radio" id="fromRepo" name="repoDirection" value="from" onchange="setSecondRepoDirection(this.value)">
+                <label for="fromRepo">From</label>
+            </div>
+            <div>
+                <input type="radio" id="toRepo" name="repoDirection" value="to" checked onchange="setSecondRepoDirection(this.value)">
+                <label for="toRepo">To</label>
+            </div>
+        </div>        
+        <button id="confirm" type="button" onclick="addSecondRepo()" style="display: none;">confirm</button>
+    </div>
 
     <div class="spinner" id="loadingSpinner"></div>
     
@@ -71,18 +94,6 @@
                 <select id="fromCommits" name="commits"></select>
             </div>
         </div>
-    </div>
-    
-    <div  id="compareRepoContainer"  style="display: none;">
-        <div>
-            <label for="compareRepo">Compare with other remote repo</label>
-            <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
-        </div>
-        <div id="remoteUrlContainer" style="display: none;">
-            <label for="secondRepoUrl">Project url:</label>
-            <input type="text" id="secondRepoUrl" name="secondRepoUrl">
-        </div>
-        <button id="confirm" type="button" onclick="addSecondRepo()" style="display: none;">confirm</button>
     </div>
 
     <div  id="toTagBranchCommit"  style="display: none;">
@@ -128,8 +139,9 @@
         let isFromTag = false;
         let isToTag = false;
         // second_repo_used_as_from_repo and second_repo_used_as_to_repo are global variables to store if the second repo is used as from or to repo
-        let second_repo_used_as_from_repo;
-        let second_repo_used_as_to_repo;
+        // the default is to use the second repo as the to repo
+        let is_second_repo_used_as_from_repo = false
+        let is_second_repo_used_as_to_repo = true;
 
         startWebsocketConnection();
 
@@ -203,14 +215,15 @@
             }
         }
         
-        async function populate_From_DropdownsAndSetupInterations() {
+        async function populate_From_DropdownsAndSetupInterations(gitRemote) {
             // Dropdown elements
             const tagsDropdown = document.getElementById('fromTags');
             const branchesDropdown = document.getElementById('fromBranches');
             const commitsDropdown = document.getElementById('fromCommits');
 
             // Initial population of dropdowns
-            const params = `?tempDir=${tempDir}`;
+            const remoteParam = gitRemote ? `&remote=${gitRemote}` : '';
+            const params = `?tempDir=${tempDir}${remoteParam}`;
             populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
             populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
             populateDropdown(commitsDropdown, `http://localhost:3000/api/v1/list-commits${params}`, 'commits');
@@ -296,17 +309,30 @@
             const compareRepoCheckbox = document.getElementById('compareRepo');
             const confirmButton = document.getElementById('confirm');
             const launchReportForm = document.getElementById('launchReport');
+            const secondRepoDirectionContainer = document.getElementById('secondRepoDirectionContainer');
             if (compareRepoCheckbox.checked) {
                 remoteUrlContainer.style.display = 'block';
-                toTagBranchCommitContainer.style.display = 'none';
+                // toTagBranchCommitContainer.style.display = 'none';
                 confirmButton.style.display = 'block';
-                launchReportForm.style.display = 'none';
+                // launchReportForm.style.display = 'none';
+                secondRepoDirectionContainer.style.display = 'block';
             } else {
                 remoteUrlContainer.style.display = 'none';
-                toTagBranchCommitContainer.style.display = 'block';
+                // toTagBranchCommitContainer.style.display = 'block';
                 confirmButton.style.display = 'none';
-                launchReportForm.style.display = 'block';
-                populate_To_DropdownsAndSetupInterations();
+                // launchReportForm.style.display = 'block';
+                secondRepoDirectionContainer.style.display = 'none';
+                // populate_To_DropdownsAndSetupInterations();
+            }
+        }
+        
+        function setSecondRepoDirection(value) {
+            if (value === 'from') {
+                is_second_repo_used_as_from_repo = true;
+                is_second_repo_used_as_to_repo = false;
+            } else if (value === 'to') {
+                is_second_repo_used_as_from_repo = false;
+                is_second_repo_used_as_to_repo = true;
             }
         }
 
@@ -327,13 +353,18 @@
                     body: JSON.stringify(_body)
                 });
                 const data = await response.json();
-                await populate_To_DropdownsAndSetupInterations(remoteName);
+                if (is_second_repo_used_as_from_repo) {
+                    await populate_From_DropdownsAndSetupInterations(remoteName);
+                    await populate_To_DropdownsAndSetupInterations();
+                }
+                if (is_second_repo_used_as_to_repo) {
+                    await populate_To_DropdownsAndSetupInterations(remoteName);
+                    await populate_From_DropdownsAndSetupInterations();
+                }
                 const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
                 toTagBranchCommitContainer.style.display = 'block';
                 const launchReportForm = document.getElementById('launchReport');
                 launchReportForm.style.display = 'block';
-                second_repo_used_as_from_repo = false;
-                second_repo_used_as_to_repo = true;
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -365,8 +396,8 @@
                 from_tag_branch_commit,
                 to_tag_branch_commit,
                 url_to_second_repo: document.getElementById('secondRepoUrl').value,
-                second_repo_used_as_from_repo,
-                second_repo_used_as_to_repo,
+                is_second_repo_used_as_from_repo,
+                is_second_repo_used_as_to_repo,
                 use_ssh: false,
                 promptTemplates: null,
                 outdir: tempDir,

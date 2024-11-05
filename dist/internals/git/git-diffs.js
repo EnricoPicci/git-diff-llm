@@ -1,23 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.gitDiff$ = gitDiff$;
-exports.toFromTagBranchCommitPrefix = toFromTagBranchCommitPrefix;
+exports.comparisonEndString = comparisonEndString;
+exports.tagBranchCommitPrefix = tagBranchCommitPrefix;
 const rxjs_1 = require("rxjs");
 const execute_command_1 = require("../execute-command/execute-command");
 const git_remote_1 = require("./git-remote");
 const git_commit_hash_1 = require("./git-commit-hash");
-function gitDiff$(projectDir, fromToParams, file, executedCommands) {
-    return (0, git_remote_1.addRemote$)(projectDir, fromToParams, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
-        const to_tag_branch_commit = fromToParams.to_tag_or_branch;
-        const from_tag_branch_commit = fromToParams.from_tag_or_branch;
-        // `git diff base/${upstream_repo_tag_or_branch} origin/${fork_tag_or_branch} -- <File>`
+function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, executedCommands) {
+    const addRemoteParams_from = {
+        url_to_repo: from_tag_branch_commit.url_to_repo,
+        git_remote_name: from_tag_branch_commit.git_remote_name
+    };
+    const addRemoteParams_to = {
+        url_to_repo: to_tag_branch_commit.url_to_repo,
+        git_remote_name: to_tag_branch_commit.git_remote_name
+    };
+    return (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_from, executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_to, executedCommands)), (0, rxjs_1.concatMap)(() => {
+        const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);
+        const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit);
         const command = `git`;
-        const compareWithRemote = fromToParams.url_to_remote_repo ? true : false;
-        const prefixes = toFromTagBranchCommitPrefix(to_tag_branch_commit, from_tag_branch_commit, compareWithRemote);
         const args = [
             'diff',
-            `${prefixes.toTagBranchCommitPrefix}${to_tag_branch_commit}`,
-            `${prefixes.fromTagBranchCommitPrefix}${from_tag_branch_commit}`,
+            `${_to_tag_branch_commit}`,
+            `${_from_tag_branch_commit}`,
             '--',
             file
         ];
@@ -30,21 +36,18 @@ function gitDiff$(projectDir, fromToParams, file, executedCommands) {
     // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
     (0, rxjs_1.reduce)((acc, curr) => acc + curr, ''));
 }
-function toFromTagBranchCommitPrefix(toTagBranchCommit, fromTagBranchCommit, compareWithRemote = false) {
-    const resp = {
-        toTagBranchCommitPrefix: tagBranchCommitPrefix(toTagBranchCommit, compareWithRemote),
-        fromTagBranchCommitPrefix: tagBranchCommitPrefix(fromTagBranchCommit)
-    };
-    return resp;
+function comparisonEndString(comparisonEnd) {
+    const prefix = tagBranchCommitPrefix(comparisonEnd.tag_branch_commit, comparisonEnd.git_remote_name);
+    let _tag_branch_commit = comparisonEnd.tag_branch_commit;
+    return `${prefix}${_tag_branch_commit}`;
 }
-function tagBranchCommitPrefix(tagBranchCommit, compareWithRemote = false) {
+function tagBranchCommitPrefix(tagBranchCommit, gitRemoteName) {
     if (tagBranchCommit.startsWith('tags/')) {
         return 'refs/';
     }
     if ((0, git_commit_hash_1.isInGitCommitHashFormat)(tagBranchCommit)) {
         return '';
     }
-    const base_or_origin_for_to_tagBranchCommit = compareWithRemote ? `${git_remote_1.DefaultNameOfGitRemote}/` : 'origin/';
-    return base_or_origin_for_to_tagBranchCommit;
+    return gitRemoteName + '/';
 }
 //# sourceMappingURL=git-diffs.js.map
