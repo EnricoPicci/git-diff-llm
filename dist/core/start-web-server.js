@@ -9,6 +9,7 @@ const http_1 = __importDefault(require("http"));
 const express_1 = __importDefault(require("express"));
 const ws_1 = __importDefault(require("ws"));
 const cors_1 = __importDefault(require("cors"));
+const archiver_1 = __importDefault(require("archiver"));
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
 const git_remote_1 = require("../internals/git/git-remote");
@@ -16,12 +17,14 @@ const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc
 const observable_fs_1 = require("observable-fs");
 const rxjs_1 = require("rxjs");
 const console_1 = require("console");
+const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
 const wss = new ws_1.default.Server({ server });
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+const outputDirName = 'output';
 // Read the version from package.json
 const packageJson = require('../../package.json');
 const version = packageJson.version;
@@ -147,6 +150,39 @@ function startWebServer() {
             },
         });
     });
+    app.get('/api/v1/download-output', (req, res) => {
+        const tempDir = req.query.tempDir;
+        // Sanitize the dirName to prevent directory traversal attacks
+        const sanitizedDirName = path_1.default.basename(tempDir); // Extract only the directory name
+        const outputDir = path_1.default.join(sanitizedDirName, outputDirName);
+        if (!fs_1.default.existsSync(outputDir)) {
+            res.status(404).send('Output directory not found: ' + outputDir);
+            return;
+        }
+        const zipFileName = `${outputDir}.zip`;
+        const output = fs_1.default.createWriteStream(zipFileName);
+        const archive = (0, archiver_1.default)('zip', {
+            zlib: { level: 9 }, // Set the compression level
+        });
+        output.on('close', () => {
+            res.download(zipFileName, (err) => {
+                if (err) {
+                    console.error(`Error sending zip file: ${err}`);
+                    res.status(500).send('Error sending zip file');
+                }
+                else if (fs_1.default.existsSync(zipFileName)) {
+                    fs_1.default.unlinkSync(zipFileName); // Delete the zip file after sending
+                }
+            });
+        });
+        archive.on('error', (err) => {
+            console.error(`Error creating zip file: ${err}`);
+            res.status(500).send('Error creating zip file');
+        });
+        archive.pipe(output);
+        archive.directory(outputDir, false);
+        archive.finalize();
+    });
     // Use server.listen instead of app.listen to allow WebSocket connections
     server.listen(port, () => {
         console.log(`git-diff-llm server is running at http://localhost:${port}`);
@@ -204,7 +240,7 @@ ${JSON.stringify(data, null, 2)}`;
     const inputParams = {
         comparisonParams: comparisonParams,
         promptTemplates: data.promptTemplates,
-        outdir: projectDir,
+        outdir: path_1.default.join(projectDir, outputDirName),
         llmModel,
         languages
     };
@@ -232,7 +268,7 @@ ${JSON.stringify(data, null, 2)}`;
             webSocket.clients.forEach(client => {
                 client.send(JSON.stringify({ messageId: 'error', data: err }));
             });
-        }
+        },
     });
 }
 // npm run tsc && node dist/lib/command.js

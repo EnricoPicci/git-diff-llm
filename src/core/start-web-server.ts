@@ -3,6 +3,8 @@ import http from 'http';
 import express, { Request, Response } from 'express';
 import ws from 'ws';
 import cors from 'cors';
+import archiver from 'archiver';
+
 import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
@@ -13,6 +15,7 @@ import { concatMap, tap } from 'rxjs';
 import { MessageWriter } from '../internals/message-writer/message-writer';
 import { ComparisonEnd } from '../internals/git/git-diffs';
 import { error } from 'console';
+import path from 'path';
 
 const app = express();
 const port = 3000;
@@ -21,6 +24,8 @@ const wss = new ws.Server({ server });
 
 app.use(cors());
 app.use(express.json());
+
+const outputDirName = 'output';
 
 // Read the version from package.json
 const packageJson = require('../../package.json');
@@ -162,6 +167,44 @@ export function startWebServer() {
       },
     });
   });
+  
+  app.get('/api/v1/download-output', (req: Request, res: Response) => {
+    const tempDir = req.query.tempDir as string;
+
+    // Sanitize the dirName to prevent directory traversal attacks
+    const sanitizedDirName = path.basename(tempDir); // Extract only the directory name
+    const outputDir = path.join(sanitizedDirName, outputDirName);
+    if (!fs.existsSync(outputDir)) {
+      res.status(404).send('Output directory not found: ' + outputDir);
+      return
+    }
+  
+    const zipFileName = `${outputDir}.zip`;
+    const output = fs.createWriteStream(zipFileName);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }, // Set the compression level
+    });
+
+    output.on('close', () => {
+      res.download(zipFileName, (err) => {
+        if (err) {
+          console.error(`Error sending zip file: ${err}`);
+          res.status(500).send('Error sending zip file');
+        } else if (fs.existsSync(zipFileName)) {
+          fs.unlinkSync(zipFileName); // Delete the zip file after sending
+        }
+      });
+    });
+  
+    archive.on('error', (err) => {
+      console.error(`Error creating zip file: ${err}`);
+      res.status(500).send('Error creating zip file');
+    });
+  
+    archive.pipe(output);
+    archive.directory(outputDir, false);
+    archive.finalize();
+  });
 
   // Use server.listen instead of app.listen to allow WebSocket connections
   server.listen(port, () => {
@@ -221,7 +264,7 @@ ${JSON.stringify(data, null, 2)}`
   const inputParams: GenerateMdReportParams = {
     comparisonParams: comparisonParams,
     promptTemplates: data.promptTemplates,
-    outdir: projectDir,
+    outdir: path.join(projectDir, outputDirName),
     llmModel,
     languages
   }
@@ -252,7 +295,7 @@ ${JSON.stringify(data, null, 2)}`
         webSocket.clients.forEach(client => {
           client.send(JSON.stringify({ messageId: 'error', data: err }));
         });
-      }
+      },
     });
 }
 
