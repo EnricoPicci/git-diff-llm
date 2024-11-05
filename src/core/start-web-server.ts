@@ -1,21 +1,22 @@
 import fs from 'fs';
+import path from 'path';
 import http from 'http';
 import express, { Request, Response } from 'express';
 import ws from 'ws';
 import cors from 'cors';
 import archiver from 'archiver';
 
+import { concatMap } from 'rxjs';
+
+import { readLinesObs } from 'observable-fs';
+
 import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
 import { GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from '../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit';
 import { ComparisonParams } from '../internals/cloc-git/cloc-diff-rel';
-import { readLinesObs } from 'observable-fs';
-import { concatMap, tap } from 'rxjs';
 import { MessageWriter } from '../internals/message-writer/message-writer';
 import { ComparisonEnd } from '../internals/git/git-diffs';
-import { error } from 'console';
-import path from 'path';
 
 const app = express();
 const port = 3000;
@@ -250,7 +251,7 @@ function launchGenerateReport(webSocket: ws.Server, data: any) {
       const errMsg = `"url_to_second_repo" set but neither "is_url_to_second_repo_from" nor "is_url_to_second_repo_to" are set to true. 
 Data received:
 ${JSON.stringify(data, null, 2)}`
-      throw error(errMsg)
+      throw errMsg
     }
   }
 
@@ -281,14 +282,14 @@ ${JSON.stringify(data, null, 2)}`
     concatMap(({ markdownFilePath }) => { 
       return readLinesObs(markdownFilePath)
     }),
-    tap({
-      next: lines => {
-        const mdContent = lines.join('\n');
-        webSocket.clients.forEach(client => {
-          client.send(JSON.stringify({ messageId: 'report-generated', mdReport: mdContent }));
-        });
-      }
-    })
+    // tap({
+    //   next: lines => {
+    //     const mdContent = lines.join('\n');
+    //     webSocket.clients.forEach(client => {
+    //       client.send(JSON.stringify({ messageId: 'report-generated', mdReport: mdContent }));
+    //     });
+    //   }
+    // })
   ).subscribe({
       error: (err) => {
         console.error(`Error generating report: ${err}`);

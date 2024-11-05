@@ -56,7 +56,7 @@ function explainGitDiffs$(explanationInput, promptTemplates, llmModel, executedC
         diffs: explanationInput.diffLines,
     };
     const prompt = (0, prompt_templates_1.fillPromptTemplateExplainDiff)(promptTemplate, promptData);
-    const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath}`;
+    const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath} with prompt:\n`;
     const msg = (0, message_writer_1.newInfoMessage)(msgText);
     messageWriter.write(msg);
     return (0, openai_1.getFullCompletion$)(prompt, llmModel).pipe((0, rxjs_1.catchError)(err => {

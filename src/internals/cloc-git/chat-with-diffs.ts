@@ -1,15 +1,15 @@
 import { catchError, of } from "rxjs";
 import { FileDiffWithExplanation } from "./cloc-git-diff-rel-between-tag-branch-commit";
 import { getFullCompletion$ } from "../openai/openai";
-import { fillPromptTemplateSummarizeDiffs, getDefaultPromptTemplates, SummarizeDiffsPromptTemplateData } from "../prompt-templates/prompt-templates";
+import { fillPromptTemplateSummarizeDiffs, SummarizeDiffsPromptTemplateData as DiffsPromptTemplateData } from "../prompt-templates/prompt-templates";
 import { DefaultMessageWriter, MessageWriter, newInfoMessage } from "../message-writer/message-writer";
 
-export function summarizeDiffs$(
+export function chatWithDiffs$(
     compareResults: FileDiffWithExplanation[],
     languages: string[] | undefined,
     project: string,
     llmModel: string,
-    promptForSummaryTemplate:  string,
+    promptTemplate:  string,
     executedCommands: string[],
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
@@ -22,31 +22,28 @@ export function summarizeDiffs$(
         diffs.push('---------------------------------------------------------------------------------------------')
         diffs.push('')
     })
-    const msgDiffsWithExplanation = newInfoMessage(diffs)
-    msgDiffsWithExplanation.id = 'diffs-with-explanation'
-    messageWriter.write(msgDiffsWithExplanation)
 
     let languageSpecilization = ''
     if (languages) {
         languageSpecilization = languages.join(', ')
     }
-    const templateData: SummarizeDiffsPromptTemplateData = {
+    const templateData: DiffsPromptTemplateData = {
         languages: languageSpecilization,
         diffs: diffs.join('\n')
     }
 
-    const _promptForSummaryTemplate = promptForSummaryTemplate || getDefaultPromptTemplates().summary.prompt
-    const promptForSummary = fillPromptTemplateSummarizeDiffs(_promptForSummaryTemplate, templateData)
+    const _promptTemplate = promptTemplate
+    const promptForChat = fillPromptTemplateSummarizeDiffs(_promptTemplate, templateData)
 
-    const msgText = `Calling LLM to summarize all diffs for the project ${project}`
+    const msgText = `Chat with LLM with all diffs for the project ${project}`
     const msg = newInfoMessage(msgText)
     messageWriter.write(msg)
-    return getFullCompletion$(promptForSummary, llmModel).pipe(
+    return getFullCompletion$(promptForChat, llmModel).pipe(
         catchError(err => {
-            const errMsg = `===>>> Error calling LLM to summarize all diffs for the project ${project} - ${err.message}`
+            const errMsg = `===>>> Error chatting with LLM with all diffs for the project ${project} - ${err.message}`
             console.log(errMsg)
             executedCommands.push(errMsg)
-            return of('error in calling LLM to explain diffs')
+            return of('error in chatting with LLM about diffs')
         }),
     )
 }

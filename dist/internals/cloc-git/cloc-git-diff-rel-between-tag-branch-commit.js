@@ -127,6 +127,15 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
             writeExecutedCommands$(executedCommands, projectDirName, outExecutedCommandsFile),
         ]).pipe((0, rxjs_1.map)(([markdownFilePath, executedCommandFilePath]) => {
             return { markdownFilePath, executedCommandFilePath };
+        }), (0, rxjs_1.concatMap)(({ markdownFilePath, executedCommandFilePath }) => {
+            return (0, observable_fs_1.readLinesObs)(markdownFilePath).pipe((0, rxjs_1.tap)({
+                next: lines => {
+                    const mdContent = lines.join('\n');
+                    const msg = (0, message_writer_1.newInfoMessage)(mdContent);
+                    msg.id = 'report-generated';
+                    messageWriter.write(msg);
+                }
+            }), (0, rxjs_1.map)(() => ({ markdownFilePath, executedCommandFilePath })));
         }));
     }));
 }

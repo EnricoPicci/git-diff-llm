@@ -5,19 +5,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startWebServer = startWebServer;
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const http_1 = __importDefault(require("http"));
 const express_1 = __importDefault(require("express"));
 const ws_1 = __importDefault(require("ws"));
 const cors_1 = __importDefault(require("cors"));
 const archiver_1 = __importDefault(require("archiver"));
+const rxjs_1 = require("rxjs");
+const observable_fs_1 = require("observable-fs");
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
 const git_remote_1 = require("../internals/git/git-remote");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit");
-const observable_fs_1 = require("observable-fs");
-const rxjs_1 = require("rxjs");
-const console_1 = require("console");
-const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
@@ -227,7 +226,7 @@ function launchGenerateReport(webSocket, data) {
             const errMsg = `"url_to_second_repo" set but neither "is_url_to_second_repo_from" nor "is_url_to_second_repo_to" are set to true. 
 Data received:
 ${JSON.stringify(data, null, 2)}`;
-            throw (0, console_1.error)(errMsg);
+            throw errMsg;
         }
     }
     const comparisonParams = {
@@ -255,13 +254,6 @@ ${JSON.stringify(data, null, 2)}`;
     };
     (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams, messageWriterToRemoteClient).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
         return (0, observable_fs_1.readLinesObs)(markdownFilePath);
-    }), (0, rxjs_1.tap)({
-        next: lines => {
-            const mdContent = lines.join('\n');
-            webSocket.clients.forEach(client => {
-                client.send(JSON.stringify({ messageId: 'report-generated', mdReport: mdContent }));
-            });
-        }
     })).subscribe({
         error: (err) => {
             console.error(`Error generating report: ${err}`);

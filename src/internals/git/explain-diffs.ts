@@ -68,7 +68,7 @@ export function explainGitDiffs$<T>(
         diffs: explanationInput.diffLines,
     }
     const prompt = fillPromptTemplateExplainDiff(promptTemplate, promptData)
-    const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath}`
+    const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath} with prompt:\n`
     const msg = newInfoMessage(msgText)
     messageWriter.write(msg)
     return getFullCompletion$(prompt, llmModel).pipe(
