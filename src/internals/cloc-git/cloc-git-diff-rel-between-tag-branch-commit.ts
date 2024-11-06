@@ -228,19 +228,6 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
                 map(([markdownFilePath, executedCommandFilePath]) => {
                     return { markdownFilePath, executedCommandFilePath }
                 }),
-                concatMap(({ markdownFilePath, executedCommandFilePath }) => { 
-                    return readLinesObs(markdownFilePath).pipe(
-                        tap({
-                            next: lines => {
-                                const mdContent = lines.join('\n');
-                                const msg = newInfoMessage(mdContent)
-                                msg.id = 'report-generated'
-                                messageWriter.write(msg)
-                            }
-                        }),
-                        map(() => ({ markdownFilePath, executedCommandFilePath }))
-                    )
-                }),
             )
         }),
     )
