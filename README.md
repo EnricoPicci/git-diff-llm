@@ -16,6 +16,9 @@ The `src` folder has the following structure:
 -   `core` folder containing `exec-command.ts` which implements the logic to execute the command
 -   `internals` folder containing the internals of the logic of the command
 
+## Current known limitations
+- The tool can not generate the correct "Git Web Client Command" when comparing an upstream repo with a forked repo in GitLab
+
 ## test
 
 Run the tests using the command

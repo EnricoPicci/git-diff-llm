@@ -48,10 +48,10 @@
     <form>
         <label for="repo-url">Repo URL:</label>
         <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm">
-        <button type="button" onclick="cloneRepo()">Clone</button>
         <div>
             <input type="checkbox" id="use-ssh-checkbox" name="use-ssh-checkbox" onchange="setSsh()">
             <label for="use-ssh-checkbox">Use SSH</label>
+            <button type="button" onclick="cloneRepo()">Clone</button>
         </div>
     </form>
     
@@ -408,6 +408,9 @@
         }
 
         function generateReport() {
+            const reportContainer = document.getElementById('report');
+            reportContainer.innerHTML = '';
+            
             const action = 'generate-report';
 
             const url_to_repo = document.getElementById('repo-url').value;

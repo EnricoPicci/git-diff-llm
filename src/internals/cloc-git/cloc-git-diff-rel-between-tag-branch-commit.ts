@@ -111,6 +111,9 @@ export function allDiffsForProjectWithExplanation$(
     messageWriter: MessageWriter = DefaultMessageWriter,
     concurrentLLMCalls = 5
 ): Observable<FileDiffWithExplanation> {
+    const startingMsg = newInfoMessage(`Starting all diffs with explanations`)
+    messageWriter.write(startingMsg)
+
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
         mergeMap(comparisonResult => {
@@ -348,14 +351,16 @@ function gitWebClientCommand(
     let fromTagBranchCommit = from_tag_branch_commit.tag_branch_commit
     if (from_tag_branch_commit.url_to_repo !== repoUrl) {
         const fromUrlParts = from_tag_branch_commit.url_to_repo.split('/')
+        const repoOwner = fromUrlParts[fromUrlParts.length - 2]
         const urlRepoName = fromUrlParts[fromUrlParts.length - 1]
-        fromTagBranchCommit = `${urlRepoName}:${urlRepoName}:${fromTagBranchCommit}`
+        fromTagBranchCommit = `${repoOwner}:${urlRepoName}:${fromTagBranchCommit}`
     }
     let toTagBranchCommit = to_tag_branch_commit.tag_branch_commit
     if (to_tag_branch_commit.url_to_repo !== repoUrl) {
         const toUrlParts = to_tag_branch_commit.url_to_repo.split('/')
+        const repoOwner = toUrlParts[toUrlParts.length - 2]
         const urlRepoName = toUrlParts[toUrlParts.length - 1]
-        toTagBranchCommit = `${urlRepoName}:${urlRepoName}:${toTagBranchCommit}`
+        toTagBranchCommit = `${repoOwner}:${urlRepoName}:${toTagBranchCommit}`
     }
     return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
 }

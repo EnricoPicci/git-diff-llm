@@ -67,6 +67,8 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
     }));
 }
 function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages, messageWriter = message_writer_1.DefaultMessageWriter, concurrentLLMCalls = 5) {
+    const startingMsg = (0, message_writer_1.newInfoMessage)(`Starting all diffs with explanations`);
+    messageWriter.write(startingMsg);
     const startExecTime = new Date();
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
         return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter);
@@ -204,14 +206,16 @@ function gitWebClientCommand(repoUrl, from_tag_branch_commit, to_tag_branch_comm
     let fromTagBranchCommit = from_tag_branch_commit.tag_branch_commit;
     if (from_tag_branch_commit.url_to_repo !== repoUrl) {
         const fromUrlParts = from_tag_branch_commit.url_to_repo.split('/');
+        const repoOwner = fromUrlParts[fromUrlParts.length - 2];
         const urlRepoName = fromUrlParts[fromUrlParts.length - 1];
-        fromTagBranchCommit = `${urlRepoName}:${urlRepoName}:${fromTagBranchCommit}`;
+        fromTagBranchCommit = `${repoOwner}:${urlRepoName}:${fromTagBranchCommit}`;
     }
     let toTagBranchCommit = to_tag_branch_commit.tag_branch_commit;
     if (to_tag_branch_commit.url_to_repo !== repoUrl) {
         const toUrlParts = to_tag_branch_commit.url_to_repo.split('/');
+        const repoOwner = toUrlParts[toUrlParts.length - 2];
         const urlRepoName = toUrlParts[toUrlParts.length - 1];
-        toTagBranchCommit = `${urlRepoName}:${urlRepoName}:${toTagBranchCommit}`;
+        toTagBranchCommit = `${repoOwner}:${urlRepoName}:${toTagBranchCommit}`;
     }
     return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
 }
