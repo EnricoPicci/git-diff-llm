@@ -5,7 +5,7 @@ import { convertHttpsToSshUrl } from "./convert-ssh-https-url"
 export const DefaultNameOfGitRemote = 'default_name_of_git_remote'
 export type AddRemoteParams = {
     url_to_repo?: string
-    git_remote_name?: string
+    git_remote_name?: string,
     use_ssh?: boolean
 }
 // cd to project directory and add a remote to the project if the remote url is provided
@@ -17,9 +17,9 @@ export function addRemote$(
     const baseRemoteName = params.git_remote_name ? params.git_remote_name : DefaultNameOfGitRemote
     const url_to_remote_repo = params.url_to_repo
     let commandIfRemoteExists = ''
+    let remoteUrl = url_to_remote_repo
     if (url_to_remote_repo) {
         // convert to ssh url if required (e.g. to avoid password prompts)
-        let remoteUrl = url_to_remote_repo
         if (params.use_ssh) {
             remoteUrl = convertHttpsToSshUrl(url_to_remote_repo)
         }
@@ -38,7 +38,7 @@ export function addRemote$(
             // if the remote base already exists, we can ignore the error
             if (err.message.includes(`remote ${baseRemoteName} already exists`)) {
                 // remove the remote if it already exists and add it again with the new url
-                const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${url_to_remote_repo} && git fetch ${baseRemoteName} --tags`
+                const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`
                 return executeCommandObs$('remove remote and add it again with new url', command, executedCommands).pipe(
                     last()
                 )

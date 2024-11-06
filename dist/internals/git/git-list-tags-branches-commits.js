@@ -24,6 +24,10 @@ function listTags$(gitRepoPath, remote = 'origin') {
     return (0, execute_command_1.executeCommandObs$)('read tags', command).pipe((0, rxjs_1.map)((out) => {
         return out.split('\n').filter((line) => line.trim().length > 0);
     }), (0, rxjs_1.map)((lines) => {
+        // if 'no message on stdout or stderr' is the first line, then return an empty array
+        if (lines[0].includes('no message on stdout or stderr')) {
+            return [];
+        }
         return lines.map((line) => {
             return line.split('\t')[1].replace('refs/tags/', '');
         });

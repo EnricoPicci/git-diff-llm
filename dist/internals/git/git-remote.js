@@ -13,9 +13,9 @@ function addRemote$(projectDir, params, executedCommands) {
     const baseRemoteName = params.git_remote_name ? params.git_remote_name : exports.DefaultNameOfGitRemote;
     const url_to_remote_repo = params.url_to_repo;
     let commandIfRemoteExists = '';
+    let remoteUrl = url_to_remote_repo;
     if (url_to_remote_repo) {
         // convert to ssh url if required (e.g. to avoid password prompts)
-        let remoteUrl = url_to_remote_repo;
         if (params.use_ssh) {
             remoteUrl = (0, convert_ssh_https_url_1.convertHttpsToSshUrl)(url_to_remote_repo);
         }
@@ -32,7 +32,7 @@ function addRemote$(projectDir, params, executedCommands) {
         // if the remote base already exists, we can ignore the error
         if (err.message.includes(`remote ${baseRemoteName} already exists`)) {
             // remove the remote if it already exists and add it again with the new url
-            const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${url_to_remote_repo} && git fetch ${baseRemoteName} --tags`;
+            const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`;
             return (0, execute_command_1.executeCommandObs$)('remove remote and add it again with new url', command, executedCommands).pipe((0, rxjs_1.last)());
         }
         throw (err);

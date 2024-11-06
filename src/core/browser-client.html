@@ -49,6 +49,10 @@
         <label for="repo-url">Repo URL:</label>
         <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm">
         <button type="button" onclick="cloneRepo()">Clone</button>
+        <div>
+            <input type="checkbox" id="use-ssh-checkbox" name="use-ssh-checkbox" onchange="setSsh()">
+            <label for="use-ssh-checkbox">Use SSH</label>
+        </div>
     </form>
     
     <div  id="compareRepoContainer"  style="display: none;">
@@ -149,6 +153,8 @@
         let is_second_repo_used_as_to_repo = true;
         // diffsWithExplanation is a global variable to store the diffs with explanation produced by the server
         let diffsWithExplanation = null;
+        // use_ssh is a global variable to store if the user wants to use SSH to clone the repo
+        let use_ssh = false;
 
         startWebsocketConnection();
 
@@ -192,6 +198,11 @@
             }
         }
 
+        function setSsh() {
+            const sshCheckbox = document.getElementById('use-ssh-checkbox');
+            use_ssh = sshCheckbox.checked;
+        }
+
         async function cloneRepo() {
             const repoUrl = document.getElementById('repo-url').value;
             const loadingSpinner = document.getElementById('loadingSpinner');
@@ -202,7 +213,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ repoUrl })
+                    body: JSON.stringify({ repoUrl, use_ssh })
                 });
                 const data = await response.json();
                 tempDir = data.tempDir;
@@ -352,7 +363,7 @@
             // the remote name is the last part of the URL
             const remoteUrlParts = secondRepoUrl.split('/');
             const remoteName = remoteUrlParts[remoteUrlParts.length - 1]; 
-            const _body = { tempDir, remoteName };
+            const _body = { tempDir, remoteName, use_ssh };
             _body.remoteUrl = secondRepoUrl;
             console.log('Body:', _body);
             try {
@@ -411,7 +422,7 @@
                 url_to_second_repo: document.getElementById('secondRepoUrl').value,
                 is_second_repo_used_as_from_repo,
                 is_second_repo_used_as_to_repo,
-                use_ssh: false,
+                use_ssh,
                 promptTemplates: null,
                 outdir: tempDir,
                 llmModel,

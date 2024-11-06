@@ -55,6 +55,7 @@ export function allDiffsForProject$(
                 comparisonParams.from_tag_branch_commit,
                 comparisonParams.to_tag_branch_commit,
                 rec.File,
+                !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
                 executedCommands
             ).pipe(
                 map(diffLinesString => {

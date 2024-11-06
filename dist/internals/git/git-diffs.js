@@ -7,14 +7,16 @@ const rxjs_1 = require("rxjs");
 const execute_command_1 = require("../execute-command/execute-command");
 const git_remote_1 = require("./git-remote");
 const git_commit_hash_1 = require("./git-commit-hash");
-function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, executedCommands) {
+function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, use_ssh, executedCommands) {
     const addRemoteParams_from = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
-        git_remote_name: from_tag_branch_commit.git_remote_name
+        git_remote_name: from_tag_branch_commit.git_remote_name,
+        use_ssh
     };
     const addRemoteParams_to = {
         url_to_repo: to_tag_branch_commit.url_to_repo,
-        git_remote_name: to_tag_branch_commit.git_remote_name
+        git_remote_name: to_tag_branch_commit.git_remote_name,
+        use_ssh
     };
     return (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_from, executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_to, executedCommands)), (0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);

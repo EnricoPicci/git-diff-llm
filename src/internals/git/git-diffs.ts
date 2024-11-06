@@ -13,15 +13,18 @@ export function gitDiff$(
     from_tag_branch_commit: ComparisonEnd,
     to_tag_branch_commit: ComparisonEnd,
     file: string,
+    use_ssh: boolean,
     executedCommands: string[]
 ) {
     const addRemoteParams_from: AddRemoteParams = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
-        git_remote_name: from_tag_branch_commit.git_remote_name
+        git_remote_name: from_tag_branch_commit.git_remote_name,
+        use_ssh
     }
     const addRemoteParams_to: AddRemoteParams = {
         url_to_repo: to_tag_branch_commit.url_to_repo,
-        git_remote_name: to_tag_branch_commit.git_remote_name
+        git_remote_name: to_tag_branch_commit.git_remote_name,
+        use_ssh
     }
     return addRemote$(
         projectDir,

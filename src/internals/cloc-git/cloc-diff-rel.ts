@@ -43,6 +43,7 @@ export function comparisonResultFromClocDiffRelForProject$(
         projectDir,
         comparisonParams.from_tag_branch_commit,
         comparisonParams.to_tag_branch_commit,
+        !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
         languages,
         executedCommands
     ).pipe(
@@ -81,17 +82,18 @@ function clocDiffRel$(
     projectDir: string,    
     from_tag_branch_commit: ComparisonEnd,
     to_tag_branch_commit: ComparisonEnd,
+    use_ssh: boolean,
     languages?: string[],
     executedCommands: string[] = []
 ) {
     return addRemote$(
         projectDir,
-        from_tag_branch_commit,
+        {...from_tag_branch_commit, use_ssh},
         executedCommands
     ).pipe(
         concatMap(() => addRemote$(
             projectDir,
-            to_tag_branch_commit,
+            {...to_tag_branch_commit, use_ssh},
             executedCommands
         )),
         concatMap(() => {

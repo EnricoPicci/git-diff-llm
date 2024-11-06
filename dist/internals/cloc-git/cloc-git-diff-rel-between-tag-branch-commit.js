@@ -30,7 +30,8 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
         const msgText = `Calculating git diff for ${rec.fullFilePath}`;
         const msg = (0, message_writer_1.newInfoMessage)(msgText);
         messageWriter.write(msg);
-        return (0, git_diffs_1.gitDiff$)(rec.projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, rec.File, executedCommands).pipe((0, rxjs_1.map)(diffLinesString => {
+        return (0, git_diffs_1.gitDiff$)(rec.projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, rec.File, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
+        executedCommands).pipe((0, rxjs_1.map)(diffLinesString => {
             const diffLines = diffLinesString.toString();
             const _lines = diffLines.split('\n');
             const _rec = Object.assign(Object.assign({}, rec), { diffLines, fileContent: '', deleted: null, added: null, copied: null, renamed: null });

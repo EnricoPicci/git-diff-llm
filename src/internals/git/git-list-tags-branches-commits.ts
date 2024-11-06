@@ -22,6 +22,10 @@ export function listTags$(gitRepoPath: string, remote = 'origin') {
             return out.split('\n').filter((line) => line.trim().length > 0);
         }),
         map((lines) => {
+            // if 'no message on stdout or stderr' is the first line, then return an empty array
+            if (lines[0].includes('no message on stdout or stderr')) {
+                return [];
+            }
             return lines.map((line) => {
                 return line.split('\t')[1].replace('refs/tags/', '');
             });

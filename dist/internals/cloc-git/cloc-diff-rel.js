@@ -13,7 +13,8 @@ const git_diffs_1 = require("../git/git-diffs");
 function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages) {
     const projectDir = comparisonParams.projectDir;
     const header = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed';
-    return clocDiffRel$(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, languages, executedCommands).pipe((0, rxjs_1.filter)(line => line.trim().length > 0), 
+    return clocDiffRel$(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
+    languages, executedCommands).pipe((0, rxjs_1.filter)(line => line.trim().length > 0), 
     // skip the first line which is the header line
     // File, == blank, != blank, + blank, - blank, == comment, != comment, + comment, - comment, == code, != code, + code, - code, "github.com/AlDanial/cloc v 2.00 T=0.0747981071472168 s"
     (0, rxjs_1.skip)(1), 
@@ -38,8 +39,8 @@ function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCo
 // these functions may be exported for testing purposes
 // this stream is not safe in concurrent execution and therefore shouls NOT be called by operators that work concurrently
 // e.g. mergeMap
-function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, languages, executedCommands = []) {
-    return (0, git_remote_1.addRemote$)(projectDir, from_tag_branch_commit, executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, to_tag_branch_commit, executedCommands)), (0, rxjs_1.concatMap)(() => {
+function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, languages, executedCommands = []) {
+    return (0, git_remote_1.addRemote$)(projectDir, Object.assign(Object.assign({}, from_tag_branch_commit), { use_ssh }), executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, Object.assign(Object.assign({}, to_tag_branch_commit), { use_ssh }), executedCommands)), (0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(to_tag_branch_commit);
         const _from_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(from_tag_branch_commit);
         const command = `cloc`;
