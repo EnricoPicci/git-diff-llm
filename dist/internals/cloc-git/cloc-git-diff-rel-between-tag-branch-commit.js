@@ -19,15 +19,25 @@ const summarize_diffs_1 = require("./summarize-diffs");
 const cloc_diff_rel_1 = require("./cloc-diff-rel");
 const message_writer_1 = require("../message-writer/message-writer");
 function allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter = message_writer_1.DefaultMessageWriter) {
+    let count = 0;
+    let totNumFiles = 0;
     return (0, cloc_diff_rel_1.comparisonResultFromClocDiffRelForProject$)(comparisonParams, executedCommands, languages).pipe(
+    // toArray to calculate the total number of files
+    (0, rxjs_1.toArray)(), (0, rxjs_1.tap)(comapareResults => {
+        totNumFiles = comapareResults.length;
+        const msg = (0, message_writer_1.newInfoMessage)(`Total number of files: ${totNumFiles}`);
+        messageWriter.write(msg);
+    }), 
+    // mergeMap to emit each file diff record and start the stream of git diff for each file again
+    (0, rxjs_1.mergeMap)((compareResult) => compareResult), 
     // we MUST use concatMap here to ensure that gitDiff$ is not streaming concurrently but only sequentially
     // in other words gitDiff$ must return the bufferDiffLines value before starting for the next one
-    // gitDiffs$ eventually calls the command "git diff" which outputs on the stdout - gitDiffs$ Obsrvable accumulates the output
+    // gitDiffs$ eventually calls the command "git diff" which outputs on the stdout - gitDiffs$ Observable accumulates the output
     // sent to the stdout and returns it as a buffer string (diffLinesString)
     // Using concatMap (which just mergeMap with concurrency set to 1) ensures that the command "git diff" 
     // is not executed concurrently for different projects
     (0, rxjs_1.concatMap)(rec => {
-        const msgText = `Calculating git diff for ${rec.fullFilePath}`;
+        const msgText = `Calculating git diff for ${rec.fullFilePath} (${++count}/${totNumFiles})`;
         const msg = (0, message_writer_1.newInfoMessage)(msgText);
         messageWriter.write(msg);
         return (0, git_diffs_1.gitDiff$)(rec.projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, rec.File, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined

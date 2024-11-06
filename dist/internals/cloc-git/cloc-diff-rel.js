@@ -51,13 +51,15 @@ function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, 
             `${_to_tag_branch_commit}`,
             `${_from_tag_branch_commit}`
         ];
+        // It is important to trim the languages because otherwise the command may not work properly
+        // cloc --include-lang=Python,JavaScript,TypeScript
+        // is correct while
+        // cloc --include-lang=Python, JavaScript, TypeScript
+        // is incorrect and will work only for Python
+        if (languages) {
+            languages = languages.map(lang => lang.trim()).filter(lang => lang.length > 0);
+        }
         if (languages && (languages === null || languages === void 0 ? void 0 : languages.length) > 0) {
-            // It is important to trim the languages because otherwise the command may not work properly
-            // cloc --include-lang=Python,JavaScript,TypeScript
-            // is correct while
-            // cloc --include-lang=Python, JavaScript, TypeScript
-            // is incorrect and will work only for Python
-            languages = languages.map(lang => lang.trim());
             const languagesString = languages.join(',');
             args.push(`--include-lang=${languagesString}`);
         }
