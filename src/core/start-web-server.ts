@@ -55,7 +55,7 @@ export function startWebServer() {
     });
 
   // WebSocket connection
-  const actions: {[key: string]: (webSocket: ws.Server, data: any) => void} = {
+  const actions: {[key: string]: (webSocket: ws.WebSocket, data: any) => void} = {
     "generate-report": launchGenerateReport
   }
   wss.on('connection', (ws: ws.WebSocket) => {
@@ -66,8 +66,7 @@ export function startWebServer() {
       const message = JSON.parse(messageData.toString());
       const action: string = message.action;
       const actionFunction = actions[action];
-      // const actionFunction: any = actions[action];
-      actionFunction(wss, message.data);
+      actionFunction(ws, message.data);
     });
 
     ws.on('error', (error: Error) => {
@@ -214,7 +213,7 @@ export function startWebServer() {
 }
 
 const GitRemoteNameForSecondRepo = 'git-diff-llm'
-function launchGenerateReport(webSocket: ws.Server, data: any) {
+function launchGenerateReport(webSocket: ws.WebSocket, data: any) {
   // the client must provide these data - some properties must be undefined but this is the structure expected from the client
   const projectDir = data.tempDir
   const url_to_repo = data.url_to_repo
@@ -273,29 +272,17 @@ ${JSON.stringify(data, null, 2)}`
   const messageWriterToRemoteClient: MessageWriter = {
     write: (msg) => {
       console.log(`Message to client: ${JSON.stringify(msg)}`);
-      webSocket.clients.forEach(client => {
-        client.send(JSON.stringify(msg));
-      });
+      webSocket.send(JSON.stringify(msg));
     }
   }
   writeAllDiffsForProjectWithExplanationToMarkdown$(inputParams, messageWriterToRemoteClient).pipe(
     concatMap(({ markdownFilePath }) => { 
       return readLinesObs(markdownFilePath)
     }),
-    // tap({
-    //   next: lines => {
-    //     const mdContent = lines.join('\n');
-    //     webSocket.clients.forEach(client => {
-    //       client.send(JSON.stringify({ messageId: 'report-generated', mdReport: mdContent }));
-    //     });
-    //   }
-    // })
   ).subscribe({
       error: (err) => {
         console.error(`Error generating report: ${err}`);
-        webSocket.clients.forEach(client => {
-          client.send(JSON.stringify({ messageId: 'error', data: err }));
-        });
+        webSocket.send(JSON.stringify({ messageId: 'error', data: err }));
       },
     });
 }

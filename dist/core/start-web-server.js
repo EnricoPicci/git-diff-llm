@@ -56,8 +56,7 @@ function startWebServer() {
             const message = JSON.parse(messageData.toString());
             const action = message.action;
             const actionFunction = actions[action];
-            // const actionFunction: any = actions[action];
-            actionFunction(wss, message.data);
+            actionFunction(ws, message.data);
         });
         ws.on('error', (error) => {
             console.error(`WebSocket error: ${error.message}`);
@@ -247,9 +246,7 @@ ${JSON.stringify(data, null, 2)}`;
     const messageWriterToRemoteClient = {
         write: (msg) => {
             console.log(`Message to client: ${JSON.stringify(msg)}`);
-            webSocket.clients.forEach(client => {
-                client.send(JSON.stringify(msg));
-            });
+            webSocket.send(JSON.stringify(msg));
         }
     };
     (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams, messageWriterToRemoteClient).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
@@ -257,9 +254,7 @@ ${JSON.stringify(data, null, 2)}`;
     })).subscribe({
         error: (err) => {
             console.error(`Error generating report: ${err}`);
-            webSocket.clients.forEach(client => {
-                client.send(JSON.stringify({ messageId: 'error', data: err }));
-            });
+            webSocket.send(JSON.stringify({ messageId: 'error', data: err }));
         },
     });
 }
