@@ -15,19 +15,21 @@ exports.fillPromptTemplateFromFile = fillPromptTemplateFromFile;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 function getDefaultPromptTemplates() {
-    const promptTemplateFileChanged = "/prompts/explain-diff.txt";
-    const promptTemplateFileAdded = "/prompts/explain-added.txt";
-    const promptTemplateFileRemoved = "/prompts/explain-removed.txt";
-    const promptTemplateFileSummarize = "/prompts/summarize-diffs.txt";
-    const currentDir = process.cwd();
-    console.log(`currentDir: ${currentDir}`);
-    const _promptTemplateFileChanged = path_1.default.join(currentDir, promptTemplateFileChanged);
+    const promptTemplateFileChanged = "explain-diff.txt";
+    const promptTemplateFileAdded = "explain-added.txt";
+    const promptTemplateFileRemoved = "explain-removed.txt";
+    const promptTemplateFileSummarize = "summarize-diffs.txt";
+    // create the path to the prompts directory this way so that it can work also when the code is packaged
+    // and used, for instance, with npx
+    const promptsDir = path_1.default.join(__dirname, "..", "..", "..", "prompts");
+    console.log(`promptsDir: ${promptsDir}`);
+    const _promptTemplateFileChanged = path_1.default.join(promptsDir, promptTemplateFileChanged);
     const promptChanged = fs_1.default.readFileSync(_promptTemplateFileChanged, 'utf-8');
-    const _promptTemplateFileAdded = path_1.default.join(currentDir, promptTemplateFileAdded);
+    const _promptTemplateFileAdded = path_1.default.join(promptsDir, promptTemplateFileAdded);
     const promptAdded = fs_1.default.readFileSync(_promptTemplateFileAdded, 'utf-8');
-    const _promptTemplateFileRemoved = path_1.default.join(currentDir, promptTemplateFileRemoved);
+    const _promptTemplateFileRemoved = path_1.default.join(promptsDir, promptTemplateFileRemoved);
     const promptRemoved = fs_1.default.readFileSync(_promptTemplateFileRemoved, 'utf-8');
-    const _promptTemplateSummarize = path_1.default.join(currentDir, promptTemplateFileSummarize);
+    const _promptTemplateSummarize = path_1.default.join(promptsDir, promptTemplateFileSummarize);
     const promptSummarize = fs_1.default.readFileSync(_promptTemplateSummarize, 'utf-8');
     const promptTemplates = {
         changedFile: { prompt: promptChanged, description: 'Prompt to summarize the changes in a file' },

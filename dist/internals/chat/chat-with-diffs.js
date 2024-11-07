@@ -32,7 +32,10 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
     }));
 }
 function fillPromptForChat(prompt, diffs, languageSpecilization) {
-    const chatPromptTemplate = fs_1.default.readFileSync(path_1.default.join(process.cwd(), 'prompts', 'chat-template.txt'), 'utf-8');
+    // create the path to the prompts directory this way so that it can work also when the code is packaged
+    // and used, for instance, with npx
+    const promptsDir = path_1.default.join(__dirname, "..", "..", "..", "prompts");
+    const chatPromptTemplate = fs_1.default.readFileSync(path_1.default.join(promptsDir, 'chat-template.txt'), 'utf-8');
     return chatPromptTemplate.replace(/{{diffs}}/g, diffs.join('\n'))
         .replace(/{{languages}}/g, languageSpecilization)
         .replace(/{{prompt}}/g, prompt);

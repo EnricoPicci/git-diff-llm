@@ -9,20 +9,22 @@ export type PromptTemplates = {
 }
 
 export function getDefaultPromptTemplates() {
-    const promptTemplateFileChanged = "/prompts/explain-diff.txt";
-    const promptTemplateFileAdded = "/prompts/explain-added.txt";
-    const promptTemplateFileRemoved = "/prompts/explain-removed.txt";
-    const promptTemplateFileSummarize = "/prompts/summarize-diffs.txt";
-    const currentDir = process.cwd();
+    const promptTemplateFileChanged = "explain-diff.txt";
+    const promptTemplateFileAdded = "explain-added.txt";
+    const promptTemplateFileRemoved = "explain-removed.txt";
+    const promptTemplateFileSummarize = "summarize-diffs.txt";
+    // create the path to the prompts directory this way so that it can work also when the code is packaged
+    // and used, for instance, with npx
+    const promptsDir = path.join(__dirname, "..", "..", "..", "prompts");
 
-    console.log(`currentDir: ${currentDir}`);
-    const _promptTemplateFileChanged = path.join(currentDir, promptTemplateFileChanged);
+    console.log(`promptsDir: ${promptsDir}`);
+    const _promptTemplateFileChanged = path.join(promptsDir, promptTemplateFileChanged);
     const promptChanged = fs.readFileSync(_promptTemplateFileChanged, 'utf-8');
-    const _promptTemplateFileAdded = path.join(currentDir, promptTemplateFileAdded);
+    const _promptTemplateFileAdded = path.join(promptsDir, promptTemplateFileAdded);
     const promptAdded = fs.readFileSync(_promptTemplateFileAdded, 'utf-8');
-    const _promptTemplateFileRemoved = path.join(currentDir, promptTemplateFileRemoved);
+    const _promptTemplateFileRemoved = path.join(promptsDir, promptTemplateFileRemoved);
     const promptRemoved = fs.readFileSync(_promptTemplateFileRemoved, 'utf-8');
-    const _promptTemplateSummarize = path.join(currentDir, promptTemplateFileSummarize);
+    const _promptTemplateSummarize = path.join(promptsDir, promptTemplateFileSummarize);
     const promptSummarize = fs.readFileSync(_promptTemplateSummarize, 'utf-8');
 
     const promptTemplates: PromptTemplates = {

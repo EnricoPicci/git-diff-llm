@@ -1,49 +1,53 @@
 {
-    "name": "git-diff-llm",
-    "version": "1.0.1",
-    "description": "",
-    "main": "index.js",
-    "bin": {
-        "git-diff-llm": "dist/lib/command.js"
-    },
-    "scripts": {
-        "test": "mocha -r ts-node/register src/**/*.spec.ts src/**/**/*.spec.ts",
-        "tsc": "tsc --outDir dist",
-        "tsc-version": "tsc --version",
-        "lint": "eslint src/**/*.ts",
-        "lint:fix": "eslint src/**/*.ts --fix",
-        "prepublishOnly": "npm version patch",
-        "version": "npm run tsc && git add -A dist",
-        "postversion": "git push"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "MIT",
-    "devDependencies": {
-        "@types/archiver": "^6.0.3",
-        "@types/chai": "^4.3.20",
-        "@types/cors": "^2.8.17",
-        "@types/express": "^5.0.0",
-        "@types/json2md": "^1.5.4",
-        "@types/mocha": "^10.0.9",
-        "@types/node": "^22.8.5",
-        "@types/ws": "^8.5.13",
-        "chai": "^4.5.0",
-        "mocha": "^10.8.2",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.6.3"
-    },
-    "dependencies": {
-        "@enrico.piccinin/csv-tools": "^1.0.11",
-        "archiver": "^7.0.1",
-        "axios": "^1.4.0",
-        "commander": "^11.0.0",
-        "cors": "^2.8.5",
-        "express": "^4.21.1",
-        "json2md": "^2.0.1",
-        "observable-fs": "^2.2.8",
-        "openai": "^4.68.4",
-        "rxjs": "^7.8.1",
-        "ws": "^8.18.0"
-    }
+  "name": "git-diff-llm",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "git-diff-llm": "dist/lib/command.js"
+  },
+  "files": [
+    "prompts"
+  ],
+  "scripts": {
+    "test": "mocha -r ts-node/register src/**/*.spec.ts src/**/**/*.spec.ts",
+    "tsc": "tsc --outDir dist",
+    "tsc-version": "tsc --version",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "prepublishOnly": "npm version patch",
+    "preversion": "npm run test",
+    "version": "npm run tsc && git add -A dist",
+    "postversion": "git push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/chai": "^4.3.20",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/json2md": "^1.5.4",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "^22.8.5",
+    "@types/ws": "^8.5.13",
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@enrico.piccinin/csv-tools": "^1.0.11",
+    "archiver": "^7.0.1",
+    "axios": "^1.4.0",
+    "commander": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "json2md": "^2.0.1",
+    "observable-fs": "^2.2.8",
+    "openai": "^4.68.4",
+    "rxjs": "^7.8.1",
+    "ws": "^8.18.0"
+  }
 }
