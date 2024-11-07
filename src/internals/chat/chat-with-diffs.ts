@@ -1,10 +1,11 @@
 import path from "path";
 import fs from "fs";
 
-import { catchError, of } from "rxjs";
+import { catchError, concatMap, of } from "rxjs";
 
 import { getFullCompletion$ } from "../openai/openai";
 import { DefaultMessageWriter, MessageWriter, newErrorMessage, newInfoMessage } from "../message-writer/message-writer";
+import { appendFileObs } from "observable-fs";
 
 export type ChatWithDiffsParams = {
     diffs: string[],
@@ -40,6 +41,19 @@ export function chatWithDiffs$(
             const _errMsg = newErrorMessage(errMsg)
             messageWriter.write(_errMsg)
             return of('error in chatting with LLM about diffs')
+        }),
+    )
+}
+
+export function chatWithDiffsAndWriteChat$(
+    input: ChatWithDiffsParams,
+    outputDirName: string,
+    executedCommands: string[],
+    messageWriter: MessageWriter = DefaultMessageWriter
+) {
+    return chatWithDiffs$(input, executedCommands, messageWriter).pipe(
+        concatMap((response) => {
+            return appendFileObs(path.join(outputDirName, 'chat.txt'), response)
         }),
     )
 }

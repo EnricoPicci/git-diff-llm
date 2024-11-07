@@ -4,11 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatWithDiffs$ = chatWithDiffs$;
+exports.chatWithDiffsAndWriteChat$ = chatWithDiffsAndWriteChat$;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const rxjs_1 = require("rxjs");
 const openai_1 = require("../openai/openai");
 const message_writer_1 = require("../message-writer/message-writer");
+const observable_fs_1 = require("observable-fs");
 function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
     const diffs = input.diffs;
     const languages = input.languages;
@@ -29,6 +31,11 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
         const _errMsg = (0, message_writer_1.newErrorMessage)(errMsg);
         messageWriter.write(_errMsg);
         return (0, rxjs_1.of)('error in chatting with LLM about diffs');
+    }));
+}
+function chatWithDiffsAndWriteChat$(input, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
+    return chatWithDiffs$(input, executedCommands, messageWriter).pipe((0, rxjs_1.concatMap)((response) => {
+        return (0, observable_fs_1.appendFileObs)(path_1.default.join(outputDirName, 'chat.txt'), response);
     }));
 }
 function fillPromptForChat(prompt, diffs, languageSpecilization) {

@@ -11,6 +11,7 @@ const express_1 = __importDefault(require("express"));
 const ws_1 = __importDefault(require("ws"));
 const cors_1 = __importDefault(require("cors"));
 const archiver_1 = __importDefault(require("archiver"));
+const uuid_1 = require("uuid");
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
 const git_remote_1 = require("../internals/git/git-remote");
@@ -44,19 +45,28 @@ function startWebServer() {
     app.get('/', (_, res) => {
         res.send(`git-diff-llm server started. Version: ${version}`);
     });
-    // WebSocket connection
     const actions = {
         "generate-report": launch_report_1.launchGenerateReport,
         "chat": chat_1.chat,
     };
     wss.on('connection', (ws) => {
-        console.log('New client connected');
+        const connectionId = (0, uuid_1.v4)();
+        ws['id'] = connectionId;
+        console.log(`New client connected with ID: ${connectionId}`);
+        ws.send(JSON.stringify({ id: 'connection-established', data: connectionId }));
         ws.on('message', (messageData) => {
             console.log(`Received message: ${messageData}`);
             const message = JSON.parse(messageData.toString());
             const action = message.action;
             const actionFunction = actions[action];
             const data = message.data;
+            // check if data has a prop named outputDirName
+            if (data.outputDirName) {
+                console.error('outputDirName is a reserved property and cannot be used in the data object');
+                return;
+            }
+            // add the outputDirName to the data object - this is used for instance by the chat function
+            // to save the chat to a file in the output directory which will be downloaded with the download endpoint
             data.outputDirName = outputDirName;
             actionFunction(ws, message.data);
         });

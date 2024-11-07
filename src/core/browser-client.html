@@ -158,6 +158,9 @@
 
         // ws is a global variable to store the websocket connection
         let ws = null;
+        // connectionId is a global variable to store the connection ID
+        let connectionId = null;
+
         // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
         let tempDir = '';
         // isFromTag and isToTag are global variables to store if the selected option is a tag
@@ -184,7 +187,10 @@
                 console.log('Message received:', message);
 
                 const messageId = message.id;
-                if (messageId === 'report-generated') {
+                if (messageId === 'connection-established') {
+                    connectionId = message.data;
+                    console.log('Connection ID:', connectionId);
+                } else if (messageId === 'report-generated') {
                     const report = message.data;
                     fillReport(report);
                     const downloadForm = document.getElementById('download');
@@ -448,7 +454,6 @@
                 is_second_repo_used_as_to_repo,
                 use_ssh,
                 promptTemplates: null,
-                outdir: tempDir,
                 llmModel,
                 languages: document.getElementById('languages').value
             }

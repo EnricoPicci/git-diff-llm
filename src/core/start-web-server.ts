@@ -5,6 +5,7 @@ import express, { Request, Response } from 'express';
 import ws from 'ws';
 import cors from 'cors';
 import archiver from 'archiver';
+import { v4 as uuidv4 } from 'uuid';
 
 
 
@@ -51,12 +52,18 @@ export function startWebServer() {
     });
 
   // WebSocket connection
-  const actions: {[key: string]: (webSocket: ws.WebSocket, data: any) => void} = {
+  type EnrichedWebSocket = ws.WebSocket & { id: string };
+  const actions: {[key: string]: (webSocket: EnrichedWebSocket, data: any) => void} = {
     "generate-report": launchGenerateReport,
     "chat": chat,
   }
-  wss.on('connection', (ws: ws.WebSocket) => {
-    console.log('New client connected');
+
+  wss.on('connection', (ws: EnrichedWebSocket) => {
+    const connectionId = uuidv4();
+    ws['id'] = connectionId;
+    console.log(`New client connected with ID: ${connectionId}`);
+    ws.send(JSON.stringify({ id: 'connection-established', data: connectionId  }));
+    
   
     ws.on('message', (messageData: ws.Data) => {
       console.log(`Received message: ${messageData}`);
@@ -65,6 +72,13 @@ export function startWebServer() {
       const actionFunction = actions[action];
 
       const data = message.data;
+      // check if data has a prop named outputDirName
+      if (data.outputDirName) {
+        console.error('outputDirName is a reserved property and cannot be used in the data object');
+        return;
+      }
+      // add the outputDirName to the data object - this is used for instance by the chat function
+      // to save the chat to a file in the output directory which will be downloaded with the download endpoint
       data.outputDirName = outputDirName;
       actionFunction(ws, message.data);
     });

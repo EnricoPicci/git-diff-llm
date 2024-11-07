@@ -191,7 +191,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
 
     const executedCommands: string[] = []
 
-    const projectDirName = path.basename(comparisonParams.projectDir)
+    const projectName = path.basename(comparisonParams.projectDir)
 
     const repoUrl = comparisonParams.url_to_repo
     const gitWebClientCommandUrl = gitWebClientCommand(
@@ -212,7 +212,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
             return summarizeDiffs$(
                 diffsWithExplanation, 
                 languages, 
-                projectDirName, 
+                projectName, 
                 llmModel, 
                 promptForSummaryTemplate, 
                 executedCommands,
@@ -234,11 +234,11 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
             appendPromptsToMdJson(mdJson, _promptTemplates)
         }),
         concatMap((mdJson) => {
-            const outMarkdownFile = path.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
-            const outExecutedCommandsFile = path.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
+            const outMarkdownFile = path.join(outdir, `${projectName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
+            const outExecutedCommandsFile = path.join(outdir, `${projectName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
             return forkJoin([
-                writeCompareResultsToMarkdown$(mdJson, projectDirName, outMarkdownFile),
-                writeExecutedCommands$(executedCommands, projectDirName, outExecutedCommandsFile),
+                writeCompareResultsToMarkdown$(mdJson, projectName, outMarkdownFile),
+                writeExecutedCommands$(executedCommands, projectName, outExecutedCommandsFile),
             ]).pipe(
                 map(([markdownFilePath, executedCommandFilePath]) => {
                     return { markdownFilePath, executedCommandFilePath }

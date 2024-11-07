@@ -114,7 +114,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     const languages = params.languages;
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
-    const projectDirName = path_1.default.basename(comparisonParams.projectDir);
+    const projectName = path_1.default.basename(comparisonParams.projectDir);
     const repoUrl = comparisonParams.url_to_repo;
     const gitWebClientCommandUrl = gitWebClientCommand(repoUrl, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit);
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages);
@@ -123,7 +123,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
         appendNumLinesOfCode(mdJson, diffsWithExplanation);
         const promptForSummaryTemplate = (_a = promptTemplates === null || promptTemplates === void 0 ? void 0 : promptTemplates.summary) === null || _a === void 0 ? void 0 : _a.prompt;
-        return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectDirName, llmModel, promptForSummaryTemplate, executedCommands, messageWriter).pipe((0, rxjs_1.map)(summary => {
+        return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectName, llmModel, promptForSummaryTemplate, executedCommands, messageWriter).pipe((0, rxjs_1.map)(summary => {
             appendSummaryToMdJson(mdJson, summary);
             return diffsWithExplanation;
         }));
@@ -134,11 +134,11 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
         const _promptTemplates = promptTemplates || (0, prompt_templates_1.getDefaultPromptTemplates)();
         appendPromptsToMdJson(mdJson, _promptTemplates);
     }), (0, rxjs_1.concatMap)((mdJson) => {
-        const outMarkdownFile = path_1.default.join(outdir, `${projectDirName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
-        const outExecutedCommandsFile = path_1.default.join(outdir, `${projectDirName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
+        const outMarkdownFile = path_1.default.join(outdir, `${projectName}-compare-with-explanations-${timeStampYYYYMMDDHHMMSS}.md`);
+        const outExecutedCommandsFile = path_1.default.join(outdir, `${projectName}-executed-commands-${timeStampYYYYMMDDHHMMSS}.txt`);
         return (0, rxjs_1.forkJoin)([
-            writeCompareResultsToMarkdown$(mdJson, projectDirName, outMarkdownFile),
-            writeExecutedCommands$(executedCommands, projectDirName, outExecutedCommandsFile),
+            writeCompareResultsToMarkdown$(mdJson, projectName, outMarkdownFile),
+            writeExecutedCommands$(executedCommands, projectName, outExecutedCommandsFile),
         ]).pipe((0, rxjs_1.map)(([markdownFilePath, executedCommandFilePath]) => {
             return { markdownFilePath, executedCommandFilePath };
         }));
