@@ -3,6 +3,11 @@
 import path from 'path';
 import { startWebServer } from '../core/start-web-server';
 
+// Read the version from package.json
+const packageJson = require('../../package.json');
+const version = packageJson.version;
+console.log(`Starting git-diff-llm server. Version: ${version}\n`);
+
 startWebServer();
 
 const clientAddress = path.join(__dirname, '..', '..', 'src', 'core', 'browser-client.html');
