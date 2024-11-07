@@ -10,6 +10,8 @@ function chat(webSocket, data) {
         llmModel: data.llmModel,
         prompt: data.promptTemplate,
     };
+    const projectDir = data.tempDir;
+    const outputDirName = data.outputDirName;
     console.log('Chatting with params:', inputParams);
     const messageWriterToRemoteClient = {
         write: (msg) => {
@@ -18,7 +20,7 @@ function chat(webSocket, data) {
         }
     };
     const executedCommands = [];
-    (0, chat_with_diffs_1.chatWithDiffs$)(inputParams, executedCommands, messageWriterToRemoteClient).subscribe({
+    (0, chat_with_diffs_1.chatWithDiffsAndWriteChat$)(inputParams, projectDir, outputDirName, executedCommands, messageWriterToRemoteClient).subscribe({
         next: response => {
             const msg = (0, message_writer_1.newInfoMessage)(response);
             msg.id = 'chat';

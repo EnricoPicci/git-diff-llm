@@ -33,9 +33,11 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
         return (0, rxjs_1.of)('error in chatting with LLM about diffs');
     }));
 }
-function chatWithDiffsAndWriteChat$(input, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
+function chatWithDiffsAndWriteChat$(input, projectDir, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
+    const outDir = path_1.default.join(projectDir, outputDirName);
     return chatWithDiffs$(input, executedCommands, messageWriter).pipe((0, rxjs_1.concatMap)((response) => {
-        return (0, observable_fs_1.appendFileObs)(path_1.default.join(outputDirName, 'chat.txt'), response);
+        const qAndA = `Q: ${input.prompt}\nA: ${response}\n\n\n`;
+        return (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat.txt'), qAndA).pipe((0, rxjs_1.map)(() => response));
     }));
 }
 function fillPromptForChat(prompt, diffs, languageSpecilization) {

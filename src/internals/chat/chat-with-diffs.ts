@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 
-import { catchError, concatMap, of } from "rxjs";
+import { catchError, concatMap, map, of } from "rxjs";
 
 import { getFullCompletion$ } from "../openai/openai";
 import { DefaultMessageWriter, MessageWriter, newErrorMessage, newInfoMessage } from "../message-writer/message-writer";
@@ -47,13 +47,18 @@ export function chatWithDiffs$(
 
 export function chatWithDiffsAndWriteChat$(
     input: ChatWithDiffsParams,
+    projectDir: string,
     outputDirName: string,
     executedCommands: string[],
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
+    const outDir = path.join(projectDir, outputDirName)
     return chatWithDiffs$(input, executedCommands, messageWriter).pipe(
         concatMap((response) => {
-            return appendFileObs(path.join(outputDirName, 'chat.txt'), response)
+            const qAndA = `Q: ${input.prompt}\nA: ${response}\n\n\n`
+            return appendFileObs(path.join(outDir, 'chat.txt'), qAndA).pipe(
+                map(() => response)
+            )
         }),
     )
 }

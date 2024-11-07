@@ -519,6 +519,7 @@
             languages: document.getElementById('languages').value,
             llmModel: document.getElementById('llm-model').value,
             promptTemplate: prompt,
+            tempDir
         }
         sendWebsocketMessage(JSON.stringify({ action: 'chat', data }));
 

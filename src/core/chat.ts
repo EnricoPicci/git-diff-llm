@@ -1,6 +1,6 @@
 import ws from 'ws';
 import { MessageWriter, newInfoMessage } from '../internals/message-writer/message-writer';
-import { chatWithDiffs$, ChatWithDiffsParams } from '../internals/chat/chat-with-diffs';
+import { chatWithDiffsAndWriteChat$, ChatWithDiffsParams } from '../internals/chat/chat-with-diffs';
 
 export function chat(webSocket: ws.WebSocket, data: any) {
     const inputParams: ChatWithDiffsParams = {
@@ -9,6 +9,9 @@ export function chat(webSocket: ws.WebSocket, data: any) {
         llmModel: data.llmModel,
         prompt: data.promptTemplate,
     }
+
+    const projectDir = data.tempDir;
+    const outputDirName = data.outputDirName;
 
     console.log('Chatting with params:', inputParams);
 
@@ -21,7 +24,7 @@ export function chat(webSocket: ws.WebSocket, data: any) {
 
     const executedCommands: string[] = [];
 
-    chatWithDiffs$(inputParams, executedCommands, messageWriterToRemoteClient).subscribe({
+    chatWithDiffsAndWriteChat$(inputParams, projectDir, outputDirName, executedCommands, messageWriterToRemoteClient).subscribe({
         next: response => {
           const msg = newInfoMessage(response)
           msg.id = 'chat'
