@@ -121,6 +121,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         var _a;
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
+        appendNumLinesOfCode(mdJson, diffsWithExplanation);
         const promptForSummaryTemplate = (_a = promptTemplates === null || promptTemplates === void 0 ? void 0 : promptTemplates.summary) === null || _a === void 0 ? void 0 : _a.prompt;
         return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectDirName, llmModel, promptForSummaryTemplate, executedCommands, messageWriter).pipe((0, rxjs_1.map)(summary => {
             appendSummaryToMdJson(mdJson, summary);
@@ -182,6 +183,18 @@ function initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages)
 }
 function appendNumFilesWithDiffsToMdJson(mdJson, numFilesWithDiffs) {
     mdJson.push({ h3: `Files with differences: ${numFilesWithDiffs}` });
+}
+function appendNumLinesOfCode(mdJson, fileDiffsWithExplanation) {
+    // sum the lines of code same, modified, added, removed for all files
+    const totalLinesOfCode = fileDiffsWithExplanation.reduce((acc, curr) => {
+        acc.code_same += Number(curr.code_same);
+        acc.code_modified += Number(curr.code_modified);
+        acc.code_added += Number(curr.code_added);
+        acc.code_removed += Number(curr.code_removed);
+        return acc;
+    }, { code_same: 0, code_modified: 0, code_added: 0, code_removed: 0 });
+    const linesOfCodeInfo = `lines of code: ${totalLinesOfCode.code_same} same, ${totalLinesOfCode.code_modified} modified, ${totalLinesOfCode.code_added} added, ${totalLinesOfCode.code_removed} removed`;
+    mdJson.push({ p: linesOfCodeInfo });
 }
 function appendCompResultToMdJson(mdJson, compareResult) {
     const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;

@@ -207,6 +207,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
         toArray(),
         concatMap((diffsWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
+            appendNumLinesOfCode(mdJson, diffsWithExplanation)
             const promptForSummaryTemplate = promptTemplates?.summary?.prompt
             return summarizeDiffs$(
                 diffsWithExplanation, 
@@ -308,6 +309,23 @@ function appendNumFilesWithDiffsToMdJson(
     numFilesWithDiffs: number
 ) {
     mdJson.push({ h3: `Files with differences: ${numFilesWithDiffs}` })
+}
+
+function appendNumLinesOfCode(
+    mdJson: any[],
+    fileDiffsWithExplanation: FileDiffWithExplanation[]
+) {
+    // sum the lines of code same, modified, added, removed for all files
+    const totalLinesOfCode = fileDiffsWithExplanation.reduce((acc, curr) => {
+        acc.code_same += Number(curr.code_same)
+        acc.code_modified += Number(curr.code_modified)
+        acc.code_added += Number(curr.code_added)
+        acc.code_removed += Number(curr.code_removed)
+        return acc
+    }, { code_same: 0, code_modified: 0, code_added: 0, code_removed: 0 })
+
+    const linesOfCodeInfo = `lines of code: ${totalLinesOfCode.code_same} same, ${totalLinesOfCode.code_modified} modified, ${totalLinesOfCode.code_added} added, ${totalLinesOfCode.code_removed} removed`
+    mdJson.push({ p: linesOfCodeInfo })
 }
 
 function appendCompResultToMdJson(
