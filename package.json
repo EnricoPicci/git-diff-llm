@@ -6,9 +6,6 @@
     "bin": {
         "git-diff-llm": "dist/lib/command.js"
     },
-    "files": [
-        "prompts"
-    ],
     "scripts": {
         "test": "mocha -r ts-node/register src/**/*.spec.ts src/**/**/*.spec.ts",
         "tsc": "tsc --outDir dist",
