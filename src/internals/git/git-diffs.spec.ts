@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ComparisonEnd, comparisonEndString, tagBranchCommitPrefix } from './git-diffs';
+import { ComparisonEnd, comparisonEndString, gitDiffsNameOnly$, tagBranchCommitPrefix } from './git-diffs';
 
 describe(`tagBranchCommitPrefix`, () => {
     it(`should return the prefix when a tag passed in as arguments`, () => {
@@ -72,4 +72,38 @@ describe(`comparisonEndString`, () => {
         const comp_string = comparisonEndString(comparisonEnd)
         expect(comp_string).equal(commit)
     });
+});
+
+
+describe(`gitDiffsNameOnly$`, () => {
+    it(`should return the names of the files which diff between 2 references`, (done) => {
+        const from: ComparisonEnd = {
+            git_remote_name: 'origin',
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm'
+        }
+        const to: ComparisonEnd = {
+            git_remote_name: 'origin',
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm'
+        }
+
+        const projectDir = './'
+        const use_ssh = false
+        const executedCommands: string[] = []
+
+        gitDiffsNameOnly$(projectDir, from, to, use_ssh, executedCommands).subscribe({
+            next: (result) => {
+                expect(result).not.null
+                // the result should be an array of strings
+                const files = result.split('\n')
+                expect(files).not.null
+                expect(files.length).greaterThan(0)
+                done()
+            },
+            error: (error) => {
+                done(error)
+            }
+        })
+    }).timeout(10000);
 });
