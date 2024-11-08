@@ -64,6 +64,11 @@ function listCommits$(gitRepoPath, remote = 'origin') {
     }), (0, rxjs_1.map)((lines) => {
         lines[0] = lines[0].replace('from stdout: ', '');
         return lines;
+    }), (0, rxjs_1.catchError)((err) => {
+        if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+            return (0, rxjs_1.of)(['Error: too many commits']);
+        }
+        throw err;
     }));
 }
 //# sourceMappingURL=git-list-tags-branches-commits.js.map

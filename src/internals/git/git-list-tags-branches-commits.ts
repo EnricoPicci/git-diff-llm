@@ -1,4 +1,4 @@
-import { map } from "rxjs";
+import { catchError, map, of } from "rxjs";
 import { executeCommandObs$ } from "../execute-command/execute-command";
 
 export function listTags$(gitRepoPath: string, remote = 'origin') {
@@ -70,6 +70,12 @@ export function listCommits$(gitRepoPath: string, remote = 'origin') {
         map((lines) => {
             lines[0] = lines[0].replace('from stdout: ', '');
             return lines;
+        }),
+        catchError((err) => {
+            if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+                return of(['Error: too many commits']);
+            }
+            throw err;
         }),
     );
 }
