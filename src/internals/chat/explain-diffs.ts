@@ -1,7 +1,9 @@
-import { of, catchError, map } from "rxjs"
+import { of, catchError, map, concatMap } from "rxjs"
 import { FullCompletionReponse, getFullCompletion$ } from "../openai/openai"
 import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, getDefaultPromptTemplates, languageFromExtension, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { MessageWriter, newInfoMessage } from "../message-writer/message-writer"
+import { appendFileObs } from "observable-fs"
+import path from "path"
 
 
 export type FileInfo = {
@@ -34,6 +36,7 @@ export function explainGitDiffs$<T>(
     explanationInput: T & ExplanationInput, 
     promptTemplates: PromptTemplates, 
     llmModel: string, 
+    outDir: string,
     executedCommands: string[],
     messageWriter: MessageWriter
 ) {
@@ -71,7 +74,10 @@ export function explainGitDiffs$<T>(
     const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath} with prompt:\n`
     const msg = newInfoMessage(msgText)
     messageWriter.write(msg)
-    return getFullCompletion$(prompt, llmModel).pipe(
+    return appendFileObs(path.join(outDir, 'llm-explain-log.txt'), `Full prompt: ${prompt}\n`).pipe(
+        concatMap(() => {
+            return getFullCompletion$(prompt, llmModel)
+        }),
         catchError(err => {
             const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`
             console.log(errMsg)

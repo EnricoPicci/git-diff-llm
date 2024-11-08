@@ -7,7 +7,7 @@ import { toCsvObs } from "@enrico.piccinin/csv-tools"
 import { readLinesObs, writeFileObs } from "observable-fs"
 
 import { ComparisonEnd, comparisonEndString, gitDiff$ } from "../git/git-diffs"
-import { explainGitDiffs$ } from "../git/explain-diffs"
+import { explainGitDiffs$ } from "../chat/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
 import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
@@ -117,6 +117,7 @@ export function allDiffsForProjectWithExplanation$(
     comparisonParams: ComparisonParams,
     promptTemplates: PromptTemplates,
     model: string,
+    outDir: string,
     executedCommands: string[],
     languages?: string[],
     messageWriter: MessageWriter = DefaultMessageWriter,
@@ -128,7 +129,7 @@ export function allDiffsForProjectWithExplanation$(
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
         mergeMap(comparisonResult => {
-            return explainGitDiffs$(comparisonResult, promptTemplates, model, executedCommands, messageWriter)
+            return explainGitDiffs$(comparisonResult, promptTemplates, model, outDir, executedCommands, messageWriter)
         }, concurrentLLMCalls),
         tap({
             complete: () => {
@@ -151,7 +152,7 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, outdir, executedCommands, languages).pipe(
         // replace any ',' in the explanation with a '-'
         map((diffWithExplanation) => {
             diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-')
@@ -202,7 +203,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages)
 
     return allDiffsForProjectWithExplanation$(
-        comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter
+        comparisonParams, promptTemplates, llmModel, outdir, executedCommands, languages, messageWriter
     ).pipe(
         toArray(),
         concatMap((diffsWithExplanation) => {
