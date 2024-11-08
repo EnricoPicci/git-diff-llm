@@ -99,8 +99,9 @@ function clocDiffRel$(
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
             const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
-            const command = `cloc`
+            const command = `npx`
             const args = [
+                'cloc',
                 '--git-diff-rel',
                 '--csv',
                 '--by-file',
@@ -124,7 +125,7 @@ function clocDiffRel$(
                 cwd: projectDir
             }
             return executeCommandNewProcessToLinesObs(
-                'run cloc --git-diff-rel --csv --by-file', command, args, options, executedCommands
+                'run npx cloc --git-diff-rel --csv --by-file', command, args, options, executedCommands
             )
         })
     )

@@ -43,8 +43,9 @@ function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, 
     return (0, git_remote_1.addRemote$)(projectDir, Object.assign(Object.assign({}, from_tag_branch_commit), { use_ssh }), executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, Object.assign(Object.assign({}, to_tag_branch_commit), { use_ssh }), executedCommands)), (0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(to_tag_branch_commit);
         const _from_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(from_tag_branch_commit);
-        const command = `cloc`;
+        const command = `npx`;
         const args = [
+            'cloc',
             '--git-diff-rel',
             '--csv',
             '--by-file',
@@ -66,7 +67,7 @@ function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, 
         const options = {
             cwd: projectDir
         };
-        return (0, execute_command_1.executeCommandNewProcessToLinesObs)('run cloc --git-diff-rel --csv --by-file', command, args, options, executedCommands);
+        return (0, execute_command_1.executeCommandNewProcessToLinesObs)('run npx cloc --git-diff-rel --csv --by-file', command, args, options, executedCommands);
     }));
 }
 //# sourceMappingURL=cloc-diff-rel.js.map
