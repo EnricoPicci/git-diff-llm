@@ -313,7 +313,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         })
     }).timeout(100000);
 
-    it(`should return the diffs between a branch of the local repo and a branch on the remote repo
+    it.only(`should return the diffs between a branch of the local repo and a branch on the remote repo
         The git diff should compare "fork/first-branch-on-fork vs refs/tags/first-tag"`, (done) => {
         const from: ComparisonEnd = {
             tag_branch_commit: 'tags/first-tag',

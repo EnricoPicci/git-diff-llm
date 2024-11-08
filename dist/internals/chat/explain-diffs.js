@@ -30,7 +30,7 @@ const path_1 = __importDefault(require("path"));
 // 
 // which means that it returns an object that is T & FileInfo & {explanation: string | null}
 // since it omits the properties 'fileContent' and 'diffLines'
-function explainGitDiffs$(explanationInput, promptTemplates, llmModel, outDir, executedCommands, messageWriter) {
+function explainGitDiffs$(explanationInput, promptTemplates, llmModel, executedCommands, messageWriter, outDir) {
     const _promptTemplates = promptTemplates || (0, prompt_templates_1.getDefaultPromptTemplates)();
     const language = (0, prompt_templates_1.languageFromExtension)(explanationInput.extension);
     let promptTemplate = '';
@@ -64,7 +64,11 @@ function explainGitDiffs$(explanationInput, promptTemplates, llmModel, outDir, e
     const msgText = `Calling LLM to explain diffs for file ${explanationInput.fullFilePath} with prompt:\n`;
     const msg = (0, message_writer_1.newInfoMessage)(msgText);
     messageWriter.write(msg);
-    return (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'llm-explain-log.txt'), `Full prompt: ${prompt}\n`).pipe((0, rxjs_1.concatMap)(() => {
+    const start$ = outDir ? (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'llm-explain-log.txt'), `Full prompt: ${prompt}\n`).pipe((0, rxjs_1.catchError)(() => {
+        return (0, observable_fs_1.writeFileObs)(path_1.default.join(outDir, 'llm-explain-log.txt'), [`Full prompt: ${prompt}\n`]);
+    })) :
+        (0, rxjs_1.of)('');
+    return start$.pipe((0, rxjs_1.concatMap)(() => {
         return (0, openai_1.getFullCompletion$)(prompt, llmModel);
     }), (0, rxjs_1.catchError)(err => {
         const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`;
@@ -76,6 +80,11 @@ function explainGitDiffs$(explanationInput, promptTemplates, llmModel, outDir, e
         const command = `call openai to explain diffs for file ${explanationInput.fullFilePath}`;
         executedCommands.push(command);
         return Object.assign(Object.assign({}, explanationInput), { explanation: explanation.explanation });
+    }), (0, rxjs_1.concatMap)(rec => {
+        const separator = '=====================================================\n';
+        return outDir ?
+            (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'llm-explain-log.txt'), `Response: ${rec.explanation}\n\n\n${separator}`).pipe((0, rxjs_1.map)(() => rec)) :
+            (0, rxjs_1.of)(rec);
     }), (0, rxjs_1.map)(rec => {
         // remove the file content and the diffLines to avoid writing it to the json file
         // this is shown in the type assigned to _rec, which is
@@ -90,5 +99,36 @@ function explainGitDiffs$(explanationInput, promptTemplates, llmModel, outDir, e
         const { fileContent, diffLines } = rec, _rec = __rest(rec, ["fileContent", "diffLines"]);
         return _rec;
     }));
+    // return appendFileObs(path.join(outDir, 'llm-explain-log.txt'), `Full prompt: ${prompt}\n`).pipe(
+    //     concatMap(() => {
+    //         return getFullCompletion$(prompt, llmModel)
+    //     }),
+    //     catchError(err => {
+    //         const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`
+    //         console.log(errMsg)
+    //         executedCommands.push(errMsg)
+    //         const resp: FullCompletionReponse = { explanation: `error in calling LLM to explain diffs for file ${explanationInput.fullFilePath}.\n${err.message}`, prompt }
+    //         return of(resp)
+    //     }),
+    //     map(explanation => {
+    //         const command = `call openai to explain diffs for file ${explanationInput.fullFilePath}`
+    //         executedCommands.push(command)
+    //         return { ...explanationInput, explanation: explanation.explanation }
+    //     }),
+    //     map(rec => {
+    //         // remove the file content and the diffLines to avoid writing it to the json file
+    //         // this is shown in the type assigned to _rec, which is
+    //         // Omit<T & FileInfo & {
+    //         //     explanation: string | null;
+    //         //     fileContent: string;
+    //         //     diffLines: string;
+    //         // }, "fileContent" | "diffLines">
+    //         // 
+    //         // which means that it returns a new object that is the same as T & FileInfo & {explanation: string | null}
+    //         // since it omits the properties 'fileContent' and 'diffLines'
+    //         const { fileContent, diffLines, ..._rec } = rec
+    //         return _rec
+    //     })
+    // )
 }
 //# sourceMappingURL=explain-diffs.js.map

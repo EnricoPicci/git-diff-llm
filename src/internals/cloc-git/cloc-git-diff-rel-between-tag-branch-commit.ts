@@ -117,10 +117,10 @@ export function allDiffsForProjectWithExplanation$(
     comparisonParams: ComparisonParams,
     promptTemplates: PromptTemplates,
     model: string,
-    outDir: string,
     executedCommands: string[],
     languages?: string[],
     messageWriter: MessageWriter = DefaultMessageWriter,
+    outDirForChatLog?: string,
     concurrentLLMCalls = 5
 ): Observable<FileDiffWithExplanation> {
     const startingMsg = newInfoMessage(`Starting all diffs with explanations`)
@@ -129,7 +129,7 @@ export function allDiffsForProjectWithExplanation$(
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
         mergeMap(comparisonResult => {
-            return explainGitDiffs$(comparisonResult, promptTemplates, model, outDir, executedCommands, messageWriter)
+            return explainGitDiffs$(comparisonResult, promptTemplates, model,  executedCommands, messageWriter, outDirForChatLog,)
         }, concurrentLLMCalls),
         tap({
             complete: () => {
@@ -152,7 +152,7 @@ export function writeAllDiffsForProjectWithExplanationToCsv$(
 
     const projectDirName = path.basename(comparisonParams.projectDir)
 
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, outdir, executedCommands, languages).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages, DefaultMessageWriter, outdir).pipe(
         // replace any ',' in the explanation with a '-'
         map((diffWithExplanation) => {
             diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-')
@@ -203,7 +203,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages)
 
     return allDiffsForProjectWithExplanation$(
-        comparisonParams, promptTemplates, llmModel, outdir, executedCommands, languages, messageWriter
+        comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter, outdir
     ).pipe(
         toArray(),
         concatMap((diffsWithExplanation) => {
