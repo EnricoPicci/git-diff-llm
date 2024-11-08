@@ -451,9 +451,9 @@
             }
 
             const llmModelEl = document.getElementById('llm-model')
-            const llmModel = llmModelEl.value
+            const llmModel = llmModelEl.value;
 
-            use_ssh = url_to_repo.includes('https://git.ad')
+            const prompt = document.getElementById('prompt').value;
                                             
             const data = {
                 tempDir,
@@ -464,7 +464,7 @@
                 is_second_repo_used_as_from_repo,
                 is_second_repo_used_as_to_repo,
                 use_ssh,
-                promptTemplates: null,
+                prompt,
                 llmModel,
                 languages: document.getElementById('languages').value
             }

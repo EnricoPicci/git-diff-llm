@@ -12,15 +12,8 @@ const openai_1 = require("../openai/openai");
 const message_writer_1 = require("../message-writer/message-writer");
 const observable_fs_1 = require("observable-fs");
 function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
-    const diffs = input.diffs;
-    const languages = input.languages;
+    const promptForChat = buildFullPrompt(input);
     const llmModel = input.llmModel;
-    const prompt = input.prompt;
-    let languageSpecilization = '';
-    if (languages) {
-        languageSpecilization = languages.join(', ');
-    }
-    const promptForChat = fillPromptForChat(prompt, diffs, languageSpecilization);
     const msgText = `Chat with LLM with all diffs`;
     const msg = (0, message_writer_1.newInfoMessage)(msgText);
     messageWriter.write(msg);
@@ -40,11 +33,14 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
 }
 function chatWithDiffsAndWriteChat$(input, projectDir, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
     const outDir = path_1.default.join(projectDir, outputDirName);
-    return chatWithDiffs$(input, executedCommands, messageWriter).pipe((0, rxjs_1.concatMap)((response) => {
+    const promptForChat = buildFullPrompt(input);
+    return (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), `Full prompt: ${promptForChat}\n`).pipe((0, rxjs_1.concatMap)(() => {
+        return chatWithDiffs$(input, executedCommands, messageWriter);
+    }), (0, rxjs_1.concatMap)((response) => {
         const qAndA = `Q: ${input.prompt}\nA: ${response.explanation}\n\n\n`;
         const appentToChat$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat.txt'), qAndA);
-        const fullLogEntry = `Full prompt: ${response.prompt}\nResponse: ${response.explanation}\n\n\n`;
-        const appendToChatLog$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), fullLogEntry);
+        const promptForChat = `Response: ${response.explanation}\n\n\n`;
+        const appendToChatLog$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), promptForChat);
         return (0, rxjs_1.forkJoin)([appentToChat$, appendToChatLog$]).pipe((0, rxjs_1.map)(() => {
             return response.explanation;
         }));
@@ -58,5 +54,15 @@ function fillPromptForChat(prompt, diffs, languageSpecilization) {
     return chatPromptTemplate.replace(/{{diffs}}/g, diffs.join('\n'))
         .replace(/{{languages}}/g, languageSpecilization)
         .replace(/{{prompt}}/g, prompt);
+}
+function buildFullPrompt(input) {
+    const diffs = input.diffs;
+    const languages = input.languages;
+    const prompt = input.prompt;
+    let languageSpecilization = '';
+    if (languages) {
+        languageSpecilization = languages.join(', ');
+    }
+    return fillPromptForChat(prompt, diffs, languageSpecilization);
 }
 //# sourceMappingURL=chat-with-diffs.js.map

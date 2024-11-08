@@ -1,0 +1,2244 @@
+package it.rgi.passvita.batch.quietanzamento;
+
+import java.io.IOException;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Vector;
+import com.rgigroup.passlife.batch.calculation.WriterCalculation;
+import com.rgigroup.passlife.financial.FundMarker;
+import com.rgigroup.passlife.financial.investmentdate.InvestmentDateStrategyFactory;
+import com.rgigroup.passlife.financial.order.LifeFinancialOrder;
+import com.rgigroup.passlife.financial.order.OrderBook;
+import com.rgigroup.passlife.financial.order.OrdersUtility;
+import com.rgigroup.passlife.payments.interfaces.IWrapperPaymentObject;
+
+import it.rgi.dbobjects.EntCausale;
+import it.rgi.dbobjects.EntConvenzioni;
+import it.rgi.dbobjects.EntFattori;
+import it.rgi.dbobjects.EntFiliale;
+import it.rgi.dbobjects.EntMovimento;
+import it.rgi.dbobjects.EntPolizza;
+import it.rgi.dbobjects.EntPolmadreconfig;
+import it.rgi.dbobjects.EntProdotti;
+import it.rgi.dbobjects.EntProduttore;
+import it.rgi.dbobjects.EntTitolo;
+import it.rgi.dbobjects.EntVfilequietpol;
+import it.rgi.dbobjects.EntVfilequietrischi;
+import it.rgi.dbobjects.EntVkoperpremium;
+import it.rgi.dbobjects.EntVkpolicyop;
+import it.rgi.dbobjects.EntVpianoinvest;
+import it.rgi.dbobjects.EntVprestazinvest;
+import it.rgi.dbobjects.EntVquietanzko;
+import it.rgi.dbobjects.EntVrata;
+import it.rgi.dbobjects.EntVratarischio;
+import it.rgi.dbobjects.EntVreservation;
+import it.rgi.dbobjects.EntVrespoldata;
+import it.rgi.dbobjects.EntVrischioass;
+import it.rgi.dbobjects.EntVverprestazrisc;
+import it.rgi.dbobjects.EntVverrischioass;
+import it.rgi.dbobjects.RelPolizzarel;
+import it.rgi.passadmin.cache.ConvenzioniPuntiVendita;
+import it.rgi.passadmin.cache.Filiali;
+import it.rgi.passadmin.cache.Produttori;
+import it.rgi.passcomp.passanag.PassSoggettoLock;
+import it.rgi.passportafoglio.cache.ListaCausali;
+import it.rgi.passpro.api.Divisa;
+import it.rgi.passpro.api.Fattore;
+import it.rgi.passpro.api.IstanzaBene;
+import it.rgi.passpro.api.IstanzaUnitVita;
+import it.rgi.passpro.api.Operazione;
+import it.rgi.passpro.api.PPKeyList;
+import it.rgi.passpro.api.PPMessage;
+import it.rgi.passpro.api.Prodotto;
+import it.rgi.passpro.api.ProdottoVita;
+import it.rgi.passpro.api.UnitBene;
+import it.rgi.passpro.api.UnitVita;
+import it.rgi.passprocache.obj.ProdottiBis;
+import it.rgi.passvita.AssicuratoVita;
+import it.rgi.passvita.ExceptionsLauncher;
+import it.rgi.passvita.GestoreRataRischi;
+import it.rgi.passvita.GestoreRateVita;
+import it.rgi.passvita.Movimenti;
+import it.rgi.passvita.ParametroFormula;
+import it.rgi.passvita.Polizza;
+import it.rgi.passvita.PrestazioneInvestimento;
+import it.rgi.passvita.PrestazioneRischio;
+import it.rgi.passvita.Rata;
+import it.rgi.passvita.RataRischio;
+import it.rgi.passvita.RischioAssicuratoVita;
+import it.rgi.passvita.VitaAppConfig;
+import it.rgi.passvita.VitaException;
+import it.rgi.passvita.batch.BatchCalculation;
+import it.rgi.passvita.batch.quietanzamento.FormulasEvalutation.Values;
+import it.rgi.passvita.batch.template.ContainerOggettiFile;
+import it.rgi.passvita.batch.template.ContainerOggettiRelazionali;
+import it.rgi.passvita.ex.VitaScartoBatchException;
+import it.rgi.passvita.factory.ManagerFactoryUtility;
+import it.rgi.passvita.fattori.registratori.ICodiciFattori;
+import it.rgi.passvita.formule.Formula;
+import it.rgi.passvita.formule.FormulePersonalizzateContainer;
+import it.rgi.passvita.formule.FormulePersonalizzateContainer.ResultAddRiga;
+import it.rgi.passvita.interfacce.ICodiciOperazione;
+import it.rgi.passvita.interfacce.ICodiciProprieta;
+import it.rgi.passvita.interfacce.IGestoreAzioniVita;
+import it.rgi.passvita.interfacce.IMarshallableRata;
+import it.rgi.passvita.interfacce.IPolizza;
+import it.rgi.passvita.interfacce.IQuietanzamento;
+import it.rgi.passvita.layers.wrapper.interfaces.IEntityEntVratarischio;
+import it.rgi.passvita.layers.wrapper.interfaces.IEntityEntVverRiskInsured;
+import it.rgi.passvita.layers.wrapper.interfaces.IEntityEntVverprestazrisc;
+import it.rgi.passvita.log.VitaLogger;
+import it.rgi.passvita.postdatate.PostDatate;
+import it.rgi.passvita.postdatate.Scadenzario;
+import it.rgi.passvita.postdatate.UpdaterScadenzario;
+import it.rgi.passvita.provvigioni.IGestoreProvvigioniVita;
+import it.rgi.passvita.provvigioni.ImportiProvvigioni;
+import it.rgi.passvita.provvigioni.ParametriInputProvvVita;
+import it.rgi.passvita.provvigioni.ParametriOutputProvvVita;
+import it.rgi.passvita.utility.*;
+import it.rgi.passvita.utility.policyquery.LifePolicyByQuery;
+import it.rgi.passvita.utility.query.VitaQuery;
+import it.rgi.passvita.utility.soa.FormulaEvaluationType;
+import it.rgi.webapp.dbms.Connettore;
+import it.rgi.webapp.dbms.MetaInfo;
+import it.rgi.webapp.dbms.MetaInfoValoriPredefiniti;
+import it.rgi.webapp.dbms.ObjectId;
+import it.rgi.webapp.dbms.Transazione;
+import it.rgi.webapp.dbms.VersionId;
+import it.rgi.webapp.dbms.jdbc.ConnessioneConfiguration;
+import it.rgi.webapp.utility.ArrayIterator;
+import it.rgi.webapp.utility.Data;
+import it.rgi.webapp.utility.database.CostantiQuery;
+
+
+public class QuietanzamentoAdapter implements IQuietanzamento
+{
+	private static final char NEW_CHAR = '-';
+	private static final char OLD_CHAR = ';';
+	private static final char OLD_CHARCOMMA = ',';
+
+	public static final String CALCOLO_INTERESSI_MORA_SI = ICostantiString.SI_U;
+	public static final String CALCOLO_INTERESSI_MORA_NO = ICostantiString.NO_U;
+
+	private static final String[] CODICI_FORMULE_PUR =
+			{
+					ICodiciFormule.TASSO_PURO,
+					ICodiciFormule.TASSO_TARIFFA,
+					ICodiciFormule.TASSO_INVENTARIO,
+					ICodiciFormule.TASSO_TECNICO,
+					ICodiciFormule.PREMIO_PURO,
+					ICodiciFormule.PREMIO_INVENTARIO,
+					ICodiciFormule.PREMIO_TARIFFA,
+					ICodiciFormule.PREMIO_NETTO,
+					ICodiciFormule.PRESTAZIONE_INIZIALE,
+					ICodiciFormule.CAPITALE_OPZIONE_RENDITA,
+					ICodiciFormule.CAPITALE_GARANTITO
+			};
+
+
+	private CalcoloQuietanzamentoTask owner = null;
+	private Data dataInizio = null;
+	private Data dataFine = null;
+	private Scadenzario scadenzario = null;
+	private Map<ObjectId, ObjectId> mapRischi = null;
+	private Boolean bElabEffettiva = null;
+	private FormulePersonalizzateContainer formuleRischio = null;
+	private String numPolizzaCollettiva = "";
+
+	private int modalita=0;
+
+	private List<ErrorMessage> lErrorMessage= new ArrayList<ErrorMessage>();
+	private boolean interessiMoraSettati;
+	private int idRischioIntMora = 0;
+
+
+	/** Creates a new instance of RiserveAdapter */
+	public QuietanzamentoAdapter(){
+		//do nothing
+	}
+
+	@Override
+	public void init(Connettore connettore, Parameter param) {
+		this.setOwner((CalcoloQuietanzamentoTask)param.getOwnerTask());
+		setParametriFromOwner();
+	}
+
+
+	@Override
+	public void execute(Connettore connettore, Parameter param) throws Exception {
+		Data dataProssimaQuietanza = getOperazionDate(connettore, param);
+		calcolaQuietanzamentoBatch(connettore, param.getPolizza(), dataProssimaQuietanza, getOwner());
+	}
+
+
+	@Override
+	public Data getOperazionDate(Connettore connettore, Parameter param) throws IOException, SQLException {
+		return (Data)param.getRow()[2];
+	}
+
+	@Override
+	public int getModalitaAperturaPolizza(Connettore connettore, Parameter param) throws IOException, SQLException {
+		return APRI_CON_DATA;
+	}
+
+	@Override
+	public ObjectId getIdMovimento(Connettore connettore, Parameter param) throws IOException, SQLException {
+		return null;
+	}
+
+	@Override
+	public void writeRejectFile(Connettore connettore, Parameter param, Throwable exception, String message) throws SQLException, IOException {
+
+		Data dataProssimaQuietanza = getOperazionDate(connettore, param);
+		Polizza polizza = param.getPolizza();
+
+		final Connettore connettoreFile = param.getFileConnector();
+		final String codiceFormula = "";
+		final ObjectId idPolizza = getIdPolizza(connettore, param);
+		RischioAssicuratoVita rischioAssicurato = null;
+		if (exception instanceof VitaScartoBatchException){
+			rischioAssicurato = ((VitaScartoBatchException)exception).getRischioAssicurato();
+		}
+		scriviFileQuietanzamentoKO(connettore, connettoreFile, dataProssimaQuietanza, idPolizza, polizza, rischioAssicurato, message, codiceFormula);
+	}
+
+	public ObjectId getIdProduct(Connettore connettore, Parameter param) throws IOException, SQLException {
+		return new ObjectId(((Long)param.getRow()[1]).longValue());
+	}
+
+	@Override
+	public ObjectId getIdPolizza(Connettore connettore, Parameter param) throws IOException, SQLException {
+		return new ObjectId(((Long)param.getRow()[0]).longValue());
+	}
+
+
+	@Override
+	public boolean canExecute(Connettore connettore, Parameter param) throws IOException, SQLException {
+		ObjectId idPolizza = getIdPolizza(connettore, param);
+
+		ArrayIterator iter = RelPolizzarel.selectWhereForeignKeyIdPolizzaEquals(connettore, VersionId.TAPPO.longValue(), idPolizza, null);
+		if (iter != null && iter.hasNext()) {
+			RelPolizzarel rel = (RelPolizzarel)iter.next();
+			EntPolmadreconfig entPolmadreconfig = EntPolmadreconfig.selectByObjectId(connettore, VersionId.TAPPO.longValue(), rel.getAttrIdPolizzalegata());
+			if (entPolmadreconfig!=null && EntPolmadreconfig.ENUM_ETIPOADESIONE_COLLETTIVA.equals(entPolmadreconfig.getAttrTipoadesioneObjectId())) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+	@Override
+	public void calcolaQuietanzamentoBatch(final Connettore connettore,
+										   final Polizza polizza,
+										   final Data dataProssimoQuiet,
+										   final CalcoloQuietanzamentoTask owner)
+			throws Exception{
+		final ResponseQuietanzamento response = calcolaQuietanzamento(connettore, polizza, dataProssimoQuiet);
+		writeFile(connettore, response);
+	}
+
+
+	private void setParametriFromOwner(){
+
+		if(isElabBatch()){
+			formuleRischio = new FormulePersonalizzateContainer(getOwner().getGestoreFormuleRischio());
+			dataInizio = getOwner().getDataInizio();
+			dataFine = getOwner(). getDataFine();
+			mapRischi = getOwner().getMappaRischi();
+			bElabEffettiva = Boolean.valueOf(getOwner().getElaborazioneEffettiva());
+		}
+	}
+
+	protected boolean calcolaInteressiMora(ProdottoVita prodotto) {
+		return prodotto.getCalcoloInteressiMora();
+	}
+
+	@Override
+	public ResponseQuietanzamento calcolaQuietanzamento(Connettore connettore,
+														final Polizza polizza,
+														Data dataInizioCopertura)
+			throws Exception{
+		return calcolaQuietanzamento(connettore, polizza, dataInizioCopertura, Optional.empty());
+	}
+
+	/**
+	 * Questo  il core del calcolo del quietanzamento.
+	 * Nella ResponseQuietanzamento vengono ritornati tutti gli attributi necessari per
+	 * gestire eventuali errori, per scrivere i file e le tabelle proprie del quietanzamento.
+	 * @param connettore
+	 * @param polizza
+     * @param dataProssimoQuiet
+     * @param mapRischi
+     * @param bElaborazioneEffettiva
+	 * @return
+	 * @throws IOException
+	 * @throws SQLException
+	 */
+	@Override
+	public ResponseQuietanzamento calcolaQuietanzamento(Connettore connettore,
+														final Polizza polizza,
+														Data dataInizioCopertura,
+														Optional<FormulaEvaluationType> formulaEvaluationType)
+			throws Exception{
+
+		EntVkoperpremium entVkoperpr = null;
+		if(checkTempTable(connettore, polizza, isElabBatch())) {
+
+			EntVkoperpremium filterEntVkoperpr = new EntVkoperpremium();
+			filterEntVkoperpr.setAttrEffective(dataInizioCopertura);
+			filterEntVkoperpr.setAttrPolicyext(polizza.getNumPolizza());
+			ArrayIterator iterOperPremium = EntVkoperpremium.selectEntVkoperpremiumWhere(connettore, null, filterEntVkoperpr, null, null);
+
+			if(iterOperPremium == null || !iterOperPremium.hasNext()) {
+				throw new VitaException("There is no record with the reference date for the policy in question in the premium operations table");
+			}else {
+				// TODO refactor
+				while (iterOperPremium.hasNext()) {
+					entVkoperpr = (EntVkoperpremium) iterOperPremium.next();
+					EntVkpolicyop filterPolicyOp = new EntVkpolicyop();
+					filterPolicyOp.setAttrPoloperationid(entVkoperpr.getAttrIdOperation());
+					ArrayIterator arrayIterator =
+							EntVkpolicyop.selectEntVkpolicyopWhere(connettore, null, filterPolicyOp, null, null);
+					if(arrayIterator != null && arrayIterator.hasNext()){
+						EntVkpolicyop next = (EntVkpolicyop) arrayIterator.next();
+						if(next.isAttrCancoriginopcodidNull() || next.getAttrCancoriginopcodid() == 0) {
+							break;
+						}else if(!iterOperPremium.hasNext()){
+							throw new VitaException("Can't regenerate without a valid regeneration oper premium");
+						}
+					}
+				}
+			}
+		}
+
+		ContainerOggettiRelazionali result = new ContainerOggettiRelazionali();
+
+		aggiornaPolizzaDaScadenzario(connettore, polizza, dataInizioCopertura);
+
+		if(getOwner() == null) {
+			formuleRischio = new FormulePersonalizzateContainer();
+		}
+
+		ProdottoVita prodotto = (ProdottoVita) polizza.getProdotto(connettore);
+		polizza.setDataOperazione(dataInizioCopertura);
+
+		//*** metodo che valorizza la stringa "numPolizzaCollettiva"
+		valorizzaNumeroPolizzaCollettiva(connettore, polizza);
+
+		polizza.impostaFattori(connettore, polizza.getContestoAnagrafe(), polizza.getProdotto(connettore), false, true, ICodiciOperazione.OPERAZIONE_QUIETANZAMENTO);
+
+		//verifico se il prodotto richiede il calcolo degli interessi di mora
+		boolean bCalcoloIntMora = calcolaInteressiMora(prodotto);
+
+		//calcolo gli interessi di mora
+		double importoInteressiMora = 0.0;
+		if(bCalcoloIntMora) {
+			importoInteressiMora = calcolaInteressiMora(connettore, polizza);
+		}
+
+		//inizializzo fileQuietPolizza
+		EntVfilequietpol entFileQuietPolizza = inizializzaEntFileQuietPolizze(connettore,polizza, prodotto, dataInizio, dataFine, dataInizioCopertura);
+		entFileQuietPolizza.getObjectId().reset(entFileQuietPolizza.getAttrIdPolizza());
+
+		result.setOggettoPrincipale(entFileQuietPolizza);
+		//setto sul file se sono stati calcolati gli interessi di mora
+		setCalcoloIntMoraSuFile(entFileQuietPolizza, bCalcoloIntMora);
+
+		List<EntVfilequietrischi> listRigheRischio = new ArrayList<EntVfilequietrischi>();
+		List<ContainerOggettiFile> listObjfile = new ArrayList<ContainerOggettiFile>();
+
+		Iterator beniAss = polizza.getAssicurati().iterator(connettore);
+
+		while (beniAss.hasNext()) {
+			AssicuratoVita assicurato = (AssicuratoVita)beniAss.next();
+
+			Iterator rischiAss = assicurato.getRischiAssicurato().iterator(connettore);
+
+			while (rischiAss.hasNext()){
+				final RischioAssicuratoVita rischioAssicurato = (RischioAssicuratoVita)rischiAss.next();
+				ResponseElaborateRisk resultRisk = elaborateRisk(connettore,
+						polizza,
+						dataInizioCopertura,
+						importoInteressiMora,
+						assicurato,
+						rischioAssicurato,
+						entVkoperpr,
+						formulaEvaluationType);
+				if(resultRisk.isRischioDaQuietanzare()){
+					ContainerOggettiFile contObjFile = resultRisk.getContObjFile();
+					EntVfilequietrischi entFileRisk = (EntVfilequietrischi) contObjFile.getOggettoRelazionale();
+					setInvestmentDateToFileQuietRisk(connettore, rischioAssicurato, entFileRisk);
+					listRigheRischio.add(entFileRisk);
+					listObjfile.add(contObjFile);
+				}
+			}
+		}
+		result.setOggettiCollegati(listObjfile);
+
+		EntVfilequietrischi[] righeRischi = listRigheRischio.toArray(new EntVfilequietrischi[listRigheRischio.size()]);
+
+		if(callPassProductSystem(connettore, polizza)) {
+
+			prodotto.calcola();
+
+			boolean calculateRatePolicyLevel = ManagerFactoryUtility.getSingleton().getProprietaCustomVita().getPropBooleanValue(prodotto, ICodiciProprieta.GESTIONE_RATEO);
+			if(calculateRatePolicyLevel) {
+				Fattore rateFactor = prodotto.getFattore(ICodiciFattori.FAT_RATEO_PREMIO);
+				if(rateFactor != null) {
+					double rateValue = rateFactor.getValoreDouble();
+					assegnaPremioRischio(connettore, polizza, prodotto, righeRischi, importoInteressiMora, idRischioIntMora, rateValue);
+				}
+			} else {
+				assegnaPremioRischio(connettore, polizza, prodotto, righeRischi, importoInteressiMora, idRischioIntMora, null);
+			}
+		}
+
+		Integer idCurrency = polizza.getCurrencyProduct(connettore).getId();
+		assegnaPremioVitaPolizza(connettore, prodotto, entFileQuietPolizza, righeRischi, importoInteressiMora, idCurrency);
+
+		RataRischio[] rateRischio = creaArrayRataRischio(connettore, righeRischi);
+
+		calcoloProvvigioniQuietanzamento(connettore, righeRischi, rateRischio, polizza);
+
+		ResponseQuietanzamento responseQuietanzamento = new ResponseQuietanzamento(entFileQuietPolizza, righeRischi, formuleRischio);
+
+		List<String> messageList = executeActions(connettore, polizza, prodotto, responseQuietanzamento, getActionLevel());
+		if(!messageList.isEmpty()) {
+			EntVquietanzko entQuietKO = createQuietKO(connettore, polizza, dataInizioCopertura, messageList.get(0));
+			result.setOggettoPrincipale(entQuietKO);
+			responseQuietanzamento.setRowBlockedPolicy(entQuietKO);
+		}
+
+		responseQuietanzamento.setContainer(result);
+
+		return responseQuietanzamento;
+	}
+
+	public String getActionLevel() {
+		return IGestoreAzioniVita.CODICE_LIVELLO_AZIONE_CONTROLLO_BATCH;
+	}
+
+	public List<String> executeActions(Connettore connector, Polizza policy, Prodotto product, ResponseQuietanzamento responseQuietanzamento, String actionLevel) throws IOException, SQLException {
+		setExtFactorForExecuteActions(connector, policy, product, responseQuietanzamento);
+
+		product.eseguiAzioniLivello(actionLevel);
+
+		List<String> messageList = new ArrayList<>();
+		final Vector messages = product.getMessaggi();
+		if(messages != null && messages.size() > 0){
+			final Iterator<PPMessage> iter = messages.iterator();
+			while(iter.hasNext()) {
+				final PPMessage msg = (PPMessage)iter.next();
+				messageList.add(msg.getMessaggio());
+			}
+		}
+		return messageList;
+	}
+
+	/**
+	 * This method allow projects to set specific factors before execute product actions
+	 *
+	 * @param connector
+	 * @param policy
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public void setExtFactorForExecuteActions(Connettore connector, Polizza policy, Prodotto product, ResponseQuietanzamento responseQuietanzamento) throws IOException, SQLException {
+		//empty method
+	}
+
+	public void setInvestmentDateToFileQuietRisk(Connettore connector, final RischioAssicuratoVita insuredRisk, EntVfilequietrischi entFileRisk) {
+		if(insuredRisk.isLinked()) {
+			Fattore factor = insuredRisk.getFactor(connector, ICodiciFattori.FATSYS_DATA_INVESTIMENTO);
+			if (factor != null){
+				factor.setDefault();
+				if(factor.getValoreData() != null) {
+					entFileRisk.setAttrInvestment(new Data(factor.getValoreData()));
+				}
+			}
+		}
+	}
+
+	protected void writeRiskFormulas(String idFileRischioString) throws IOException {
+		if(getOwner() != null) {
+			formuleRischio.writeAllRighe(getOwner().getPathFileSql(), BatchCalculation.FILE_TEMP_FORMULE_RISCHIO, idFileRischioString);
+		}
+	}
+
+	protected void doBeforeWrite(Connettore connector, ContainerOggettiRelazionali cont, Transazione transazione) {
+		//default do nothing
+	}
+
+	private class ResponseElaborateRisk{
+
+		private boolean isRischioDaQuietanzare;
+		private ContainerOggettiFile contObjFile;
+
+
+		/**
+		 * @return the contObjFile
+		 */
+		public ContainerOggettiFile getContObjFile() {
+			return contObjFile;
+		}
+
+		/**
+		 * @param contObjFile the contObjFile to set
+		 */
+		public void setContObjFile(ContainerOggettiFile contObjFile) {
+			this.contObjFile = contObjFile;
+		}
+
+		public boolean isRischioDaQuietanzare() {
+			return isRischioDaQuietanzare;
+		}
+
+		public void setRischioDaQuietanzare(boolean isRischioDaQuietanzare) {
+			this.isRischioDaQuietanzare = isRischioDaQuietanzare;
+		}
+	}
+
+	private ResponseElaborateRisk elaborateRisk(Connettore connettore,
+												final Polizza polizza,
+												Data dataInizioCopertura,
+												double importoInteressiMora,
+												AssicuratoVita assicurato,
+												final RischioAssicuratoVita rischioAssicurato,
+												EntVkoperpremium entVkoperpr,
+												Optional<FormulaEvaluationType> formulaEvaluationType)
+			throws IOException, SQLException, VitaScartoBatchException {
+
+		ResponseElaborateRisk result = new ResponseElaborateRisk();
+
+		ProdottoVita prodotto = (ProdottoVita) polizza.getProdotto(connettore);
+		IstanzaBene istBene = assicurato.getIstanzaBene(connettore, prodotto);
+		IstanzaUnitVita istUnit = rischioAssicurato.getIstanzaUnit(connettore,rischioAssicurato.getUnitBene(istBene));
+		int idRischio = istUnit.getUnit().getIdRischio();
+		UnitVita unitVita = (UnitVita)istUnit.getUnit();
+		ErrorMessage rischioDaQuietanzare = verificaRischioAssicurato(connettore,polizza, prodotto, rischioAssicurato, unitVita, mapRischi, idRischio);
+		boolean isRischioDaQuietanzare = rischioDaQuietanzare == null;
+		result.setRischioDaQuietanzare(isRischioDaQuietanzare);
+		if (isRischioDaQuietanzare) {
+			istUnit.getUnitBene().setSelezionata(true);
+			PPKeyList formuleOper = istUnit.getFormuleOperazione();
+
+			//setto gli interessi di mora solo sulla prima base che trovo
+			if(((UnitVita)istUnit.getUnit()).getBase() && !interessiMoraSettati){
+				idRischioIntMora = istUnit.getUnit().getIdRischio();
+				valorizzaComponentePremio(istUnit, formuleOper, ICodiciFormule.INTERESSI_MORA, importoInteressiMora);
+				interessiMoraSettati = true;
+			}
+			//valorizzo tutte le componenti di premio sull'IstanzaUnitVita
+			rischioAssicurato.valorizzaComponentiPremioFromRischioAss(istUnit, formuleOper);
+
+			//inizializzo il FileQuietRischio
+			EntVfilequietrischi entFileQuietRischi = inizializzaEntFileQuietRischi(connettore, polizza, prodotto, rischioAssicurato, assicurato, dataInizio, dataFine, dataInizioCopertura, entVkoperpr);
+
+            boolean isRevalReason = new OrdersUtility().isRagioneEmesso(connettore, polizza);
+            if (callPassProductFormulasSystem(connettore, polizza, isElabBatch()) && isRevalReason) {
+                List<FundMarker> fundMarkersList = getFundMarkers(connettore, polizza);
+                ProdottoVita product = (ProdottoVita) polizza.getProdotto(connettore);
+                Data investmentDate = InvestmentDateStrategyFactory.create(connettore, product, fundMarkersList, dataInizioCopertura);
+                entFileQuietRischi.setAttrInvestment(investmentDate);
+            }
+
+			ContainerOggettiFile cof = new ContainerOggettiFile();
+			cof.setOggettoRelazionale(entFileQuietRischi);
+
+			//verifico che si tratta di garanzia di tipo PUR e setto il dato sul FileQuietRischio
+			boolean isGaranziaPUR = unitVita.getModalitaVersamento() == UnitVita.VERSAMENTO_PREMIO_UNICO_RIC ? true : false;
+			entFileQuietRischi.setAttrCreaprestazione(isGaranziaPUR);
+
+			checkRischioPUR(connettore, entFileQuietRischi);
+
+			//Calcolo formule su rischi
+			if (isGaranziaPUR){
+				entFileQuietRischi.setAttrCapitaleopzioneToNull();
+				entFileQuietRischi.setAttrPremiopuroinizToNull();
+				entFileQuietRischi.setAttrPremioinventinizToNull();
+				entFileQuietRischi.setAttrPremiotariffainizToNull();
+				entFileQuietRischi.setAttrPremionettoinizToNull();
+				entFileQuietRischi.setAttrPrestazinizialeToNull();
+				entFileQuietRischi.setAttrPrestazrivallordaToNull();
+
+			}
+
+			FormulasEvalutation formulasEvalutation = getFormulasEvaluator(connettore, polizza, formulaEvaluationType);
+			String[] codiciFormuleSistema = isGaranziaPUR ? CODICI_FORMULE_PUR : TypeUtility.VOID_StringArray;
+			Values values = formulasEvalutation.evaluation(connettore, polizza, rischioAssicurato, codiciFormuleSistema);
+
+			cof.setHeaderEccedenza(new String[0]);
+			cof.setCampiEccedenza(new String[0]);
+
+			if (values.hasValues()) {
+				final Iterator iterCodiciFormulaRischio = values.iteratoreChiaviRisultati();
+				while (iterCodiciFormulaRischio.hasNext()) {
+					final String codiceFormula =  (String) iterCodiciFormulaRischio.next();
+					if (values.containsKey(codiceFormula)){
+						assegnaRisultatoFormulaPrestazione(codiceFormula, values.getValue(codiceFormula), entFileQuietRischi);
+					}
+				}
+
+				String idFileRiskStrig = setNewIdRiskFile(entFileQuietRischi);
+				ResultAddRiga resultAddFormule = formuleRischio.aggiungiRigaFormulePersonalizzate(istUnit, values, new String[]{Formula.TIPO_UTILIZZO_RISCHIO, Formula.TIPO_UTILIZZO_ENTRAMBI});
+				formuleRischio.setIdRischioAss(rischioAssicurato.getObjectId());
+				if(isElabBatch()){
+					writeRiskFormulas(idFileRiskStrig);
+				}
+
+				cof.setHeaderEccedenza(resultAddFormule.getColumns());
+				cof.setCampiEccedenza(resultAddFormule.getValues());
+
+			} else {
+				String idFileRiskStrig = setNewIdRiskFile(entFileQuietRischi);
+				formuleRischio.aggiungiRigaFormulePersonalizzateVuota();
+				if(isElabBatch()) {
+					writeRiskFormulas(idFileRiskStrig);
+				}
+			}
+
+			result.setContObjFile(cof);
+
+			calcolaPremioAnnuoVita(istUnit);
+			if (!isElabBatch()) {
+				rischioAssicurato.getCalcoli().aggiornaCalcoliFormule(connettore, values.getAllFormule());
+			}
+
+		} else {
+			lErrorMessage.add(rischioDaQuietanzare);
+			unitVita.setSelezionata(false);
+		}
+		return result;
+	}
+
+    private List<FundMarker> getFundMarkers(Connettore connettore, Polizza polizza) {
+        List<RischioAssicuratoVita> rischiAssicurati = polizza.getRischiAssicurati(connettore);
+        List<FundMarker> fundMarkersList = new ArrayList<>();
+        rischiAssicurati.forEach(insuredRisk -> {
+            try {
+                ArrayIterator pianiInvest = getInvestPlanIterator(connettore, polizza, insuredRisk);
+                if (pianiInvest != null) {
+                    wrapFundMarkers(pianiInvest, fundMarkersList);
+                }
+            } catch (IOException | SQLException e) {
+                throw new VitaException(e);
+            }
+        });
+        return fundMarkersList;
+    }
+
+    private ArrayIterator getInvestPlanIterator(Connettore connettore, Polizza polizza, RischioAssicuratoVita insuredRisk) throws IOException, SQLException {
+        return EntVpianoinvest.selectWhereForeignKeyIdRischioassEquals(connettore,
+                polizza.getMovimentoCorrente().getVersione().longValue(),
+                insuredRisk.getObjectId(), null);
+    }
+
+    private void wrapFundMarkers(ArrayIterator pianiInvest, List<FundMarker> fundMarkersList) {
+        pianiInvest.forEachRemaining(next -> {
+            String attrIdFondo = ((EntVpianoinvest) next).getAttrIdFondo().toString();
+            fundMarkersList.add(() -> attrIdFondo);
+        });
+    }
+
+	private FormulasEvalutation getFormulasEvaluator(Connettore connector, Polizza polizza, Optional<FormulaEvaluationType> formulaEvaluationType){
+		if(formulaEvaluationType.isPresent()){
+			return FormulaEvaluationUtility.createFormulaEvaluatorQuiettance(formulaEvaluationType.get());
+		}
+		if(callOnlineExternalFinancialSystem(connector, polizza, isElabBatch())) {
+			return new FormulaEvaluatorFinancialExternal();
+		} else if(callPassProductFormulasSystem(connector, polizza, isElabBatch())) {
+			return new FormulaEvaluationPP();
+		}
+
+		return new FormulaEvalutationFile();
+
+	}
+
+	public boolean isElabBatch() {
+		return getOwner() != null || ConnessioneConfiguration.getSingleton().isBatch();
+	}
+
+	public static boolean callPassProductFormulasSystem(Connettore connector, Polizza polizza, boolean batch){
+		boolean existULPolicyRisk = UtilityRamo3.existULPolicyRisk(connector, polizza);
+		return callPassProductFormulasSystem(connector, polizza.getNumPolizza(), existULPolicyRisk, batch);
+	}
+
+	public boolean callOnlineExternalFinancialSystem(Connettore connector, Polizza polizza, boolean batch) {
+		boolean existULPolicyRisk = UtilityRamo3.existULPolicyRisk(connector, polizza);
+    	Optional<String> prodCodeOpt = Optional.of(polizza.getProduct(connector).getCodice());
+    	String financialSystem = UtilityRamo3.getFinancialSystem(prodCodeOpt);
+		return !UtilityRamo3.FINANCIAL_SYSTEM_PASS.equals(financialSystem) && existULPolicyRisk && !batch;
+	}
+
+	public static boolean callPassProductFormulasSystem(Connettore connector, String policyNumber, boolean existULPolicyRisk, boolean batch){
+    	String productCode = LifePolicyByQuery.getProductCodeByPolicyNumber(connector, policyNumber);
+        String financialSystem = UtilityRamo3.getFinancialSystem(Optional.of(productCode));
+		return UtilityRamo3.FINANCIAL_SYSTEM_PASS.equals(financialSystem) || !existULPolicyRisk;
+	}
+
+	public static boolean checkTempTable(Connettore connector, Polizza polizza, boolean batch) {
+		boolean existULPolicyRisk = UtilityRamo3.existULPolicyRisk(connector, polizza);
+    	 Optional<String> prodCodeOpt = Optional.of(polizza.getProduct(connector).getCodice());
+    	 String financialSystem = UtilityRamo3.getFinancialSystem(prodCodeOpt);
+		return !UtilityRamo3.FINANCIAL_SYSTEM_PASS.equals(financialSystem) && batch && existULPolicyRisk;
+	}
+
+	public static boolean callPassProductSystem(Connettore connector, Polizza polizza){
+		boolean existULPolicyRisk = UtilityRamo3.existULPolicyRisk(connector, polizza);
+		return callPassProductSystem(connector, polizza.getNumPolizza(), existULPolicyRisk);
+	}
+
+	public static boolean callPassProductSystem(Connettore connector, String policyNumber, boolean existULPolicyRisk){
+    	String productCode = LifePolicyByQuery.getProductCodeByPolicyNumber(connector, policyNumber);
+        String financialSystem = UtilityRamo3.getFinancialSystem(Optional.of(productCode));
+		return !existULPolicyRisk || UtilityRamo3.FINANCIAL_SYSTEM_PASS.equals(financialSystem);
+	}
+
+	public static EntVkoperpremium getOperPremium(Connettore connector, String policyNumber) {
+		try {
+			ArrayIterator iteratorPrem = EntVkoperpremium.selectByNotUniqeKeyCpolicyext(connector, policyNumber);
+			if(iteratorPrem != null && iteratorPrem.hasNext()) {
+				return (EntVkoperpremium) iteratorPrem.next();
+			}
+		} catch (IOException | SQLException e) {
+			ExceptionsLauncher.manageException(connector, e, VitaException.class);
+		}
+		return null;
+	}
+
+	private String setNewIdRiskFile(EntVfilequietrischi entFileQuietRischi) throws IOException {
+
+		long attrIdRischioass = entFileQuietRischi.getAttrIdRischioass();
+		entFileQuietRischi.getObjectId().reset(attrIdRischioass);
+		String idFileRiskStrig = Long.toString(attrIdRischioass);
+		formuleRischio.setKey(idFileRiskStrig);
+		return idFileRiskStrig;
+	}
+
+	protected void aggiornaPolizzaDaScadenzario(Connettore connettore, Polizza polizza, Data dataInizioCopertura) throws IOException, SQLException {
+
+		final ArrayList<Scadenzario> listaScadenzari = PostDatate.load(connettore, polizza.getObjectId(), dataInizioCopertura);
+		if((listaScadenzari != null) && (!listaScadenzari.isEmpty())){
+
+			scadenzario = listaScadenzari.get(0);
+
+			boolean isMovVRIPR = isMovimentoVariazPercRivalutazione(connettore, polizza, scadenzario);
+
+			if(!isMovVRIPR){
+				try {
+					UpdaterScadenzario.allineaPolizzaDaScadenzario(connettore, polizza, listaScadenzari);
+				} catch (Exception e) {
+					VitaLogger.getInstance(connettore).print(e, true);
+				}
+			}
+		}
+	}
+
+	private static boolean isMovimentoVariazPercRivalutazione(Connettore connettore, Polizza polizza, Scadenzario scadenzario) throws IOException, SQLException {
+
+		boolean isMovVRIPR = false;
+
+		if(scadenzario.getIdMovimento() != null){
+			Iterator iterMovimenti = polizza.getMovimenti(connettore).iterator();
+			while (iterMovimenti.hasNext()) {
+				EntMovimento entMovimento = (EntMovimento) iterMovimenti.next();
+				if(scadenzario.getIdMovimento().equals(entMovimento.getObjectId())){
+					ObjectId idCausale = entMovimento.getAttrIdCausale();
+					EntCausale entCausale = ListaCausali.getSingleton().getById(connettore, idCausale);
+					if(entCausale.getAttrCodice().equals(ICodiciOperazione.OPERAZIONE_VARIAZIONE_RIVALUTAZIONE_PREMIO)){
+						isMovVRIPR = true;
+						break;
+					}
+				}
+			}
+		}
+		return isMovVRIPR;
+	}
+
+
+	public static void checkRischioPUR(Connettore connettore, EntVfilequietrischi entFileQuietRischi) throws VitaException {
+		try {
+			if (entFileQuietRischi.getAttrCreaprestazione() && !RamoVita.isRamoVita(connettore, entFileQuietRischi.getAttrCodiceramo())){
+				throw new VitaException("La modalità di versamento del rischio danni " + entFileQuietRischi.getAttrCodicerischio() + " non può essere PUR.");
+			}
+		} catch (IOException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class, "La modalità di versamento del rischio danni " + entFileQuietRischi.getAttrCodicerischio() + " non può essere PUR.");
+		} catch (SQLException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class, "La modalità di versamento del rischio danni " + entFileQuietRischi.getAttrCodicerischio() + " non può essere PUR.");
+
+		}
+	}
+
+
+    private void assegnaPremioRischio(final Connettore connettore, final Polizza polizza, final ProdottoVita prodotto, final EntVfilequietrischi[] entFileQuietRischi, final double importoIntMora, final int idRischioIntMora,Double rateValue) throws IOException, SQLException{
+
+		Iterator beniAss = polizza.getAssicurati().iterator(connettore);
+		while (beniAss.hasNext()) {
+			AssicuratoVita assicurato = (AssicuratoVita)beniAss.next();
+			IstanzaBene istBene = assicurato.getIstanzaBene(connettore, prodotto);
+			Iterator rischiAss = assicurato.getRischiAssicurato().iterator(connettore);
+
+			while (rischiAss.hasNext()){
+				final RischioAssicuratoVita rischioAssicurato = (RischioAssicuratoVita)rischiAss.next();
+				IstanzaUnitVita istUnit = rischioAssicurato.getIstanzaUnit(connettore,rischioAssicurato.getUnitBene(istBene));
+
+				for(int i=0; i<entFileQuietRischi.length; i++){
+					if(new ObjectId(entFileQuietRischi[i].getAttrIdRischioass()).equals(rischioAssicurato.getObjectId())){
+						Integer currencyId = polizza.getIdCurrency(connettore);
+
+						if(rateValue == null) {
+							rateValue = getRateValueFromUnit(istUnit);
+						}
+
+						assegnaPremioVitaRischio(connettore, istUnit, entFileQuietRischi[i], currencyId, rateValue);
+
+						if(rischioAssicurato.getIdRischio().equals(new ObjectId(idRischioIntMora))){
+							entFileQuietRischi[i].setAttrIntermorarataris(importoIntMora);
+						}
+						break;
+					}
+				}
+			}
+		}
+
+	}
+
+	protected Double getRateValueFromUnit(IstanzaUnitVita istUnit) {
+		Double rateValue = 1d;
+
+		boolean calculateRateRiskLevel = ManagerFactoryUtility.getSingleton().getProprietaCustomVita().getPropBooleanValue(istUnit.getUnit(), ICodiciProprieta.GESTIONE_RATEO);
+		if(calculateRateRiskLevel) {
+			Fattore rateFactor = istUnit.getFattore(ICodiciFattori.FAT_RATEO_PREMIO);
+			if(rateFactor != null) {
+				rateValue = rateFactor.getValoreDouble();
+			}
+		}
+
+		return rateValue;
+	}
+
+
+	private double calcolaInteressiMora(final Connettore connettore, final Polizza polizza) throws VitaException {
+
+		try {
+			ProdottoVita prodotto = (ProdottoVita) polizza.getProdotto(connettore);
+			Integer idCurrency = polizza.getCurrencyProduct(prodotto).getId();
+
+			double importoInteressiMora = 0.0;
+
+			//setto l'operazione sul prodotto
+			final PPKeyList lista = prodotto.getOperazioni();
+			final Operazione operazione = (Operazione) lista.getItemByCode(ICodiciOperazione.OPERAZIONE_QUIETANZAMENTO);
+			prodotto.setOperazione(operazione);
+
+			//recupero l'IstanzaUnitVita della garanzia base prevalente
+			IstanzaUnitVita lifeUnitInstance = getFirstBaseLifeUnitInstance(connettore, polizza);
+			if(lifeUnitInstance == null) {
+				return 0;
+			}
+			boolean calcInterestBase360 = lifeUnitInstance.getFattore(ICodiciFattori.FATSYS_NUM_DAY_ARREARS_BASE_360) != null;
+			//recupero i giorni mora dal prodotto
+			int giorniMora = prodotto.getGGMora();
+
+			//scorro le rate
+			ArrayIterator iterRate = polizza.getLoader().getAllPVVRata(connettore);
+			while (iterRate.hasNext()) {
+
+				EntVrata entRata = (EntVrata) iterRate.next();
+				Data dElabInteressi = entRata.getAttrElabinteressimora();
+				boolean isRataSecondoNodo = entRata.getAttrSecondonodo();
+
+				//verifico che si tratti di rataVita non di secondoNodo e che non sia valorizzata la DataElaborazioneInteressi
+				if(dElabInteressi == null && !isRataSecondoNodo){
+
+					EntMovimento movimentoRata = getMovementFromInstallment(connettore, polizza, entRata);
+
+					int giorniRitardoPagamento = getDayPaymantDelay(connettore, movimentoRata, calcInterestBase360);
+
+					//se non  maggiore di 0 o dei giorniMora della versione del prodotto non devo calcolare nulla
+					if(giorniRitardoPagamento > 0 && giorniRitardoPagamento > giorniMora){
+						//scorro le rateRischio
+						ArrayIterator iterRataRischi = EntVratarischio.selectWhereForeignKeyIdRataEquals(connettore, entRata.getObjectId(), null);
+						while (iterRataRischi.hasNext()) {
+							EntVratarischio entRataRischio = (EntVratarischio) iterRataRischi.next();
+
+							ParametroFormula[] args = createFormulaParams(connettore, polizza, entRataRischio, giorniRitardoPagamento);
+
+							Formula formula = new Formula(lifeUnitInstance, 1, new String[]{ICodiciFormule.CALCOLO_INTERESSI_MORA});
+							//valuto la formula
+							formula.valuta(connettore, args);
+							//ottengo il risultato della rata che sto ciclando(l'array di double dovrebbe avere sempre un solo elemento), e lo sommo alle altre.
+							importoInteressiMora += formula.getRisultato(ICodiciFormule.CALCOLO_INTERESSI_MORA);
+
+						}
+					}
+				}
+			}
+
+			return MathVita.round(connettore,importoInteressiMora,idCurrency);
+
+		} catch (IOException e) {
+			throw new VitaException(e);
+		} catch (SQLException e) {
+			throw new VitaException(e);
+		}
+	}
+
+	private int getDayPaymantDelay(Connettore connector, EntMovimento installmentMomement, boolean calcInterestBase360) throws IOException, SQLException{
+
+		if(installmentMomement != null){
+			Data dataEffetto = installmentMomement.getAttrEffetto();
+			ObjectId idGruppoTitoli = installmentMomement.getAttrIdGruppotitoli();
+
+			if(idGruppoTitoli != null){
+				Data dataIncassoTitolo = getDataEffettivoIncasso(connector, idGruppoTitoli);
+				return calcPaymentDelay(dataEffetto, dataIncassoTitolo, calcInterestBase360);
+			}
+		}
+
+		return 0;
+	}
+
+	private int calcPaymentDelay(Data effectDate, Data datePaySecurity, boolean calcInterestBase360) {
+		//calcolo differenza fra dataIncassoTitolo e dataEffetto
+		if(datePaySecurity != null){
+			if(calcInterestBase360){
+				return Data.getDiffDate360(datePaySecurity, effectDate);
+			} else {
+				return Data.getDiffDate(datePaySecurity, effectDate);
+
+			}
+
+		}
+		return 0;
+	}
+
+	private Data getDataEffettivoIncasso(Connettore connector, ObjectId idGruppoTitoli)
+			throws IOException, SQLException {
+		Data dataIncassoTitolo = null;
+
+		VitaQuery q = new VitaQuery();
+		q.appendSelect(EntTitolo.NOME_TAVOLA, EntTitolo.DEFFETTIVOINCASSO, null, false, true);
+		q.appendFrom(EntTitolo.NOME_TAVOLA, null, false, true);
+		q.append(VitaQuery.WHERE_1_EQ_1);
+        q.appendAndEspressione(EntTitolo.NOME_TAVOLA, EntTitolo.IDGRUPPOTITOLI, CostantiQuery.EQ, idGruppoTitoli);
+		q.append(VitaQuery.ORDER_BY);
+		q.appendOrderByAdd(EntTitolo.NOME_TAVOLA, EntTitolo.BPRINCIPALE, false);
+		q.append(VitaQuery.DESC);
+		ResultSet rs = q.select(connector);
+		if(rs != null && rs.next()){
+			Date date = rs.getDate(EntTitolo.DEFFETTIVOINCASSO);
+			dataIncassoTitolo = date != null ? new Data(date) : null;
+		}
+		return dataIncassoTitolo;
+	}
+
+
+	public EntMovimento getMovementFromInstallment(final Connettore connettore, final Polizza polizza, EntVrata entRata) throws VitaException {
+		try {
+			ObjectId idMovimento = entRata.getAttrIdMovimento();
+
+			EntMovimento movimentoRata = null;
+
+			//recupero tramite l'idMovimento della rata il movimento da cui ottengo la dataEffetto e l'idGruppoTitoli
+			@SuppressWarnings("unchecked")
+			Iterator<EntMovimento> iterMovimenti = polizza.getMovimentiPrecedenti(connettore, false).iterator();
+			while (iterMovimenti.hasNext()) {
+
+				EntMovimento movimentoCorr = iterMovimenti.next();
+				if(idMovimento.equals(movimentoCorr.getObjectId())){
+					movimentoRata = movimentoCorr;
+					break;
+				}
+			}
+			return movimentoRata;
+		} catch (IOException e) {
+			throw new VitaException(e);
+		} catch (SQLException e) {
+			throw new VitaException(e);
+		}
+	}
+
+
+	public IstanzaUnitVita getFirstBaseLifeUnitInstance(Connettore connector, Polizza policy) throws VitaException{
+
+		try {
+			Iterator iterInsured = policy.getAssicurati().iterator(connector);
+			ProdottoVita product = (ProdottoVita) policy.getProdotto(connector);
+
+			while (iterInsured.hasNext()) {
+				AssicuratoVita assicurato = (AssicuratoVita)iterInsured.next();
+				IstanzaBene istBene = assicurato.getIstanzaBene(connector, product);
+
+				Iterator iterRisk = assicurato.getRischiAssicurato().iterator(connector);
+				while (iterRisk.hasNext()) {
+					RischioAssicuratoVita insuredRisk = (RischioAssicuratoVita) iterRisk.next();
+					IstanzaUnitVita unitInstance = insuredRisk.getIstanzaUnit(connector, insuredRisk.getUnitBene(istBene));
+					UnitVita lifeUnit = (UnitVita) unitInstance.getUnit();
+					ErrorMessage checkRisk = verificaRischioAssicurato(connector, policy, product, insuredRisk, lifeUnit, mapRischi, insuredRisk.getIdRischio().intValue());
+					if(checkRisk == null && lifeUnit.getBase()){
+						return unitInstance;
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new VitaException(e);
+		} catch (SQLException e) {
+			throw new VitaException(e);
+		}
+
+		return null;
+	}
+
+	protected ParametroFormula[] createFormulaParams(Connettore connector, Polizza policy, EntVratarischio entRataRischio, int giorniRitardoPagamento) {
+
+		double premioTotale = entRataRischio.getAttrPremiototale() - entRataRischio.getAttrInteressimora() - entRataRischio.getAttrInteressiriattiv();
+		double premioLordo = entRataRischio.getAttrPremiototale();
+		ParametroFormula[] args = new ParametroFormula[4];
+
+		args[0] = new ParametroFormula(ICodiciFattori.FATSYS_LORDO_CALCOLO_INTERESSI, Double.valueOf(premioTotale), ParametroFormula.TIPO_PARAMETRO_FATTORE);
+		args[1] = new ParametroFormula(ICodiciFattori.FATSYS_NUMERO_GIORNI_MORA, Integer.valueOf(giorniRitardoPagamento), ParametroFormula.TIPO_PARAMETRO_FATTORE);
+		args[2] = new ParametroFormula(ICodiciFattori.FATSYS_NUM_DAY_ARREARS_BASE_360, Integer.valueOf(giorniRitardoPagamento), ParametroFormula.TIPO_PARAMETRO_FATTORE);
+		args[3] = new ParametroFormula(ICodiciFattori.FATSYS_PREMIO_LORDO_RATA_RISCHIO, premioLordo, ParametroFormula.TIPO_PARAMETRO_FATTORE);
+		return args;
+	}
+
+
+	private void calcolaPremioAnnuoVita(IstanzaUnitVita istUnit) {
+		//Calcola premio istanza unit
+		istUnit.calcolaPremioAnnuoVita();
+		List errorPostCalcoloUnit = istUnit.getMessaggi();
+		if(errorPostCalcoloUnit!=null){
+
+
+		}
+	}
+
+
+	public EntVfilequietpol inizializzaEntFileQuietPolizze(final Connettore connettore,
+														   final Polizza polizza,
+														   final Prodotto prodotto,
+														   final Data dataInizio,
+														   final Data dataFine,
+														   final Data dataProssimoQuiet)
+			throws IOException, SQLException {
+		EntVfilequietpol entFileQuietPolizza = new EntVfilequietpol();
+
+		entFileQuietPolizza.setAttrIdPolizza(polizza.getObjectId().longValue());
+		entFileQuietPolizza.setAttrIdMovimento(polizza.getMovimentoCorrente().getObjectId().longValue());
+		entFileQuietPolizza.setAttrEffettooperazione(polizza.getDataOperazione());
+		entFileQuietPolizza.setAttrDatainizquiet(dataInizio);
+		entFileQuietPolizza.setAttrDatafinequiet(dataFine);
+		entFileQuietPolizza.setAttrIdCompagnia(polizza.getIdCompagnia().longValue());
+
+		if(polizza.getContraente(connettore).getIdSoggetto() != null) {
+			entFileQuietPolizza.setAttrIdContraente(polizza.getContraente(connettore).getIdSoggetto().longValue());
+		}
+		entFileQuietPolizza.setAttrSiglaprovincia(polizza.getProvinciaResidenzaContraente(connettore));
+
+		//agente
+		entFileQuietPolizza.setAttrAgenzia(polizza.getNodoGestione(connettore).getAttrCodice());
+
+		//filiale
+		ObjectId idFiliale = polizza.getIdFiliale();
+		if(idFiliale != null){
+			EntFiliale entFiliale = Filiali.getSingleton().getByObjectId(connettore, idFiliale, false);
+			entFileQuietPolizza.setAttrCodfiliale(entFiliale.getAttrCodice());
+		}
+
+		//produttore
+		ObjectId idProduttore = polizza.getIdProduttore();
+		if(idProduttore != null){
+			EntProduttore entProduttore = Produttori.getSingleton().getByObjectId(connettore, idProduttore, false);
+			entFileQuietPolizza.setAttrCodproduttore(entProduttore.getAttrCodice());
+		}
+
+		//convenzione
+		ObjectId idConvenzione = polizza.getIdConvenzione();
+		if(idConvenzione != null){
+			EntConvenzioni entConvenz = ConvenzioniPuntiVendita.getSingleton().getEntConvenzioniById(connettore, idConvenzione, false);
+			entFileQuietPolizza.setAttrCodconvenzione(entConvenz.getAttrCodice());
+		}
+
+		String cognome = polizza.getContraente(connettore).getCognome(connettore);
+		if( cognome!= null){
+			String nome = polizza.getContraente(connettore).getNome(connettore);
+			entFileQuietPolizza.setAttrCognomecontraente(UtilityDbObjects.truncateMaxLength(cognome, EntVfilequietpol.NOME_TAVOLA, EntVfilequietpol.CCOGNOMECONTRAENTE));
+			entFileQuietPolizza.setAttrNomecontraente(UtilityDbObjects.truncateMaxLength(nome, EntVfilequietpol.NOME_TAVOLA, EntVfilequietpol.CNOMECONTRAENTE));
+		} else{
+			String denominazione = polizza.getContraente(connettore).getDenominazione(connettore);
+			entFileQuietPolizza.setAttrCognomecontraente(UtilityDbObjects.truncateMaxLength(denominazione, EntVfilequietpol.NOME_TAVOLA, EntVfilequietpol.CCOGNOMECONTRAENTE));
+		}
+
+		if(scadenzario != null){
+			entFileQuietPolizza.setAttrIdMovscadenz(scadenzario.getEntVscadenzario().getObjectId().longValue());
+			scadenzario = null;
+		}
+		String typePolicy = polizza.getTipoPolizza() == IPolizza.TIPO_POLIZZA_INDIVIDUALE ? "DictionaryMenu::Individuale" : "DictionaryMenu::Collettive";
+        String message = VitaAppConfig.getSingleton().getMessage(connettore, typePolicy);
+		entFileQuietPolizza.setAttrTipopolizza(UtilityDbObjects.truncateMaxLength(message, EntVfilequietpol.NOME_TAVOLA, EntVfilequietpol.CTIPOPOLIZZA));
+		entFileQuietPolizza.setAttrNumpolcollettiva(numPolizzaCollettiva);
+		entFileQuietPolizza.setAttrNumpolizza(polizza.getNumPolizza());
+		entFileQuietPolizza.setAttrCodiceprodotto(prodotto.getCodice());
+		entFileQuietPolizza.setAttrCodverprodotto(prodotto.getCodVersione());
+
+		if(prodotto.getDescrizioneEstesa() != null){
+			entFileQuietPolizza.setAttrDescrizprodotto(prodotto.getDescrizioneEstesa());
+		} else{
+			entFileQuietPolizza.setAttrDescrizprodotto(prodotto.getDescrizione());
+		}
+
+		entFileQuietPolizza.setAttrStatopolizza(polizza.getMovimentoCorrente().getAttrStatoObjectId().longValue());
+		entFileQuietPolizza.setAttrSottostatopolizza(polizza.getMovimentoCorrente().getAttrSottostatoObjectId().longValue());
+		entFileQuietPolizza.setAttrDescstatopolizza(polizza.getMovimentoCorrente().getAttrStato());
+		entFileQuietPolizza.setAttrDescsottostatopol(polizza.getMovimentoCorrente().getAttrSottostato());
+		entFileQuietPolizza.setAttrDecorrenzapolizza(polizza.getEntVersioneVita().getAttrDecorrenza());
+
+		entFileQuietPolizza.setAttrDataquietan(dataProssimoQuiet);
+		entFileQuietPolizza.setAttrDataquietansucc(polizza.calcolaDataProssimaQuietanza(connettore, dataProssimoQuiet));
+
+		//UMA PAYMENT MANAGEMENT
+		//		DatiPagamentoVita datiPagamento = polizza.getDatiPagamento().getDatiPagamentoRataSuccessiva(connettore);
+		IWrapperPaymentObject datiPagamento = getPaymentData(connettore, polizza);
+		if (datiPagamento!=null) {
+			entFileQuietPolizza.setAttrTipopagamento(datiPagamento.getTipoPagamento().longValue());
+			//			entFileQuietPolizza.setAttrDescrtipopagam(datiPagamento.getEntDatiPagamento().getAttrTipopagamento());
+			entFileQuietPolizza.setAttrDescrtipopagam(datiPagamento.getEntDatiPagamento().getTipoPagamento());
+			entFileQuietPolizza.setAttrCodicenazioneiban(datiPagamento.getCodiceNazioneIBAN());
+			entFileQuietPolizza.setAttrCiniban(datiPagamento.getCinIBAN());
+			entFileQuietPolizza.setAttrCin(datiPagamento.getCin());
+			entFileQuietPolizza.setAttrAbi(datiPagamento.getAbi());
+			entFileQuietPolizza.setAttrCab(datiPagamento.getCab());
+			entFileQuietPolizza.setAttrNumcontocorr(datiPagamento.getContoCorrente());
+
+			String intest = datiPagamento.getIntestatarioConto();
+			if(intest != null){
+				intest = intest.replace(OLD_CHAR, NEW_CHAR);
+				intest = intest.replace(OLD_CHARCOMMA, NEW_CHAR);
+				entFileQuietPolizza.setAttrIntestatarioconto(intest);
+			}
+			//UMA PAYMENT MANAGEMENT
+			entFileQuietPolizza.setAttrIban(datiPagamento.getIBAN());
+		}
+
+		return entFileQuietPolizza;
+	}
+
+	protected IWrapperPaymentObject getPaymentData(final Connettore connettore, final Polizza polizza) throws IOException, SQLException {
+		return polizza.getDatiPagamento().getDatiPagamentoRataSuccessiva(connettore);
+	}
+
+
+	public EntVfilequietrischi inizializzaEntFileQuietRischi(final Connettore connettore, final Polizza polizza, final Prodotto prodotto,
+															 final RischioAssicuratoVita rischioAssicurato, final AssicuratoVita assicurato, final Data dataInizio, final Data dataFine, final Data dataProssimoQuiet,
+															 EntVkoperpremium entPremium) throws IOException, SQLException {
+
+		IstanzaBene istBene = assicurato.getIstanzaBene(connettore, prodotto);
+		UnitBene unitBene = rischioAssicurato.getUnitBene(istBene);
+		IstanzaUnitVita istUnit = rischioAssicurato.getIstanzaUnit(connettore,unitBene);
+		UnitVita unitVita = (UnitVita)istUnit.getUnit();
+
+		final PassSoggettoLock sogAssicurato = assicurato.getAssicurato(connettore);
+
+		EntVfilequietrischi entFileQuietRischi = new EntVfilequietrischi();
+
+		entFileQuietRischi.setAttrIdRischioass(rischioAssicurato.getObjectId().longValue());
+
+		//Controlla il sottostato del rischio: se è in riduzione, il campo ctipodaticalc è "VIRTUALE"
+        String tipoDatiCalc = getTipoDatiCalc(connettore, rischioAssicurato);
+        entFileQuietRischi.setAttrTipodaticalc(UtilityDbObjects.truncateMaxLength(tipoDatiCalc, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CTIPODATICALC));
+		entFileQuietRischi.setAttrDatainizquiet(dataInizio);
+		entFileQuietRischi.setAttrDatafinequiet(dataFine);
+		entFileQuietRischi.setAttrIdCompagnia(polizza.getIdCompagnia().longValue());
+
+		String surnameTemp = polizza.getContraente(connettore).getCognome(connettore) != null ? polizza.getContraente(connettore).getCognome(connettore) : polizza.getContraente(connettore).getDenominazione(connettore);
+		String nameTemp = polizza.getContraente(connettore).getNome(connettore);
+		entFileQuietRischi.setAttrCognomecontraente(UtilityDbObjects.truncateMaxLength(surnameTemp, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CCOGNOMECONTRAENTE));
+		entFileQuietRischi.setAttrNomecontraente(UtilityDbObjects.truncateMaxLength(nameTemp, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CNOMECONTRAENTE));
+
+		entFileQuietRischi.setAttrIdPolizza(polizza.getIdPolizza().longValue());
+        String policyType = getPolicyType(connettore, polizza);
+		entFileQuietRischi.setAttrTipopolizza(UtilityDbObjects.truncateMaxLength(policyType, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CTIPOPOLIZZA));
+		entFileQuietRischi.setAttrNumpolcollettiva(numPolizzaCollettiva);
+		entFileQuietRischi.setAttrNumpolizza(polizza.getNumPolizza());
+		entFileQuietRischi.setAttrCodiceprodotto(prodotto.getCodice());
+		entFileQuietRischi.setAttrDescrizprodotto(prodotto.getDescrizioneEstesa() != null ? prodotto.getDescrizioneEstesa() : prodotto.getDescrizione());
+
+		entFileQuietRischi.setAttrIdRischio(unitBene.getUnit().getIdRischio());
+		entFileQuietRischi.setAttrCodicerischio(unitBene.getUnit().getCodiceRischio());
+		entFileQuietRischi.setAttrDescrizrischio(unitBene.getUnit().getDescrRischio());
+
+        final IEntityEntVverRiskInsured entVerRischiAss = rischioAssicurato.getEntVerRischiAss();
+
+		entFileQuietRischi.setAttrTiporischio(entVerRischiAss.getAttrTiporischio());
+
+		if(entVerRischiAss.getAttrTiporivalutazioneObjectId() != null){
+			String descTipoRival = EntVrischioass.getDescrEnumTiporivalutazione(connettore, entVerRischiAss.getAttrTiporivalutazioneObjectId());
+			entFileQuietRischi.setAttrTiporivalutazione(descTipoRival);
+		}
+
+		entFileQuietRischi.setAttrTipofiscalita(entVerRischiAss.getAttrTipofiscalita());
+		entFileQuietRischi.setAttrDuratarischio(entVerRischiAss.getAttrDuratarischio());
+		entFileQuietRischi.setAttrTipoprestazione(entVerRischiAss.getAttrTipoprestazione());
+
+		if(entVerRischiAss.getAttrModoversamentoObjectId() != null){
+			String descModoVersamento = EntVrischioass.getDescrEnumModoversamento(connettore, entVerRischiAss.getAttrModoversamentoObjectId());
+			entFileQuietRischi.setAttrModoversamento(descModoVersamento);
+		}
+
+		entFileQuietRischi.setAttrCodiceramo(unitBene.getUnit().getCodiceRamoMin());
+		entFileQuietRischi.setAttrTiporendita(entVerRischiAss.getAttrTiporendita());
+		entFileQuietRischi.setAttrFrazionarendita(unitVita.getFrazionamento() != null ? unitVita.getFrazionamento().getDescrizione() :"");
+		entFileQuietRischi.setAttrFrazionapremio(prodotto.getFrazionamento() != null ? prodotto.getFrazionamento().getDescrizione() :"");
+		entFileQuietRischi.setAttrStatorischio(entVerRischiAss.getAttrStatorischioObjectId().longValue());
+		entFileQuietRischi.setAttrDescrstatorischio(entVerRischiAss.getAttrStatorischio());
+		entFileQuietRischi.setAttrSottostatorischio(entVerRischiAss.getAttrSottostatorischioObjectId().longValue());
+		entFileQuietRischi.setAttrDescsotstatrischi(entVerRischiAss.getAttrSottostatorischio());
+
+		String insuredSurnameTemp = sogAssicurato != null ? sogAssicurato.getCognome(connettore) : "";
+		String insuredNameTemp = sogAssicurato != null ? sogAssicurato.getNome(connettore) : "";
+		entFileQuietRischi.setAttrCognomeassicurato(UtilityDbObjects.truncateMaxLength(insuredSurnameTemp, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CCOGNOMEASSICURATO));
+		entFileQuietRischi.setAttrNomeassicurato(UtilityDbObjects.truncateMaxLength(insuredNameTemp, EntVfilequietrischi.NOME_TAVOLA, EntVfilequietrischi.CNOMEASSICURATO));
+
+		entFileQuietRischi.setAttrSessoassicurato(sogAssicurato != null ? sogAssicurato.getDescrizioneSesso(connettore) : "");
+
+
+		if ((istBene.getFattore(ICodiciFattori.FATSYS_ASSICURATO_ETA) != null) && istBene.getFattore(ICodiciFattori.FATSYS_ASSICURATO_ETA).isValorizzato()) {
+			entFileQuietRischi.setAttrEtaassicuratoanni((int)istBene.getFattore(ICodiciFattori.FATSYS_ASSICURATO_ETA).getValoreDouble());
+		} else {
+			entFileQuietRischi.setAttrEtaassicuratoanniToNull();
+		}
+
+		if ((istBene.getFattore(ICodiciFattori.FATSYS_ETA_ASSICURATO_MESI)!=null) && istBene.getFattore(ICodiciFattori.FATSYS_ETA_ASSICURATO_MESI).isValorizzato()) {
+			entFileQuietRischi.setAttrEtaassicuratomesi((int)istBene.getFattore(ICodiciFattori.FATSYS_ETA_ASSICURATO_MESI).getValoreDouble());
+		} else {
+			entFileQuietRischi.setAttrEtaassicuratomesiToNull();
+		}
+
+		entFileQuietRischi.setAttrDecorrenzarischio(entVerRischiAss.getAttrDecorrenza());
+		entFileQuietRischi.setAttrDurataanni(polizza.getEntVersioneVita().getAttrDurata());
+		entFileQuietRischi.setAttrDuratagiorni(polizza.getEntVersioneVita().getAttrDuratagiorni());
+		entFileQuietRischi.setAttrDataquietan(dataProssimoQuiet);
+		entFileQuietRischi.setAttrDataquietansucc(polizza.calcolaDataProssimaQuietanza(connettore, dataProssimoQuiet));
+
+		if ((istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_ANNI)!=null) && istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_ANNI).isValorizzato()) {
+			entFileQuietRischi.setAttrAntidurataanni((int)istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_ANNI).getValoreDouble());
+		} else {
+			entFileQuietRischi.setAttrAntidurataanniToNull();
+		}
+
+		if ((istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_GIORNI)!=null) && istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_GIORNI).isValorizzato()) {
+			entFileQuietRischi.setAttrAntiduratagiorni((int)istUnit.getFattore(ICodiciFattori.FATSYS_ANTIDURATA_GIORNI).getValoreDouble());
+		} else {
+			entFileQuietRischi.setAttrAntiduratagiorniToNull();
+		}
+
+		/*
+		 *  RDDL-2312 if the PVVKOPERPREMIUM is present,
+		 *  some amounts must be taken from that table, rounded according to the risk.
+		 *  The amounts of the PVVKOPERPREMIUM must be multiplied by
+		 *  rischio di ramo I -> %GS
+		 *  rischio di ramo III -> (1-%GS)
+		 */
+		boolean isEntVkoperpremium = false;
+		Boolean linked = null;
+		double monetpercent = 0;
+		Integer idCurrency = 0;
+		if (entPremium!=null) {
+			isEntVkoperpremium = true;
+			linked = rischioAssicurato.isLinked();
+			monetpercent = entPremium.getAttrMonetpercent();
+			idCurrency = polizza.getIdCurrency(connettore);
+		}
+
+		// RDDL-2312
+		entFileQuietRischi.setAttrPremiopuro(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrNetamount(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremiopuro());
+		entFileQuietRischi.setAttrPrempureinstlrisk(entVerRischiAss.getAttrPremiopuro());
+		// RDDL-2312
+		entFileQuietRischi.setAttrPremioinventario(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrInventorypremium(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremioinventario());
+		// RDDL-2312
+		entFileQuietRischi.setAttrPremiotariffa(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrTariffpremium(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremiotariffa());
+		// RDDL-2312
+		entFileQuietRischi.setAttrPremionetto(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrNetfixedfees(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremionetto());
+		entFileQuietRischi.setAttrPremnettorataris(entVerRischiAss.getAttrPremionetto());
+
+        aggiornaCampoPrmdetraibrataris(connettore, entFileQuietRischi, istUnit, monetpercent, linked, idCurrency, polizza.getNumPolizza());
+
+		//Sovrappremi
+		entFileQuietRischi.setAttrSovrapprsanit(entVerRischiAss.getAttrSovrapprsanit());
+		entFileQuietRischi.setAttrSovsanitrataris(entVerRischiAss.getAttrSovrapprsanit());
+		entFileQuietRischi.setAttrSovrapprsport(entVerRischiAss.getAttrSovrapprsport());
+		entFileQuietRischi.setAttrSovsportrataris(entVerRischiAss.getAttrSovrapprsport());
+		entFileQuietRischi.setAttrSovrapprprof(entVerRischiAss.getAttrSovrapprprof());
+		entFileQuietRischi.setAttrSovprofrataris(entVerRischiAss.getAttrSovrapprprof());
+		entFileQuietRischi.setAttrSovrappraltro(entVerRischiAss.getAttrSovrappraltro());
+		entFileQuietRischi.setAttrSovaltrorataris(entVerRischiAss.getAttrSovrappraltro());
+		//caricamenti
+		// RDDL-2312
+		entFileQuietRischi.setAttrCaricacquisto(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrPurchasefees(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrCaricacquisto());
+		entFileQuietRischi.setAttrCaricacquirataris(entVerRischiAss.getAttrCaricacquisto());
+		entFileQuietRischi.setAttrCaricincasso(entVerRischiAss.getAttrCaricincasso());
+		entFileQuietRischi.setAttrCaricincrataris(entVerRischiAss.getAttrCaricincasso());
+		// RDDL-2312
+		entFileQuietRischi.setAttrCaricgestione(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrManagefees(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrCaricgestione());
+		entFileQuietRischi.setAttrCaricgestrataris(entVerRischiAss.getAttrCaricgestione());
+		entFileQuietRischi.setAttrCariclambda(entVerRischiAss.getAttrCariclambda());
+		entFileQuietRischi.setAttrCariclambdrataris(entVerRischiAss.getAttrCariclambda());
+		entFileQuietRischi.setAttrInteressifraz(entVerRischiAss.getAttrInteressifraz());
+		entFileQuietRischi.setAttrInterfrazrataris(entVerRischiAss.getAttrInteressifraz());
+		// RDDL-2312
+		entFileQuietRischi.setAttrDirittiratasucc(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrFixedfees(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrDirittiratasucc());
+		entFileQuietRischi.setAttrDirittirataris(entVerRischiAss.getAttrDirittiratasucc());
+		entFileQuietRischi.setAttrImposte(entVerRischiAss.getAttrImposte());
+		entFileQuietRischi.setAttrImposterataris(entVerRischiAss.getAttrImposte());
+		// RDDL-2312
+		entFileQuietRischi.setAttrPremiototale(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrGrossamount(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremiototale());
+		entFileQuietRischi.setAttrPrmtotrataris(isEntVkoperpremium ?
+				getRoundValueByRiskType(connettore, entPremium.getAttrGrossamount(), monetpercent, linked, idCurrency)
+				: entVerRischiAss.getAttrPremiototale());
+
+		ArrayList listPrestazioni = rischioAssicurato.getPrestazioni().getListaPrestazioni(connettore);
+		if ((listPrestazioni != null) && (listPrestazioni.size() > 0)) {
+			// Prende la prima prestazione con l'intenzione di prendere la prestazione di emissione
+			PrestazioneRischio prestazione = (PrestazioneRischio)listPrestazioni.get(0);
+			Data dataTariffa = null;
+
+			try {
+				dataTariffa = prestazione.calcolaDataTariffa(connettore, rischioAssicurato);
+			} catch (Exception e) {
+				dataTariffa = null;
+				VitaLogger.getInstance(connettore).print(e, true);
+
+			}
+
+			entFileQuietRischi.setAttrDatatariffa(dataTariffa);
+
+			if (!prestazione.getEntPrestazioneRischio().isAttrPremiopuroinizNull()){
+				entFileQuietRischi.setAttrPremiopuroiniz(prestazione.getEntPrestazioneRischio().getAttrPremiopuroiniz());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrPremioinventinizNull()){
+				entFileQuietRischi.setAttrPremioinventiniz(prestazione.getEntPrestazioneRischio().getAttrPremioinventiniz());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrPremiotariffainizNull()){
+				entFileQuietRischi.setAttrPremiotariffainiz(prestazione.getEntPrestazioneRischio().getAttrPremiotariffainiz());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrPremionettoinizNull()){
+				entFileQuietRischi.setAttrPremionettoiniz(prestazione.getEntPrestazioneRischio().getAttrPremionettoiniz());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrPrestazinizialeNull()){
+				entFileQuietRischi.setAttrPrestaziniziale(prestazione.getEntPrestazioneRischio().getAttrPrestaziniziale());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrPrestazrivallordaNull()){
+				entFileQuietRischi.setAttrPrestazrivallorda(prestazione.getEntPrestazioneRischio().getAttrPrestazrivallorda());
+			}
+			if (!prestazione.getEntPrestazioneRischio().isAttrCapitaleopzioneNull()){
+				entFileQuietRischi.setAttrCapitaleopzione(prestazione.getEntPrestazioneRischio().getAttrCapitaleopzione());
+			}
+		}
+		return entFileQuietRischi;
+	}
+
+	private String getPolicyType(final Connettore connettore, final Polizza polizza) {
+		String individual = VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryMenu::Individuali");
+        String collective = VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryMenu::Collettive");
+        String policyType = polizza.getTipoPolizza() == IPolizza.TIPO_POLIZZA_INDIVIDUALE ? individual : collective;
+		return policyType;
+	}
+
+	private String getTipoDatiCalc(final Connettore connettore, final RischioAssicuratoVita rischioAssicurato) {
+		String msg;
+		if(rischioAssicurato.getSottoStato().equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_IN_RIDUZIONE)) {
+            msg = VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryBatchVita::Virtual");
+        } else {
+            msg = VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryBatchVita::Real");
+        }
+		return msg;
+	}
+
+    public void aggiornaCampoPrmdetraibrataris(Connettore connettore,  EntVfilequietrischi entFileQuietRischi, IstanzaUnitVita istUnit, double monetpercent, Boolean linked, Integer idCurrency, String numPolizza) {
+		// Empty method for extension		
+	}
+
+	protected double getRoundValueByRiskType(Connettore connector, double value, double monetpercent,boolean linked,
+											 Integer idCurrency) throws IOException, SQLException {
+		return MathVita.round(connector, getValueByRiskType(value, monetpercent, linked), idCurrency);
+	}
+
+	protected double getValueByRiskType(double total, double monetPercent, boolean linked) {
+		double gs = total * monetPercent;
+		if(linked) {
+			return total - gs;
+		}
+		return gs;
+	}
+
+	private void setCalcoloIntMoraSuFile(EntVfilequietpol entFileQuietPolizza, boolean bCalcoloIntMora){
+
+		if(bCalcoloIntMora) {
+			entFileQuietPolizza.setAttrCalcolointermora(CALCOLO_INTERESSI_MORA_SI);
+		} else {
+			entFileQuietPolizza.setAttrCalcolointermora(CALCOLO_INTERESSI_MORA_NO);
+		}
+	}
+
+	protected void assegnaPremioVitaRischio(Connettore connettore, final IstanzaUnitVita istUnit, final EntVfilequietrischi entFileQuietRischi, Integer idCurrency, Double rateValue ) {
+
+		try {
+			entFileQuietRischi.setAttrSovsanitrataris(MathVita.round(connettore, istUnit.getPremioVita().getSovrapremioSanitarioRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrSovsportrataris(MathVita.round(connettore, istUnit.getPremioVita().getSovrapremioSportivoRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrSovprofrataris(MathVita.round(connettore, istUnit.getPremioVita().getSovrapremioProfessionaleRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrSovaltrorataris(MathVita.round(connettore, istUnit.getPremioVita().getSovrapremioAltroRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrCaricacquirataris(MathVita.round(connettore, istUnit.getPremioVita().getCaricamentiAcquistoRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrCaricincrataris(MathVita.round(connettore, istUnit.getPremioVita().getCaricamentiIncassoRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrCaricgestrataris(MathVita.round(connettore, istUnit.getPremioVita().getCaricamentiGestioneRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrCariclambdrataris(MathVita.round(connettore, istUnit.getPremioVita().getCaricamentiLambdaRataSucc()*rateValue, idCurrency));
+
+			double netAmount = MathVita.round(connettore, istUnit.getPremioVita().getPremioNettoRataSucc()*rateValue, idCurrency);
+			entFileQuietRischi.setAttrPremnettorataris(netAmount);
+			double interests = MathVita.round(connettore, istUnit.getPremioVita().getIntFrazRataSucc()*rateValue, idCurrency);
+			entFileQuietRischi.setAttrInterfrazrataris(interests);
+			double diritti = istUnit.getPremioVita().getDirittiRataSucc();
+			entFileQuietRischi.setAttrDirittirataris(diritti);
+			double tax = MathVita.round(connettore, istUnit.getPremioVita().getImposteRataSucc()*rateValue, idCurrency);
+			entFileQuietRischi.setAttrImposterataris(tax);
+
+			double grossAmount = netAmount+interests+diritti+tax;
+			entFileQuietRischi.setAttrPrmtotrataris(MathVita.round(connettore, grossAmount, idCurrency));
+
+			entFileQuietRischi.setAttrPrmdetraibrataris(MathVita.round(connettore, istUnit.getPremioVita().getImportoDetraibileRataSucc()*rateValue, idCurrency));
+			entFileQuietRischi.setAttrPrempureinstlrisk(MathVita.round(connettore, istUnit.getPremioVita().getPremioPuroRataSucc()*rateValue, idCurrency));
+		} catch (IOException | SQLException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class);
+		}
+	}
+
+
+	protected void assegnaPremioVitaPolizza(Connettore connettore, ProdottoVita prodotto, EntVfilequietpol entFileQuietPolizza, EntVfilequietrischi[] righeRischi, double importoIntMora, Integer currencyId){
+
+		for (EntVfilequietrischi riskRow : righeRischi) {
+			double sovrappremi = riskRow.getAttrSovsanitrataris() +
+					riskRow.getAttrSovsportrataris() +
+					riskRow.getAttrSovprofrataris() +
+					riskRow.getAttrSovaltrorataris();
+
+			double impCaricaAcqRata = riskRow.getAttrCaricacquirataris() +
+					riskRow.getAttrCaricincrataris() +
+					riskRow.getAttrCaricgestrataris() +
+					riskRow.getAttrCariclambdrataris();
+
+			try {
+				entFileQuietPolizza.setAttrSovrappremi(MathVita.round(connettore, entFileQuietPolizza.getAttrSovrappremi() + sovrappremi, currencyId));
+				entFileQuietPolizza.setAttrCaricamenti(MathVita.round(connettore, entFileQuietPolizza.getAttrCaricamenti() + impCaricaAcqRata, currencyId));
+				entFileQuietPolizza.setAttrInteressimora(importoIntMora);
+				entFileQuietPolizza.setAttrInteressifraz(MathVita.round(connettore, entFileQuietPolizza.getAttrInteressifraz() + riskRow.getAttrInterfrazrataris(), currencyId));
+				entFileQuietPolizza.setAttrDiritti(MathVita.round(connettore, entFileQuietPolizza.getAttrDiritti() + riskRow.getAttrDirittirataris(), currencyId));
+				entFileQuietPolizza.setAttrImposte(MathVita.round(connettore, entFileQuietPolizza.getAttrImposte() + riskRow.getAttrImposterataris(), currencyId));
+				entFileQuietPolizza.setAttrLordo(MathVita.round(connettore, entFileQuietPolizza.getAttrLordo() + riskRow.getAttrPrmtotrataris(), currencyId));
+				entFileQuietPolizza.setAttrNetto(MathVita.round(connettore, entFileQuietPolizza.getAttrNetto() + riskRow.getAttrPremnettorataris(), currencyId));
+				entFileQuietPolizza.setAttrPremiodetraibile(MathVita.round(connettore, entFileQuietPolizza.getAttrPremiodetraibile() + riskRow.getAttrPrmdetraibrataris(), currencyId));
+
+			} catch (IOException | SQLException e) {
+				ExceptionsLauncher.manageException(connettore, e, VitaException.class);
+			}
+		}
+	}
+
+
+	private void calcoloProvvigioniQuietanzamento(final Connettore connettore,
+												  final EntVfilequietrischi[] entFileQuietRischi,
+												  final RataRischio[] rateRischio,
+												  final Polizza polizza) throws Exception {
+		ParametriInputProvvVita parInput = new ParametriInputProvvVita(polizza, ICodiciOperazione.OPERAZIONE_QUIETANZAMENTO);
+
+		parInput.setRateRischio(rateRischio);
+
+		IGestoreProvvigioniVita gestoreProvvigioniVita = ManagerFactoryUtility.getSingleton().getGestoreProvvigioniVita();
+		ParametriOutputProvvVita outputProvvigioni = gestoreProvvigioniVita.calcoloProvvigioniVita(connettore, parInput);
+
+		ImportiProvvigioni[] importiProvv = outputProvvigioni.getImportiProvvigioni();
+
+		for(int i=0; (importiProvv!=null) && (i<importiProvv.length); i++) {
+			ImportiProvvigioni importoProvv = importiProvv[i];
+
+			for(int x=0; x<entFileQuietRischi.length; x++){
+
+				EntVfilequietrischi entFileQuiet = entFileQuietRischi[x];
+
+				if(importoProvv.getIdRischio() == entFileQuiet.getAttrIdRischio()) {
+					entFileQuiet.setAttrProvvacq(importoProvv.getImportoAcquisto());
+					entFileQuiet.setAttrProvvacqincrem(importoProvv.getImportoAcquistoIncrementoPremi());
+					entFileQuiet.setAttrProvvincasso(importoProvv.getImportoIncasso());
+					entFileQuiet.setAttrProvvacqrecupero(importoProvv.getImportoRecuperoAcquisto());
+				}
+			}
+		}
+	}
+
+
+	private void writeFile(Connettore connettore, final ResponseQuietanzamento response) throws IOException, SQLException{
+
+		final Transazione transazione = new Transazione();
+		if(response.getRowBlockedPolicy()!= null) {
+			transazione.add(response.getRowBlockedPolicy());
+		} else {
+			if(response.getRigheRischi() != null){
+				EntVfilequietrischi[] righeRischi = response.getRigheRischi();
+				if(righeRischi.length>0) {
+					transazione.add(response.getRigaPolizza());
+				}
+				for(int i=0; i<righeRischi.length; i++){
+					EntVfilequietrischi rigaRischio = righeRischi[i];
+					transazione.add(rigaRischio);
+				}
+			}
+		}
+
+		doBeforeWrite(connettore, response.getContainer(), transazione);
+
+		new WriterCalculation().write(connettore, transazione, getOwner());
+	}
+
+
+	public static Rata creaRata(final Connettore connettore, final ResponseQuietanzamento response, Divisa divisa) throws VitaException {
+		EntVfilequietrischi[] entFileQuietRischi = response.getRigheRischi();
+		return creaRata(connettore, entFileQuietRischi, divisa);
+	}
+
+
+	public static RataRischio[] creaArrayRataRischio(Connettore connettore, final EntVfilequietrischi[] entFileQuietRischi){
+
+		RataRischio[] rateRischio = new RataRischio[entFileQuietRischi.length];
+		for(int i=0; i<entFileQuietRischi.length; i++){
+			RataRischio rataRischio = new RataRischio();
+			EntVfilequietrischi entFileQuietRischio = entFileQuietRischi[i];
+            valorizzaRataRischio(connettore, entFileQuietRischio, rataRischio.getEntRataRischio().getLayerEntity());
+			rateRischio[i] = rataRischio;
+		}
+		return rateRischio;
+	}
+
+
+	public static Rata creaRata(final Connettore connettore, final EntVfilequietrischi[] entFileQuietRischi, Divisa divisa) throws VitaException {
+
+		Rata rata = new Rata();
+		try{
+			if(entFileQuietRischi != null){
+
+				GestoreRataRischi gestRataRischi = new GestoreRataRischi(rata, true);
+
+				for(int i=0; i<entFileQuietRischi.length; i++){
+
+					RataRischio rataRischio = new RataRischio();
+					EntVfilequietrischi entFileQuietRischio = entFileQuietRischi[i];
+                    valorizzaRataRischio(connettore, entFileQuietRischio, rataRischio.getEntRataRischio().getLayerEntity());
+					rata.sommaRateRischio(connettore, rataRischio, divisa);
+					gestRataRischi.add(connettore, rataRischio);
+				}
+
+				rata.getRataRischi().setRataRischi(connettore, gestRataRischi);
+			}
+		} catch (IOException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class);
+		} catch (SQLException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class);
+		}
+		return rata;
+	}
+
+
+	 public void aggiornaPolizza(final Connettore connettore,final Transazione transazione, final Polizza polizza, final ResponseQuietanzamento response) throws Exception{
+
+	        final EntVfilequietpol entFileQuietPolizza = response.getRigaPolizza();
+
+	        // [BGF] 70882 START
+	        String calcIntMora = entFileQuietPolizza.getAttrCalcolointermora();
+	        final ObjectId idPolizza = new ObjectId(entFileQuietPolizza.getAttrIdPolizza());
+	        if(calcIntMora.equals(QuietanzamentoAdapter.CALCOLO_INTERESSI_MORA_SI)){
+	            transazione.addTaskBeginning(AggiornaQuietanzamentoTask.getTaskUpdateDataElabInteressiMora(idPolizza));
+	        }
+	        // [BGF] 70882 END
+
+	        final Data dataEffettoOperazione =  new Data(entFileQuietPolizza.getAttrEffettooperazione());
+
+	        final EntMovimento entMovimentoCorrente = polizza.getMovimentoCorrente();
+	        final EntMovimento entMovimento = creaMovimento(connettore, entMovimentoCorrente, dataEffettoOperazione);
+
+	        final VersionId verIdOld = entMovimentoCorrente.getVersione();
+
+	        final GestoreRateVita gestRate = polizza.getRate();
+
+	        final Divisa divisa = polizza.getCurrencyProduct(connettore);
+
+	        Rata rata = null;
+	        Rata rataDanni = null;
+
+	        final ArrayList<Scadenzario> listaScadenzari = PostDatate.load(connettore, polizza.getObjectId(), dataEffettoOperazione);
+	        if((listaScadenzari != null) && (listaScadenzari.size() > 0)){
+	            //TODO viene dato per scontato che l'operazione sia una al massimo per la data
+	            Scadenzario scadenzario = listaScadenzari.get(0);
+	            boolean isMovVRIPR = isMovimentoVariazPercRivalutazione(connettore, polizza, scadenzario);
+
+	            if(!isMovVRIPR){
+	                UpdaterScadenzario.allineaPolizzaDaScadenzario(connettore, polizza, listaScadenzari);
+
+	                scadenzario.setSuppletivo(true);
+	                scadenzario.setDataElaborazione(new Data());
+	                transazione.add(scadenzario.getEntVscadenzario());
+	            }
+	        }
+
+	        final EntVfilequietrischi[] entFileQuietRischi = response.getRigheRischi();
+	        if((entFileQuietRischi != null) && (entFileQuietRischi.length > 0)){
+
+	            polizza.setDataInizioCopertura(entFileQuietRischi[0].getAttrDataquietan());
+	            polizza.setDataScadenzaCopertura(entFileQuietRischi[0].getAttrDataquietansucc());
+
+	            final GestoreRataRischi gestRataRischiVita = new GestoreRataRischi(rata, true);
+	            final GestoreRataRischi gestRataRischiDanni = new GestoreRataRischi(rataDanni, true);
+
+	            RischioAssicuratoVita rischioAss = null;
+	            for(int i=0; i<entFileQuietRischi.length; i++){
+
+	                final EntVfilequietrischi entFileQuietRischio = entFileQuietRischi[i];
+
+	                final Iterator iterAssic = polizza.getAssicurati().iterator(connettore);
+	                while (iterAssic.hasNext()) {
+	                    final AssicuratoVita assicurato = (AssicuratoVita) iterAssic.next();
+	                    if(assicurato.getRischiAssicurato().get(connettore, new ObjectId(entFileQuietRischio.getAttrIdRischioass())) != null){
+	                        rischioAss = (RischioAssicuratoVita) assicurato.getRischiAssicurato().get(connettore, new ObjectId(entFileQuietRischio.getAttrIdRischioass()));
+	                        break;
+	                    }
+	                }
+
+	                final RataRischio rataRischio = creaRataRischioValorizzata(connettore, entFileQuietRischio);
+	                if (RamoVita.isRamoVita(connettore, entFileQuietRischio.getAttrCodiceramo())){
+	                    if(rata == null){
+	                        rata = creaRata(entMovimento, IMarshallableRata.VITA, EntVrata.ENUM_ETIPORATA_QUIETANZA_SUPPLETIVA);
+	                    }
+	                    rata.sommaRateRischio(connettore, rataRischio, divisa);
+	                    gestRataRischiVita.add(connettore, rataRischio);
+	                }
+	                else{
+	                    if(rataDanni == null){
+	                        rataDanni = creaRata(entMovimento, IMarshallableRata.DANNI, EntVrata.ENUM_ETIPORATA_QUIETANZA_SUPPLETIVA);
+	                    }
+	                    rataDanni.sommaRateRischio(connettore, rataRischio, divisa);
+	                    gestRataRischiDanni.add(connettore, rataRischio);
+	                }
+
+	                if(entFileQuietRischio.getAttrCreaprestazione()) {
+	                    PrestazioneRischio prestazRischio = creaPrestazionePURValorizzata(connettore, rischioAss, entMovimento, entFileQuietRischio);
+                    rischioAss.getPrestazioni().add(connettore, prestazRischio);
+                }
+            }
+
+            if(gestRataRischiVita.size(connettore) > 0){
+                rata.getRataRischi().setRataRischi(connettore, gestRataRischiVita);
+            }
+            if(rataDanni != null){
+                rataDanni.getRataRischi().setRataRischi(connettore, gestRataRischiDanni);
+            }
+        }
+
+        List<LifeFinancialOrder> orderList = new ArrayList<>() ;
+
+        LifeStream.byList(polizza.getLinkedRiskList(connettore)).forEach(risk -> {
+        	updateLinkedRisk(connettore, polizza, entMovimento, verIdOld, entFileQuietRischi, orderList, risk);
+        });
+
+        List<LifeFinancialOrder> lifeFinancialOrders = OrdersUtility.sumNewOrdersWithSameFund(orderList);
+        if(!lifeFinancialOrders.isEmpty()){
+            for (LifeFinancialOrder financialOrder : lifeFinancialOrders) {
+                polizza.getLifeOrderManager().add(connettore, financialOrder);
+            }
+        }
+
+        gestRate.add(connettore, rata);
+        if ((rataDanni != null) && (rataDanni.getRataRischi().size(connettore) > 0)) {
+            gestRate.add(connettore, rataDanni);
+        }
+
+        polizza.setMovimentoDiSalvataggio(connettore, entMovimento);
+    }
+
+	private void updateLinkedRisk(final Connettore connettore,
+			final Polizza polizza,
+			final EntMovimento entMovimento,
+			final VersionId verIdOld,
+			final EntVfilequietrischi[] entFileQuietRischi,
+			List<LifeFinancialOrder> orderList,
+			RischioAssicuratoVita risk) {
+
+		try {
+
+			Optional<PrestazioneRischio> prestazRischioOpt = risk.getNewBenefit(connettore);
+			if(prestazRischioOpt.isPresent()) {
+				PrestazioneRischio prestazRischio = prestazRischioOpt.get();
+				IEntityEntVverprestazrisc entPrestazioneRischio = prestazRischio.getEntPrestazioneRischio();
+
+				EntVfilequietrischi entFileQuietRischio = getEntFileQuietRiskById(risk.getObjectId(), entFileQuietRischi);
+
+				final ArrayIterator pianiInvest = EntVpianoinvest.selectWhereForeignKeyIdRischioassEquals(connettore, verIdOld.longValue(), risk.getObjectId(), null);
+			    if (pianiInvest!=null && entFileQuietRischio != null) {
+	                            double totalPercULFunds = QuietUtility.getTotalPercentageULFunds(connettore, pianiInvest);
+
+	                            while(pianiInvest.hasNext()){
+	                                EntVprestazinvest entPrestazInvest = creaPrestazioneInvestFromPianoInvest((EntVpianoinvest)pianiInvest.next());
+	                                setInvestmentDataToInvestBenefit(entFileQuietRischio, entPrestazInvest);
+
+	                                if(callPassProductSystem(connettore, polizza)) {
+			                QuietUtility.updateFinancialValue(connettore, polizza, entPrestazInvest, entPrestazioneRischio.getLayerEntity(), getGsEntVverprestazRisk(connettore, polizza), totalPercULFunds);
+			                if (OrdersUtility.isRagioneEmesso(connettore, polizza)) {
+	                                        ProdottoVita lifeProduct = (ProdottoVita) polizza.getProduct(connettore);
+	                                        LifeFinancialOrder order = new OrderBook().createFinancialOrder(lifeProduct, entMovimento.getObjectId(), entPrestazInvest);
+	                                        orderList.add(order);
+	                                    }
+	                                }
+
+	                                PrestazioneInvestimento prestazioneInvestNew = new PrestazioneInvestimento(entPrestazInvest);
+	                                prestazRischio.getInvestimenti().add(connettore, prestazioneInvestNew);
+	                            }
+	                        }
+	                    }
+		} catch (IOException | SQLException e) {
+			ExceptionsLauncher.manageException(connettore, e, VitaException.class);
+	                }
+	            }
+
+	private EntVverprestazrisc getGsEntVverprestazRisk(Connettore connector, Polizza policy) {
+
+		Optional<RischioAssicuratoVita> gsRisk = policy.getGSRisk(connector);
+		if(gsRisk.isPresent()) {
+			RischioAssicuratoVita insRisk = gsRisk.get();
+			return insRisk.getNewBenefit(connector)
+					.map(ben -> ben.getEntPrestazioneRischio().getLayerEntity())
+					.orElse(null);
+	            }
+		return null;
+	}
+
+    private EntVfilequietrischi getEntFileQuietRiskById(ObjectId objectId, EntVfilequietrischi[] entFileQuietRischi) {
+    	return LifeStream.byArray(entFileQuietRischi)
+    			.filter(entFileRisk -> entFileRisk.getObjectId().equals(objectId))
+    			.findAny()
+    			.orElse(null);
+	        }
+
+	public void setInvestmentDataToInvestBenefit(final EntVfilequietrischi entFileQuietRischio, final EntVprestazinvest entPrestazInvest) {
+		entPrestazInvest.setAttrInvestimento(entFileQuietRischio.getAttrInvestment());
+	}
+
+
+	public static EntMovimento creaMovimento(final Connettore connettore, final EntMovimento entMovimentoCorrente, final Data dataEffettoOperazione) throws IOException, SQLException {
+		Data oggi = new Data();
+		final EntMovimento entMovimentoNew = Movimenti.getSingleton().creaMovimentoEstesa(connettore, (EntMovimento)entMovimentoCorrente.clone(), ICodiciOperazione.OPERAZIONE_QUIETANZAMENTO, dataEffettoOperazione, oggi);
+		return entMovimentoNew;
+	}
+
+
+	public static Rata creaRata(EntMovimento entMovimento, int categoriaRata, ObjectId eTipoRata){
+
+		Rata rata = new Rata(categoriaRata);
+		EntVrata entRataVita = rata.getEntRata();
+		entRataVita.setAttrIdMovimento(entMovimento.getObjectId());
+		entRataVita.setAttrTiporata(eTipoRata);
+
+		return rata;
+	}
+
+
+	public static void valorizzaRata(EntVfilequietpol entFileQuietPolizza, EntVrata entRataVita) {
+		if(!entFileQuietPolizza.isAttrLordoNull()) {
+			entRataVita.setAttrNetto(entFileQuietPolizza.getAttrNetto());
+			entRataVita.setAttrSovrappremi(entFileQuietPolizza.getAttrSovrappremi());
+			entRataVita.setAttrCaricamenti(entFileQuietPolizza.getAttrCaricamenti());
+			entRataVita.setAttrInteressifraz(entFileQuietPolizza.getAttrInteressifraz());
+			entRataVita.setAttrInteressimora(entFileQuietPolizza.getAttrInteressimora());
+			entRataVita.setAttrDiritti(entFileQuietPolizza.getAttrDiritti());
+			entRataVita.setAttrImposte(entFileQuietPolizza.getAttrImposte());
+			entRataVita.setAttrLordo(entFileQuietPolizza.getAttrLordo());
+			entRataVita.setAttrPremiodetraibile(entFileQuietPolizza.getAttrPremiodetraibile());
+		}
+	}
+
+
+	public static RataRischio creaRataRischioValorizzata(Connettore connettore, EntVfilequietrischi entFileQuietRischio){
+
+		RataRischio rataRischio = new RataRischio();
+        IEntityEntVratarischio entRataRischio = rataRischio.getEntRataRischio();
+
+        valorizzaRataRischio(connettore, entFileQuietRischio, entRataRischio.getLayerEntity());
+
+		return rataRischio;
+	}
+
+
+	public static PrestazioneRischio creaPrestazionePURValorizzata(Connettore connettore, RischioAssicuratoVita rischioAssicuratoVita, EntMovimento entMovimento, EntVfilequietrischi entFileQuietRischio) throws Exception {
+		PrestazioneRischio prestazioneRischio = new PrestazioneRischio();
+
+        IEntityEntVverprestazrisc entPrestazRisc = prestazioneRischio.getEntPrestazioneRischio();
+		entPrestazRisc.setAttrIdRischioass(new ObjectId(entFileQuietRischio.getAttrIdRischioass()));
+
+		//PrestazioneRisch
+		if (!entFileQuietRischio.isAttrPremiopuroinizNull()){
+			entPrestazRisc.setAttrPremiopuroiniz(entFileQuietRischio.getAttrPremiopuroiniz());
+		}
+		if (!entFileQuietRischio.isAttrPremioinventinizNull()){
+			entPrestazRisc.setAttrPremioinventiniz(entFileQuietRischio.getAttrPremioinventiniz());
+		}
+		if (!entFileQuietRischio.isAttrPremiotariffainizNull()){
+			entPrestazRisc.setAttrPremiotariffainiz(entFileQuietRischio.getAttrPremiotariffainiz());
+		}
+		if (!entFileQuietRischio.isAttrPremionettoinizNull()){
+			entPrestazRisc.setAttrPremionettoiniz(entFileQuietRischio.getAttrPremionettoiniz());
+		}
+		if (!entFileQuietRischio.isAttrPrestazinizialeNull()){
+			entPrestazRisc.setAttrPrestaziniziale(entFileQuietRischio.getAttrPrestaziniziale());
+		}
+
+		//VerPrestazioneRisch
+		if (!entFileQuietRischio.isAttrPrestazrivallordaNull()) {
+			entPrestazRisc.setAttrPrestazrivallorda(entFileQuietRischio.getAttrPrestazrivallorda());
+		}
+		if (!entFileQuietRischio.isAttrCapitaleopzioneNull()) {
+			entPrestazRisc.setAttrCapitaleopzione(entFileQuietRischio.getAttrCapitaleopzione());
+		}
+
+		if (!entFileQuietRischio.isAttrTassopuroNull()){
+			entPrestazRisc.setAttrTassopuroiniz(entFileQuietRischio.getAttrTassopuro());
+		}
+		if(!entFileQuietRischio.isAttrTassotariffaNull()){
+			entPrestazRisc.setAttrTassotariffainiz(entFileQuietRischio.getAttrTassotariffa());
+		}
+		if(!entFileQuietRischio.isAttrTassoinventarioNull()){
+			entPrestazRisc.setAttrTassoinventiniz(entFileQuietRischio.getAttrTassoinventario());
+		}
+		if(!entFileQuietRischio.isAttrCapitalegarantitoNull()){
+			entPrestazRisc.setAttrPrestazgarantita(entFileQuietRischio.getAttrCapitalegarantito());
+			entPrestazRisc.setAttrPrestazrivalgaran(entFileQuietRischio.getAttrCapitalegarantito());
+		}
+		if(!entFileQuietRischio.isAttrTassotecnicoNull()){
+			entPrestazRisc.setAttrTassotecnico(entFileQuietRischio.getAttrTassotecnico());
+		}
+
+		// Gestione DataTariffa
+		Data dataTariffa = null;
+		if(rischioAssicuratoVita!=null){
+
+			dataTariffa = prestazioneRischio.calcolaDataTariffa(connettore, rischioAssicuratoVita);
+		}else if(entFileQuietRischio.getAttrDatatariffa()!=null){
+
+			dataTariffa = entFileQuietRischio.getAttrDatatariffa();
+		}else{
+
+			dataTariffa = entMovimento.getAttrEffetto();
+		}
+		entPrestazRisc.setAttrTariffa(dataTariffa);
+
+		if(entFileQuietRischio.getAttrTiporivalutazione() != null){
+			final String labelTipoRivalPerEmesso = EntVrischioass.getDescrEnumTiporivalutazione(connettore, EntVrischioass.ENUM_ETIPORIVALUTAZIONE_PER_EMESSO);
+			if(entFileQuietRischio.getAttrTiporivalutazione().equalsIgnoreCase(labelTipoRivalPerEmesso)){
+				entPrestazRisc.setAttrDatarival(entMovimento.getAttrEffetto());
+			}
+		}
+
+		return prestazioneRischio;
+	}
+
+
+	public static void valorizzaRataRischio(Connettore connettore, EntVfilequietrischi entFileQuietRischio,
+											EntVratarischio entRataRischio) {
+		entRataRischio.setAttrIdRischio(new ObjectId(entFileQuietRischio.getAttrIdRischio()));
+		entRataRischio.setAttrIdRischioass(new ObjectId(entFileQuietRischio.getAttrIdRischioass()));
+
+		entRataRischio.setAttrSovrapprsanit(entFileQuietRischio.getAttrSovsanitrataris());
+		entRataRischio.setAttrSovrapprsport(entFileQuietRischio.getAttrSovsportrataris());
+		entRataRischio.setAttrSovrapprprof(entFileQuietRischio.getAttrSovprofrataris());
+		entRataRischio.setAttrSovrappraltro(entFileQuietRischio.getAttrSovaltrorataris());
+		entRataRischio.setAttrCaricacquisto(entFileQuietRischio.getAttrCaricacquirataris());
+		entRataRischio.setAttrCaricincasso(entFileQuietRischio.getAttrCaricincrataris());
+		entRataRischio.setAttrCaricgestione(entFileQuietRischio.getAttrCaricgestrataris());
+		entRataRischio.setAttrCariclambda(entFileQuietRischio.getAttrCariclambdrataris());
+		entRataRischio.setAttrPremionetto(entFileQuietRischio.getAttrPremnettorataris());
+		entRataRischio.setAttrInteressifraz(entFileQuietRischio.getAttrInterfrazrataris());
+		entRataRischio.setAttrInteressimora(entFileQuietRischio.getAttrIntermorarataris());
+		entRataRischio.setAttrDiritti(entFileQuietRischio.getAttrDirittirataris());
+		entRataRischio.setAttrImposte(entFileQuietRischio.getAttrImposterataris());
+		entRataRischio.setAttrPremiototale(entFileQuietRischio.getAttrPrmtotrataris());
+		entRataRischio.setAttrPremiodetraibile(entFileQuietRischio.getAttrPrmdetraibrataris());
+		entRataRischio.setAttrImpprovvacq(entFileQuietRischio.getAttrProvvacq());
+		entRataRischio.setAttrImpprovvacqincrpr(entFileQuietRischio.getAttrProvvacqincrem());  //da modificare sul db
+		entRataRischio.setAttrImpprovvacqrecup(entFileQuietRischio.getAttrProvvacqrecupero());
+		entRataRischio.setAttrImpprovvinc(entFileQuietRischio.getAttrProvvincasso());
+
+		if(isTipoFiscalitaPip(connettore, entFileQuietRischio.getAttrTipofiscalita())){
+			entRataRischio.setAttrLordocontribvol(entFileQuietRischio.getAttrPremiototale());
+		}
+		entRataRischio.setAttrPrempure(entFileQuietRischio.getAttrPrempureinstlrisk());
+	}
+
+
+	public static boolean isTipoFiscalitaPip(Connettore connettore, String attrTipoFiscalita) {
+		MetaInfo metaInfo = new EntVrischioass().getMetaInfo();
+		int indexTipoFisc = metaInfo.getIndex(EntVrischioass.ETIPOFISCALITA);
+		MetaInfoValoriPredefiniti tipiFiscalita = metaInfo.getConstantValues()[indexTipoFisc];
+		String tipoFiscPip;
+		try {
+			tipoFiscPip = tipiFiscalita.value2Label(connettore, EntVrischioass.ENUM_ETIPOFISCALITA_FIP);
+		} catch (IOException e) {
+			throw new VitaException(e);
+		} catch (SQLException e) {
+			throw new VitaException(e);
+		}
+		return tipoFiscPip.equalsIgnoreCase(attrTipoFiscalita);
+	}
+
+	private ErrorMessage verificaRischioAssicurato(final Connettore connettore,final Polizza polizza, final ProdottoVita prodotto, final RischioAssicuratoVita rischioAssicurato, final UnitVita unitVita, final  Map<ObjectId, ObjectId> mapRischi, final int idRischio) {
+
+        ErrorMessage errorMessage = new ErrorMessage();
+
+        //controllo che non sia un premio unico
+        if (unitVita.getModalitaVersamento() == UnitVita.VERSAMENTO_PREMIO_UNICO){
+            errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::uniquePayment"));
+            errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+            return errorMessage;
+        }
+
+        //Controllo la presenza del rischio nella mappaRischi
+        if ((mapRischi!=null) && (mapRischi.size() > 0) && !mapRischi.containsKey(new ObjectId(idRischio))){
+
+            errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noRisk"));
+            errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+            return errorMessage;
+        }
+
+        //Controllo l'operazione in passProdotti
+        if (unitVita.getOperazioni().getItemByCode(prodotto.getOperazione().getCode()) == null){
+            errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noOperation"));
+            errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+            return errorMessage;
+        }
+        //controllo stati e sottostati del rischio
+        ObjectId stato = rischioAssicurato.getEntVerRischiAss().getAttrStatorischioObjectId();
+        ObjectId sottoStato = rischioAssicurato.getEntVerRischiAss().getAttrSottostatorischioObjectId();
+        if(modalita==MODALITA_RIATTIVAZ_INSOLV)
+        {
+        	if(!(stato.equals(EntVverrischioass.ENUM_ESTATORISCHIO_STORNATO)
+        			&&    sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_INSOLVENZA___RESCISSIONE))) {
+                errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+        }
+        
+        if(modalita==MODALITA_RIATTIVAZ_RESCI)
+        {
+        	if(!(stato.equals(EntVverrischioass.ENUM_ESTATORISCHIO_STORNATO)
+        			&&    sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_RESCISSIONE))) {
+                errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+        }
+       //ENUM_ESOTTOSTATORISCHIO_RESCISSIONE
+        
+        else if(modalita==MODALITA_RIATTIVAZ_RIDUZ)
+        {
+            if (!stato.equals(EntVverrischioass.ENUM_ESTATORISCHIO_VALIDO) && !stato.equals(EntVverrischioass.ENUM_ESTATORISCHIO_STORNATO)) {
+                errorMessage.setsErrorMessage( VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+            if (!sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_NON_PERFEZIONATA) &&
+                    !sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_IN_VIGORE) &&
+                    !sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_PROROGATA) &&
+                    !sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_IN_RIDUZIONE))
+            {
+                errorMessage.setsErrorMessage( VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+        }
+        else{
+
+            if (!stato.equals(EntVverrischioass.ENUM_ESTATORISCHIO_VALIDO)) {
+                errorMessage.setsErrorMessage( VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+            if (!sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_NON_PERFEZIONATA) &&
+                    !sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_IN_VIGORE) &&
+                    !sottoStato.equals(EntVverrischioass.ENUM_ESOTTOSTATORISCHIO_PROROGATA))
+            {
+                errorMessage.setsErrorMessage( VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noState"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+        }
+        //Modifica per EMI002 - vedi doc analisi. GestioneDurataPagamentoPremiRischio
+        final IEntityEntVverRiskInsured entVerRischiAss = rischioAssicurato.getEntVerRischiAss();
+        if(!entVerRischiAss.isAttrScadenzapagpremiNull()){
+            if(!rischioAssicurato.getDataScadenzaPagamentoPremi().after(polizza.getDataScadenzaCopertura())){
+                errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::noExpiryDate"));
+                errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+                return errorMessage;
+            }
+        }
+
+        if(!entVerRischiAss.isAttrDatasosppagpremiNull() && !entVerRischiAss.getAttrDatasosppagpremi().after(polizza.getDataScadenzaCopertura())){
+            errorMessage.setsErrorMessage(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::sospDate"));
+            errorMessage.setRischioAssicuratoVita(rischioAssicurato);
+            return errorMessage;
+        }
+
+        return null;
+    }
+	private void valorizzaNumeroPolizzaCollettiva(Connettore connettore, Polizza polizza) throws SQLException, IOException {
+		ObjectId idPolizzaCollettiva = polizza.getIdPolizzaLegata(connettore, RelPolizzarel.ENUM_ELEGAME_MADRE);
+		if(idPolizzaCollettiva!= null) {
+			EntPolizza entPolizzaColl = EntPolizza.selectByObjectId(connettore, idPolizzaCollettiva);
+			numPolizzaCollettiva = entPolizzaColl.getAttrNumpolizza();
+		} else {
+			numPolizzaCollettiva = "";
+		}
+	}
+
+	/**
+	 *
+	 * @param codiceFormula
+	 * @param dValore
+     * @param entFilePrestazione
+     * @param entFileRischio
+     */
+	public void assegnaRisultatoFormulaPrestazione(final String codiceFormula, final double dValore, final EntVfilequietrischi entFileQuietRischi) {
+		if (codiceFormula.equals(ICodiciFormule.CAPITALE_OPZIONE_RENDITA)) {
+			entFileQuietRischi.setAttrCapitaleopzione(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PREMIO_PURO)) {
+			entFileQuietRischi.setAttrPremiopuroiniz(dValore);
+			entFileQuietRischi.setAttrPrempureinstlrisk(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PREMIO_INVENTARIO)) {
+			entFileQuietRischi.setAttrPremioinventiniz(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PREMIO_TARIFFA)) {
+			entFileQuietRischi.setAttrPremiotariffainiz(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PREMIO_NETTO)) {
+			entFileQuietRischi.setAttrPremionettoiniz(dValore);
+			entFileQuietRischi.setAttrPremnettorataris(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PRESTAZIONE_INIZIALE)) {
+			entFileQuietRischi.setAttrPrestaziniziale(dValore);
+			entFileQuietRischi.setAttrPrestazrivallorda(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.TASSO_PURO)) {
+			entFileQuietRischi.setAttrTassopuro(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.TASSO_TARIFFA)) {
+			entFileQuietRischi.setAttrTassotariffa(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.TASSO_INVENTARIO)) {
+			entFileQuietRischi.setAttrTassoinventario(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.CAPITALE_GARANTITO)) {
+			entFileQuietRischi.setAttrCapitalegarantito(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.TASSO_TECNICO)) {
+			entFileQuietRischi.setAttrTassotecnico(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.CARICAMENTI_ACQUISTO)) {
+			entFileQuietRischi.setAttrCaricacquirataris(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.CARICAMENTI_GESTIONE)) {
+			entFileQuietRischi.setAttrCaricgestrataris(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.PREMIO_LORDO)) {
+			entFileQuietRischi.setAttrPrmtotrataris(dValore);
+		}else if (codiceFormula.equals(ICodiciFormule.DIRITTI_PRIMA_RATA)) {
+			entFileQuietRischi.setAttrDirittirataris(dValore);
+		}
+	}
+
+
+	private void valorizzaComponentePremio(IstanzaUnitVita istUnit, PPKeyList formuleOper, String codFormula, double importo) {
+		if (formuleOper.getItemByCode(codFormula) != null) {
+			istUnit.resetComponentePremio(codFormula);
+		} else {
+			istUnit.setComponentePremio(codFormula,importo);
+		}
+	}
+
+
+	public void scriviFileQuietanzamentoKO(Connettore connettore,
+										   Connettore connettoreFile,
+										   Data dataProssimaQuiet,
+										   ObjectId idPolizza,
+										   Polizza polizza,
+										   RischioAssicuratoVita rischioAss,
+										   String errore,
+										   String codiceFormula)
+			throws  SQLException, IOException {
+		EntVquietanzko quietanzamentoKO = createQuietKO(connettore, dataProssimaQuiet, idPolizza, polizza, rischioAss,errore, codiceFormula);
+
+		Transazione transazione = new Transazione();
+		transazione.add(quietanzamentoKO);
+
+		WriterCalculation writer = new WriterCalculation();
+		writer.write(connettore, transazione, getOwner());
+	}
+
+	public EntVquietanzko createQuietKO(Connettore connettore, Polizza polizza, Data dataProssimaQuiet, String errore) throws IOException, SQLException {
+		return createQuietKO(connettore, dataProssimaQuiet, polizza.getObjectId(), polizza, null, errore, null);
+	}
+
+	public EntVquietanzko createQuietKO(Connettore connettore, Data dataProssimaQuiet, ObjectId idPolizza,
+										Polizza polizza, RischioAssicuratoVita rischioAss, String errore, String codiceFormula)
+			throws IOException, SQLException {
+		EntVquietanzko quietanzamentoKO = new EntVquietanzko();
+
+		if(bElabEffettiva != null) {
+			quietanzamentoKO.setAttrTipoelabeffettiva(bElabEffettiva.booleanValue());
+		}
+
+		quietanzamentoKO.setAttrDatainizquiet(dataInizio);
+		quietanzamentoKO.setAttrDatafinequiet(dataFine);
+		final ObjectId idCompagnia = getOwner().getIdCompagnia();
+		quietanzamentoKO.setAttrIdCompagnia(idCompagnia.longValue());
+		quietanzamentoKO.setAttrNumpolcollettiva("");
+
+		Prodotto prodotto = null;
+		Integer intTipoPolizza = null;
+		String strNumPolizza = null;
+		String codiceProdotto = null;
+		String descrProdotto = null;
+
+		// RDDL-2255 if the policy is not present, I try to recover the data from the entity
+		if (polizza != null) {
+			prodotto = polizza.getProdotto(connettore);
+			intTipoPolizza = polizza.getTipoPolizza();
+			strNumPolizza = polizza.getNumPolizza();
+			codiceProdotto = prodotto.getCodice();
+			descrProdotto = prodotto.getDescrizioneEstesa()!=null?prodotto.getDescrizioneEstesa():prodotto.getDescrizione();
+		} else if (idPolizza!=null) {
+			EntPolizza entPolizza = EntPolizza.selectByObjectId(connettore, idPolizza);
+			intTipoPolizza = entPolizza.getAttrTipopolizzaObjectId().intValue();
+			strNumPolizza = entPolizza.getAttrNumpolizza();
+			EntProdotti byId = ProdottiBis.getSingleton().getById(connettore, entPolizza.getAttrIdProdotto());
+			codiceProdotto = byId.getAttrCodice();
+			descrProdotto = byId.getAttrDescrizioneest()!=null ? byId.getAttrDescrizioneest() : byId.getAttrDescrizione();
+		}
+
+		quietanzamentoKO.setAttrTipopolizza(intTipoPolizza==IPolizza.TIPO_POLIZZA_INDIVIDUALE?"Individuale":"Collettiva");
+		quietanzamentoKO.setAttrNumpolizza(strNumPolizza);
+		quietanzamentoKO.setAttrCodiceprodotto(codiceProdotto);
+		quietanzamentoKO.setAttrDescrizprodotto(descrProdotto);
+
+		if(rischioAss!=null && prodotto!=null){
+			AssicuratoVita assicurato = rischioAss.getAssicuratoVita();
+			IstanzaBene istBene = assicurato.getIstanzaBene(connettore, prodotto);
+			UnitBene unitBene = rischioAss.getUnitBene(istBene);
+			quietanzamentoKO.setAttrCodicerischio(unitBene.getUnit().getCodiceRischio());
+			quietanzamentoKO.setAttrDescrizrischio(unitBene.getUnit().getDescrRischio());
+			quietanzamentoKO.setAttrStatorischio(rischioAss.getEntVerRischiAss().getAttrStatorischioObjectId().longValue());
+			quietanzamentoKO.setAttrSottostatorischio(rischioAss.getEntVerRischiAss().getAttrSottostatorischioObjectId().longValue());
+			quietanzamentoKO.setAttrDescrstatorischio(rischioAss.getEntVerRischiAss().getAttrStatorischio());
+			quietanzamentoKO.setAttrDescsotstatrischi(rischioAss.getEntVerRischiAss().getAttrSottostatorischio());
+		}
+
+		quietanzamentoKO.setAttrCodiceformula(codiceFormula);
+
+		quietanzamentoKO.setAttrMotivoerrore(errore);
+		quietanzamentoKO.setAttrIdPolizza(idPolizza.longValue());
+		quietanzamentoKO.setAttrDataprossquiet(dataProssimaQuiet);
+		return quietanzamentoKO;
+	}
+
+
+	public static EntVprestazinvest creaPrestazioneInvestFromPianoInvest(final EntVpianoinvest pianoInvest){
+
+		final EntVprestazinvest entPrestazInvest = new EntVprestazinvest();
+
+		entPrestazInvest.setAttrTipoinvestimento(EntVprestazinvest.ENUM_ETIPOINVESTIMENTO_INVESTIMENTO);
+		entPrestazInvest.setAttrPrenotazione(true);
+
+		entPrestazInvest.setAttrIdLinea(pianoInvest.getAttrIdLinea());
+		entPrestazInvest.setAttrIdFondo(pianoInvest.getAttrIdFondo());
+		entPrestazInvest.setAttrIdTranche(pianoInvest.getAttrIdTranche());
+		entPrestazInvest.setAttrPercentuale(pianoInvest.getAttrPercentuale());
+		entPrestazInvest.setAttrAppropriato(pianoInvest.getAttrAppropriatoObjectId());
+
+		return entPrestazInvest;
+	}
+
+
+	@Override
+	public int getModalita() {
+		return modalita;
+	}
+
+	@Override
+	public void setModalita(int iModalita) {
+		modalita = iModalita;
+	}
+
+	@Override
+	public ContainerOggettiRelazionali executeReturn(Connettore connettore, Parameter param) throws Exception {
+		Data dataProssimaQuietanza = getOperazionDate(connettore, param);
+		ResponseQuietanzamento calcolaQuietanzamento = calcolaQuietanzamento(connettore, param.getPolizza(), dataProssimaQuietanza);
+		writeFile(connettore, calcolaQuietanzamento);
+		return calcolaQuietanzamento.getContainer();
+	}
+
+	public CalcoloQuietanzamentoTask getOwner() {
+		return owner;
+	}
+
+	public void setOwner(CalcoloQuietanzamentoTask owner) {
+		this.owner = owner;
+	}
+
+	@Override
+	public boolean isPolicyExecutable(Connettore connettore, Polizza polizza) throws IOException, SQLException {
+		existSpecificReservationVar(connettore, polizza);
+		return true;
+	}
+
+	protected void existSpecificReservationVar(Connettore connettore, Polizza polizza) throws IOException, SQLException {
+
+		final ArrayIterator reservations = EntVreservation.selectByNotUniqeKeyIdPol(connettore, polizza.getIdPolizza());
+		while((reservations != null) && reservations.hasNext()){
+			final EntVreservation reservation = (EntVreservation) reservations.next();
+			if(reservation.getAttrStatusObjectId().getObjectKey() == EntVreservation.ENUM_ESTATUS_BOOKED.getObjectKey() &&
+				(reservation.getAttrIdCause().equals(ListaCausali.getSingleton().getByCodice(connettore, ICodiciOperazione.OPERAZIONE_RESCISSIONE).getObjectId())
+				|| reservation.getAttrIdCause().equals(ListaCausali.getSingleton().getByCodice(connettore, ICodiciOperazione.OPERAZIONE_ESTINZIONE_ANTICIPATA).getObjectId())) &&
+			   UtilityPolizza.compareDate(TypeUtility.toTypeData(polizza.getDataScadenzaCopertura()).getData(), TypeUtility.toTypeData(reservation.getAttrEff()).getData()) <= 1 &&
+			   existFactorReservationDateVar(connettore, reservation)) {
+				throw new VitaException(VitaAppConfig.getSingleton().getMessage(connettore, "DictionaryVita::DiscardReservationDateVar", new Object[]{ListaCausali.getSingleton().getById(connettore, reservation.getAttrIdCause()).getAttrDescrizione()}));
+			}
+		}
+	}
+
+	protected boolean existFactorReservationDateVar(Connettore connettore, EntVreservation reservation) throws IOException, SQLException {
+		final ArrayIterator factors = EntVrespoldata.selectByNotUniqeKeyIdReservation(connettore, reservation.getObjectId());
+		while ((factors != null) && factors.hasNext()) {
+			final EntVrespoldata factor = (EntVrespoldata) factors.next();
+			final EntFattori entFattori = EntFattori.selectByObjectId(connettore, factor.getAttrIdFactor());
+
+			if (ICodiciFattori.FAT_RESERVATION_DATE_VAR.equals(entFattori.getAttrCodice()) && ("1").equals(factor.getAttrValuestr())) {
+				return Boolean.TRUE;
+			}
+		}
+		return Boolean.FALSE;
+	}
+}

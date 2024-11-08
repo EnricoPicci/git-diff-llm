@@ -18,17 +18,8 @@ export function chatWithDiffs$(
     executedCommands: string[],
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
-    const diffs = input.diffs
-    const languages = input.languages
+    const promptForChat = buildFullPrompt(input)
     const llmModel = input.llmModel
-    const prompt = input.prompt
-
-    let languageSpecilization = ''
-    if (languages) {
-        languageSpecilization = languages.join(', ')
-    }
-
-    const promptForChat = fillPromptForChat(prompt, diffs, languageSpecilization)
 
     const msgText = `Chat with LLM with all diffs`
     const msg = newInfoMessage(msgText)
@@ -58,12 +49,16 @@ export function chatWithDiffsAndWriteChat$(
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
     const outDir = path.join(projectDir, outputDirName)
-    return chatWithDiffs$(input, executedCommands, messageWriter).pipe(
+    const promptForChat = buildFullPrompt(input)
+    return appendFileObs(path.join(outDir, 'chat-log.txt'), `Full prompt: ${promptForChat}\n`).pipe(
+        concatMap(() => {
+            return chatWithDiffs$(input, executedCommands, messageWriter)
+        }),
         concatMap((response) => {
             const qAndA = `Q: ${input.prompt}\nA: ${response.explanation}\n\n\n`
             const appentToChat$ = appendFileObs(path.join(outDir, 'chat.txt'), qAndA)
-            const fullLogEntry = `Full prompt: ${response.prompt}\nResponse: ${response.explanation}\n\n\n`
-            const appendToChatLog$ = appendFileObs(path.join(outDir, 'chat-log.txt'), fullLogEntry)
+            const promptForChat = `Response: ${response.explanation}\n\n\n`
+            const appendToChatLog$ = appendFileObs(path.join(outDir, 'chat-log.txt'), promptForChat)
             return forkJoin([appentToChat$, appendToChatLog$]).pipe(
                 map(() => {
                     return response.explanation
@@ -82,4 +77,19 @@ function fillPromptForChat(prompt: string, diffs: string[], languageSpecilizatio
     return chatPromptTemplate.replace(/{{diffs}}/g, diffs.join('\n'))
         .replace(/{{languages}}/g, languageSpecilization)
         .replace(/{{prompt}}/g, prompt)
+}
+
+function buildFullPrompt(
+    input: ChatWithDiffsParams,
+) {
+    const diffs = input.diffs
+    const languages = input.languages
+    const prompt = input.prompt
+
+    let languageSpecilization = ''
+    if (languages) {
+        languageSpecilization = languages.join(', ')
+    }
+
+    return fillPromptForChat(prompt, diffs, languageSpecilization)
 }
