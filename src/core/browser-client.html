@@ -130,6 +130,9 @@
         <label for="languages">Programming languanges:</label>
         <input type="text" id="languages" name="languages" placeholder="programming languages to consider, e.g. TypeScript, Java" value="TypeScript, Java, Python">
         <p>
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt" name="prompt" placeholder="Enter your prompt here..." style="width: 100%; height: 300px;"></textarea>
+        <p>
         <button type="button" onclick="generateReport()">Generate Report</button>
     </form> 
     
@@ -155,7 +158,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
-
         // ws is a global variable to store the websocket connection
         let ws = null;
         // connectionId is a global variable to store the connection ID
@@ -174,6 +176,15 @@
         let diffsWithExplanation = null;
         // use_ssh is a global variable to store if the user wants to use SSH to clone the repo
         let use_ssh = false;
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('http://localhost:3000/api/v1/default-prompts')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('prompt').value = data.changedFile.prompt;
+                })
+                .catch(error => console.error('Error fetching default prompts:', error));
+        });
 
         startWebsocketConnection();
 

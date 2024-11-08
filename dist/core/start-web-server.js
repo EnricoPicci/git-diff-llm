@@ -17,6 +17,7 @@ const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags
 const git_remote_1 = require("../internals/git/git-remote");
 const launch_report_1 = require("./launch-report");
 const chat_1 = require("./chat");
+const prompt_templates_1 = require("../internals/prompt-templates/prompt-templates");
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
@@ -76,6 +77,10 @@ function startWebServer() {
         ws.on('close', () => {
             console.log('Client disconnected');
         });
+    });
+    app.get('/api/v1/default-prompts', (_req, res) => {
+        const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
+        res.send(promptTemplates);
     });
     app.post('/api/v1/clone-repo', (req, res) => {
         const { repoUrl, use_ssh } = req.body;

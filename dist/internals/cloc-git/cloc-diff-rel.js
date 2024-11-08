@@ -39,7 +39,7 @@ function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCo
 // this stream is not safe in concurrent execution and therefore shouls NOT be called by operators that work concurrently
 // e.g. mergeMap
 function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, languages, executedCommands = []) {
-    return (0, git_diffs_1.addRemotes$)(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+    return (0, git_diffs_1.addRemotesAndCheckoutFromTagBranchCommit$)(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(to_tag_branch_commit);
         const _from_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(from_tag_branch_commit);
         const command = `npx`;

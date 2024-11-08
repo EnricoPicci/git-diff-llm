@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.gitDiff$ = gitDiff$;
 exports.gitDiffsNameOnly$ = gitDiffsNameOnly$;
-exports.addRemotes$ = addRemotes$;
+exports.addRemotesAndCheckoutFromTagBranchCommit$ = addRemotesAndCheckoutFromTagBranchCommit$;
 exports.comparisonEndString = comparisonEndString;
 exports.tagBranchCommitPrefix = tagBranchCommitPrefix;
 const rxjs_1 = require("rxjs");
@@ -11,7 +11,7 @@ const git_remote_1 = require("./git-remote");
 const git_commit_hash_1 = require("./git-commit-hash");
 const git_checkout_1 = require("./git-checkout");
 function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, use_ssh, executedCommands) {
-    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+    return addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);
         const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit);
         const command = `git`;
@@ -32,7 +32,7 @@ function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file
     (0, rxjs_1.reduce)((acc, curr) => acc + curr, ''));
 }
 function gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
-    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+    return addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);
         const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit);
         const command = `git`;
@@ -51,7 +51,7 @@ function gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_com
     // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
     (0, rxjs_1.reduce)((acc, curr) => acc + curr, ''));
 }
-function addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
+function addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
     const addRemoteParams_from = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
         git_remote_name: from_tag_branch_commit.git_remote_name,

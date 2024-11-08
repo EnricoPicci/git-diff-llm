@@ -14,6 +14,7 @@ import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-lis
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
 import { launchGenerateReport } from './launch-report';
 import { chat } from './chat';
+import { getDefaultPromptTemplates } from '../internals/prompt-templates/prompt-templates';
 
 const app = express();
 const port = 3000;
@@ -90,6 +91,11 @@ export function startWebServer() {
     ws.on('close', () => {
       console.log('Client disconnected');
     });
+  });
+
+  app.get('/api/v1/default-prompts', (_req: Request, res: Response) => {
+    const promptTemplates = getDefaultPromptTemplates();
+    res.send(promptTemplates);
   });
 
   app.post('/api/v1/clone-repo', (req: Request, res: Response) => {

@@ -9,6 +9,7 @@ const rxjs_1 = require("rxjs");
 const observable_fs_1 = require("observable-fs");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit");
 const message_writer_1 = require("../internals/message-writer/message-writer");
+const prompt_templates_1 = require("../internals/prompt-templates/prompt-templates");
 const GitRemoteNameForSecondRepo = 'git-diff-llm-remote-name';
 function launchGenerateReport(webSocket, data) {
     // the client must provide these data - some properties must be undefined but this is the structure expected from the client
@@ -23,6 +24,7 @@ function launchGenerateReport(webSocket, data) {
     const use_ssh = data.use_ssh;
     const llmModel = data.llmModel;
     const outputDirName = data.outputDirName;
+    const promptFromClient = data.prompt;
     // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
     // if no url_to_second_repo is sent
     const from = {
@@ -59,9 +61,11 @@ ${JSON.stringify(data, null, 2)}`;
         to_tag_branch_commit: to,
         use_ssh
     };
+    const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
+    promptTemplates.changedFile.prompt = promptFromClient;
     const inputParams = {
         comparisonParams: comparisonParams,
-        promptTemplates: data.promptTemplates,
+        promptTemplates: promptTemplates,
         outdir: path_1.default.join(projectDir, outputDirName),
         llmModel,
         languages

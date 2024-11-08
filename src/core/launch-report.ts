@@ -9,6 +9,7 @@ import { ComparisonParams } from "../internals/cloc-git/cloc-diff-rel"
 import { GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from "../internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit"
 import { ComparisonEnd } from "../internals/git/git-diffs"
 import { MessageWriter, newInfoMessage } from "../internals/message-writer/message-writer"
+import { getDefaultPromptTemplates } from "../internals/prompt-templates/prompt-templates";
 
 
 const GitRemoteNameForSecondRepo = 'git-diff-llm-remote-name'
@@ -25,6 +26,7 @@ export function launchGenerateReport(webSocket: ws.WebSocket, data: any) {
   const use_ssh = data.use_ssh
   const llmModel = data.llmModel
   const outputDirName = data.outputDirName
+  const promptFromClient = data.prompt
 
   // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
   // if no url_to_second_repo is sent
@@ -61,9 +63,12 @@ ${JSON.stringify(data, null, 2)}`
     to_tag_branch_commit: to,
     use_ssh
   };
+  const promptTemplates = getDefaultPromptTemplates();
+  promptTemplates.changedFile.prompt = promptFromClient;
+
   const inputParams: GenerateMdReportParams = {
     comparisonParams: comparisonParams,
-    promptTemplates: data.promptTemplates,
+    promptTemplates: promptTemplates,
     outdir: path.join(projectDir, outputDirName),
     llmModel,
     languages
