@@ -57,4 +57,34 @@ describe(`comparisonEndString`, () => {
         (0, chai_1.expect)(comp_string).equal(commit);
     });
 });
+describe(`gitDiffsNameOnly$`, () => {
+    it(`should return the names of the files which diff between 2 references`, (done) => {
+        const from = {
+            git_remote_name: 'origin',
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm'
+        };
+        const to = {
+            git_remote_name: 'origin',
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo: 'https://github.com/EnricoPicci/git-diff-llm'
+        };
+        const projectDir = './';
+        const use_ssh = false;
+        const executedCommands = [];
+        (0, git_diffs_1.gitDiffsNameOnly$)(projectDir, from, to, use_ssh, executedCommands).subscribe({
+            next: (result) => {
+                (0, chai_1.expect)(result).not.null;
+                // the result should be an array of strings
+                const files = result.split('\n');
+                (0, chai_1.expect)(files).not.null;
+                (0, chai_1.expect)(files.length).greaterThan(0);
+                done();
+            },
+            error: (error) => {
+                done(error);
+            }
+        });
+    }).timeout(10000);
+});
 //# sourceMappingURL=git-diffs.spec.js.map

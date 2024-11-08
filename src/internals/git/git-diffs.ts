@@ -2,6 +2,7 @@ import { concatMap, reduce } from "rxjs"
 import { executeCommandNewProcessObs } from "../execute-command/execute-command"
 import { addRemote$, AddRemoteParams } from "./git-remote"
 import { isInGitCommitHashFormat } from "./git-commit-hash"
+import { gitCheckout$ } from "./git-checkout"
 
 export type ComparisonEnd = {
     url_to_repo: string,
@@ -16,26 +17,14 @@ export function gitDiff$(
     use_ssh: boolean,
     executedCommands: string[]
 ) {
-    const addRemoteParams_from: AddRemoteParams = {
-        url_to_repo: from_tag_branch_commit.url_to_repo,
-        git_remote_name: from_tag_branch_commit.git_remote_name,
-        use_ssh
-    }
-    const addRemoteParams_to: AddRemoteParams = {
-        url_to_repo: to_tag_branch_commit.url_to_repo,
-        git_remote_name: to_tag_branch_commit.git_remote_name,
-        use_ssh
-    }
-    return addRemote$(
+    
+    return addRemotesAndCheckoutFromTagBranchCommit$(
         projectDir,
-        addRemoteParams_from,
+        from_tag_branch_commit,
+        to_tag_branch_commit,
+        use_ssh,
         executedCommands
     ).pipe(
-        concatMap(() => addRemote$(
-            projectDir,
-            addRemoteParams_to,
-            executedCommands
-        )),
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
             const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
@@ -70,26 +59,13 @@ export function gitDiffsNameOnly$(
     use_ssh: boolean, 
     executedCommands: string[]
 ) {
-    const addRemoteParams_from: AddRemoteParams = {
-        url_to_repo: from_tag_branch_commit.url_to_repo,
-        git_remote_name: from_tag_branch_commit.git_remote_name,
-        use_ssh
-    }
-    const addRemoteParams_to: AddRemoteParams = {
-        url_to_repo: to_tag_branch_commit.url_to_repo,
-        git_remote_name: to_tag_branch_commit.git_remote_name,
-        use_ssh
-    }
-    return addRemote$(
+    return addRemotesAndCheckoutFromTagBranchCommit$(
         projectDir,
-        addRemoteParams_from,
+        from_tag_branch_commit,
+        to_tag_branch_commit,
+        use_ssh,
         executedCommands
     ).pipe(
-        concatMap(() => addRemote$(
-            projectDir,
-            addRemoteParams_to,
-            executedCommands
-        )),
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
             const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
@@ -113,6 +89,43 @@ export function gitDiffsNameOnly$(
         }),
         // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
         reduce((acc, curr) => acc + curr, '')
+    )
+}
+
+export function addRemotesAndCheckoutFromTagBranchCommit$(
+    projectDir: string, 
+    from_tag_branch_commit: ComparisonEnd, 
+    to_tag_branch_commit: ComparisonEnd, 
+    use_ssh: boolean, 
+    executedCommands: string[]
+) {
+    const addRemoteParams_from: AddRemoteParams = {
+        url_to_repo: from_tag_branch_commit.url_to_repo,
+        git_remote_name: from_tag_branch_commit.git_remote_name,
+        use_ssh
+    }
+    const addRemoteParams_to: AddRemoteParams = {
+        url_to_repo: to_tag_branch_commit.url_to_repo,
+        git_remote_name: to_tag_branch_commit.git_remote_name,
+        use_ssh
+    }
+    return addRemote$(
+        projectDir,
+        addRemoteParams_from,
+        executedCommands
+    ).pipe(
+        concatMap(() => addRemote$(
+            projectDir,
+            addRemoteParams_to,
+            executedCommands
+        )),
+        concatMap(() => {
+            return gitCheckout$(
+                projectDir,
+                comparisonEndString(from_tag_branch_commit),
+                executedCommands
+            )
+        })
     )
 }
 

@@ -41,11 +41,13 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
 function chatWithDiffsAndWriteChat$(input, projectDir, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
     const outDir = path_1.default.join(projectDir, outputDirName);
     return chatWithDiffs$(input, executedCommands, messageWriter).pipe((0, rxjs_1.concatMap)((response) => {
-        const qAndA = `Q: ${input.prompt}\nA: ${response}\n\n\n`;
+        const qAndA = `Q: ${input.prompt}\nA: ${response.explanation}\n\n\n`;
         const appentToChat$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat.txt'), qAndA);
         const fullLogEntry = `Full prompt: ${response.prompt}\nResponse: ${response.explanation}\n\n\n`;
         const appendToChatLog$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), fullLogEntry);
-        return (0, rxjs_1.forkJoin)([appentToChat$, appendToChatLog$]).pipe((0, rxjs_1.map)(() => response.explanation));
+        return (0, rxjs_1.forkJoin)([appentToChat$, appendToChatLog$]).pipe((0, rxjs_1.map)(() => {
+            return response.explanation;
+        }));
     }));
 }
 function fillPromptForChat(prompt, diffs, languageSpecilization) {

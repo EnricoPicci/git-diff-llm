@@ -5,8 +5,7 @@ import { filter, skip, startWith, map, concatMap } from "rxjs"
 import { fromCsvObs } from "@enrico.piccinin/csv-tools"
 
 import { executeCommandNewProcessToLinesObs } from "../execute-command/execute-command"
-import { addRemote$ } from "../git/git-remote"
-import { ComparisonEnd, comparisonEndString } from "../git/git-diffs"
+import { addRemotesAndCheckoutFromTagBranchCommit$, ComparisonEnd, comparisonEndString } from "../git/git-diffs"
 
 export type ClocGitDiffRec = {
     File: string
@@ -86,16 +85,13 @@ function clocDiffRel$(
     languages?: string[],
     executedCommands: string[] = []
 ) {
-    return addRemote$(
+    return addRemotesAndCheckoutFromTagBranchCommit$(
         projectDir,
-        {...from_tag_branch_commit, use_ssh},
+        from_tag_branch_commit,
+        to_tag_branch_commit,
+        use_ssh,
         executedCommands
     ).pipe(
-        concatMap(() => addRemote$(
-            projectDir,
-            {...to_tag_branch_commit, use_ssh},
-            executedCommands
-        )),
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
             const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit)
