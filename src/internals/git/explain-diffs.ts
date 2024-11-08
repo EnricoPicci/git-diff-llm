@@ -1,5 +1,5 @@
 import { of, catchError, map } from "rxjs"
-import { getFullCompletion$ } from "../openai/openai"
+import { FullCompletionReponse, getFullCompletion$ } from "../openai/openai"
 import { ExplainDiffPromptTemplateData, fillPromptTemplateExplainDiff, getDefaultPromptTemplates, languageFromExtension, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
@@ -76,12 +76,13 @@ export function explainGitDiffs$<T>(
             const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`
             console.log(errMsg)
             executedCommands.push(errMsg)
-            return of('error in calling LLM to explain diffs')
+            const resp: FullCompletionReponse = { explanation: `error in calling LLM to explain diffs for file ${explanationInput.fullFilePath}.\n${err.message}`, prompt }
+            return of(resp)
         }),
         map(explanation => {
             const command = `call openai to explain diffs for file ${explanationInput.fullFilePath}`
             executedCommands.push(command)
-            return { ...explanationInput, explanation }
+            return { ...explanationInput, explanation: explanation.explanation }
         }),
         map(rec => {
             // remove the file content and the diffLines to avoid writing it to the json file

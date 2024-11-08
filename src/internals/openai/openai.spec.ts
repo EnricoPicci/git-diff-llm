@@ -10,7 +10,8 @@ describe(`getFullCompletion$`, () => {
         getFullCompletion$(prompt, model, temperature).pipe(
             tap({
                 next: (completion) => {
-                    expect(completion).to.be.a('string');
+                    expect(completion.explanation).to.be.a('string');
+                    expect(completion.prompt).to.be.a('string');
                 },
                 error: (error) => {
                     done(error);

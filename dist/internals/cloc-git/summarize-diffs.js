@@ -31,11 +31,14 @@ function summarizeDiffs$(compareResults, languages, project, llmModel, promptFor
     const msgText = `Calling LLM to summarize all diffs for the project ${project}`;
     const msg = (0, message_writer_1.newInfoMessage)(msgText);
     messageWriter.write(msg);
-    return (0, openai_1.getFullCompletion$)(promptForSummary, llmModel).pipe((0, rxjs_1.catchError)(err => {
+    return (0, openai_1.getFullCompletion$)(promptForSummary, llmModel).pipe((0, rxjs_1.map)(resp => {
+        return resp.explanation;
+    }), (0, rxjs_1.catchError)(err => {
         const errMsg = `===>>> Error calling LLM to summarize all diffs for the project ${project} - ${err.message}`;
         console.log(errMsg);
         executedCommands.push(errMsg);
-        return (0, rxjs_1.of)('error in calling LLM to explain diffs');
+        // const resp: FullCompletionReponse = { explanation: `error in calling LLM to summarize all diffs for the project ${project}.\n${err.message}`, prompt: promptForSummary }
+        return (0, rxjs_1.of)(`error in calling LLM to summarize all diffs for the project ${project}.\n${err.message}`);
     }));
 }
 //# sourceMappingURL=summarize-diffs.js.map

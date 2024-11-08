@@ -30,14 +30,22 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
         executedCommands.push(errMsg);
         const _errMsg = (0, message_writer_1.newErrorMessage)(errMsg);
         messageWriter.write(_errMsg);
-        return (0, rxjs_1.of)('error in chatting with LLM about diffs');
+        if (err.explanation) {
+            const resp = { explanation: err.explanation, prompt: promptForChat };
+            return (0, rxjs_1.of)(resp);
+        }
+        const resp = { explanation: `error in chatting with LLM about diffs.\n${err.message}`, prompt: promptForChat };
+        return (0, rxjs_1.of)(resp);
     }));
 }
 function chatWithDiffsAndWriteChat$(input, projectDir, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
     const outDir = path_1.default.join(projectDir, outputDirName);
     return chatWithDiffs$(input, executedCommands, messageWriter).pipe((0, rxjs_1.concatMap)((response) => {
         const qAndA = `Q: ${input.prompt}\nA: ${response}\n\n\n`;
-        return (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat.txt'), qAndA).pipe((0, rxjs_1.map)(() => response));
+        const appentToChat$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat.txt'), qAndA);
+        const fullLogEntry = `Full prompt: ${response.prompt}\nResponse: ${response.explanation}\n\n\n`;
+        const appendToChatLog$ = (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), fullLogEntry);
+        return (0, rxjs_1.forkJoin)([appentToChat$, appendToChatLog$]).pipe((0, rxjs_1.map)(() => response.explanation));
     }));
 }
 function fillPromptForChat(prompt, diffs, languageSpecilization) {

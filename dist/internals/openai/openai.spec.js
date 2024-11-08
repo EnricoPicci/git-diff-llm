@@ -10,7 +10,8 @@ describe(`getFullCompletion$`, () => {
         const temperature = 0.7;
         (0, openai_1.getFullCompletion$)(prompt, model, temperature).pipe((0, rxjs_1.tap)({
             next: (completion) => {
-                (0, chai_1.expect)(completion).to.be.a('string');
+                (0, chai_1.expect)(completion.explanation).to.be.a('string');
+                (0, chai_1.expect)(completion.prompt).to.be.a('string');
             },
             error: (error) => {
                 done(error);

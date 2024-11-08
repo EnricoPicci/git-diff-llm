@@ -63,11 +63,12 @@ function explainGitDiffs$(explanationInput, promptTemplates, llmModel, executedC
         const errMsg = `===>>> Error calling LLM to explain diffs for file ${explanationInput.fullFilePath} - ${err.message}`;
         console.log(errMsg);
         executedCommands.push(errMsg);
-        return (0, rxjs_1.of)('error in calling LLM to explain diffs');
+        const resp = { explanation: `error in calling LLM to explain diffs for file ${explanationInput.fullFilePath}.\n${err.message}`, prompt };
+        return (0, rxjs_1.of)(resp);
     }), (0, rxjs_1.map)(explanation => {
         const command = `call openai to explain diffs for file ${explanationInput.fullFilePath}`;
         executedCommands.push(command);
-        return Object.assign(Object.assign({}, explanationInput), { explanation });
+        return Object.assign(Object.assign({}, explanationInput), { explanation: explanation.explanation });
     }), (0, rxjs_1.map)(rec => {
         // remove the file content and the diffLines to avoid writing it to the json file
         // this is shown in the type assigned to _rec, which is
