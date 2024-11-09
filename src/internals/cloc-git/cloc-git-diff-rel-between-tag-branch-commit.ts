@@ -10,7 +10,7 @@ import { ComparisonEnd, comparisonEndString, buildFileGitUrl, gitDiff$ } from ".
 import { explainGitDiffs$ } from "../chat/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
-import { ClocGitDiffRec, ComparisonParams, hasCodeAddedRemovedModified, comparisonResultFromClocDiffRelOrGitDiffForProject$ } from "./cloc-diff-rel"
+import { ClocGitDiffRec, ComparisonParams, hasCodeAddedRemovedModified, comparisonResultFromClocDiffRelOrGitDiffForProject$, hasClocInfoDetails } from "./cloc-diff-rel"
 import { DefaultMessageWriter, MessageToClient, MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
 //********************************************************************************************************************** */
@@ -227,7 +227,9 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
         toArray(),
         concatMap((diffsWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
-            appendNumLinesOfCode(mdJson, diffsWithExplanation)
+            if (diffsWithExplanation.length > 0 && !hasClocInfoDetails(diffsWithExplanation[0])) {
+                appendNumLinesOfCode(mdJson, diffsWithExplanation)
+            }
             const promptForSummaryTemplate = promptTemplates?.summary?.prompt
             return summarizeDiffs$(
                 diffsWithExplanation, 
@@ -352,14 +354,15 @@ function appendCompResultToMdJson(
     mdJson: any[],
     compareResult: FileDiffWithExplanation
 ) {
-    const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
-
     mdJson.push({ p: '------------------------------------------------------------------------------------------------' })
     const compFileWithUrl = `[${compareResult.File}](${compareResult.fileGitUrl})`
     mdJson.push({ h3: compFileWithUrl })
     mdJson.push({ p: compareResult.explanation })
     mdJson.push({ p: '' })
-    mdJson.push({ p: linesOfCodeInfo })
+    if (!hasClocInfoDetails(compareResult)) {
+        const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
+        mdJson.push({ p: linesOfCodeInfo })
+    }
 }
 
 function appendPromptsToMdJson(
