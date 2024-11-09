@@ -46,6 +46,6 @@ function summarizeDiffs$(compareResults, languages, project, llmModel, promptFor
 }
 // need to see if there is a way to make this function more generic
 function isForSummary(explanationInput) {
-    return explanationInput.explanation.toLowerCase().includes('changed to improve readability');
+    return !explanationInput.explanation.toLowerCase().includes('changed to improve readability');
 }
 //# sourceMappingURL=summarize-diffs.js.map
