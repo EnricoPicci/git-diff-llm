@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasCodeAddedRemovedModified = hasCodeAddedRemovedModified;
+exports.hasClocInfoDetails = hasClocInfoDetails;
 exports.comparisonResultFromClocDiffRelForProject$ = comparisonResultFromClocDiffRelForProject$;
 exports.comparisonResultFromClocDiffRelOrGitDiffForProject$ = comparisonResultFromClocDiffRelOrGitDiffForProject$;
 exports.comparisonResultFromGitDiffForProject$ = comparisonResultFromGitDiffForProject$;
@@ -14,6 +15,13 @@ const execute_command_1 = require("../execute-command/execute-command");
 const git_diffs_1 = require("../git/git-diffs");
 function hasCodeAddedRemovedModified(rec) {
     const resp = rec.code_added.trim() !== '0' || rec.code_removed.trim() !== '0' || rec.code_modified.trim() !== '0';
+    return resp;
+}
+// If cloc is not available, it is possible to use git diff to get the number of lines added, removed and modified
+// in this case though we do not have all the info that cloc provides
+const noClocVal = '-';
+function hasClocInfoDetails(rec) {
+    const resp = rec.code_added !== noClocVal;
     return resp;
 }
 const clocGitDiffRecHeader = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed';
@@ -99,20 +107,19 @@ function comparisonResultFromGitDiffForProject$(comparisonParams, executedComman
     executedCommands).pipe((0, rxjs_1.concatMap)(recs => {
         return (0, rxjs_1.from)(recs);
     }), (0, rxjs_1.map)(rec => {
-        const fillUpVal = '-';
         const fillUp = {
-            blank_same: fillUpVal,
-            blank_modified: fillUpVal,
-            blank_added: fillUpVal,
-            blank_removed: fillUpVal,
-            comment_same: fillUpVal,
-            comment_modified: fillUpVal,
-            comment_added: fillUpVal,
-            comment_removed: fillUpVal,
-            code_same: fillUpVal,
-            code_modified: fillUpVal,
-            code_added: fillUpVal,
-            code_removed: fillUpVal,
+            blank_same: noClocVal,
+            blank_modified: noClocVal,
+            blank_added: noClocVal,
+            blank_removed: noClocVal,
+            comment_same: noClocVal,
+            comment_modified: noClocVal,
+            comment_added: noClocVal,
+            comment_removed: noClocVal,
+            code_same: noClocVal,
+            code_modified: noClocVal,
+            code_added: noClocVal,
+            code_removed: noClocVal,
         };
         const clocGitDiffRec = Object.assign(Object.assign({}, rec), fillUp);
         return clocGitDiffRec;

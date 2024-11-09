@@ -133,7 +133,9 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter, outdir).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         var _a;
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
-        appendNumLinesOfCode(mdJson, diffsWithExplanation);
+        if (diffsWithExplanation.length > 0 && !(0, cloc_diff_rel_1.hasClocInfoDetails)(diffsWithExplanation[0])) {
+            appendNumLinesOfCode(mdJson, diffsWithExplanation);
+        }
         const promptForSummaryTemplate = (_a = promptTemplates === null || promptTemplates === void 0 ? void 0 : promptTemplates.summary) === null || _a === void 0 ? void 0 : _a.prompt;
         return (0, summarize_diffs_1.summarizeDiffs$)(diffsWithExplanation, languages, projectName, llmModel, promptForSummaryTemplate, executedCommands, messageWriter).pipe((0, rxjs_1.map)(summary => {
             appendSummaryToMdJson(mdJson, summary);
@@ -209,13 +211,15 @@ function appendNumLinesOfCode(mdJson, fileDiffsWithExplanation) {
     mdJson.push({ p: linesOfCodeInfo });
 }
 function appendCompResultToMdJson(mdJson, compareResult) {
-    const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
     mdJson.push({ p: '------------------------------------------------------------------------------------------------' });
     const compFileWithUrl = `[${compareResult.File}](${compareResult.fileGitUrl})`;
     mdJson.push({ h3: compFileWithUrl });
     mdJson.push({ p: compareResult.explanation });
     mdJson.push({ p: '' });
-    mdJson.push({ p: linesOfCodeInfo });
+    if (!(0, cloc_diff_rel_1.hasClocInfoDetails)(compareResult)) {
+        const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
+        mdJson.push({ p: linesOfCodeInfo });
+    }
 }
 function appendPromptsToMdJson(mdJson, promptTemplates) {
     const promptSectionTitle = [
