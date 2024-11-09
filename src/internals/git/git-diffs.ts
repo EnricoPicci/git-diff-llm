@@ -1,8 +1,9 @@
-import { concatMap, reduce } from "rxjs"
+import { concatMap, of, reduce } from "rxjs"
 import { executeCommandNewProcessObs } from "../execute-command/execute-command"
 import { addRemote$, AddRemoteParams } from "./git-remote"
 import { isInGitCommitHashFormat } from "./git-commit-hash"
 import { gitCheckout$ } from "./git-checkout"
+import { getConfig } from "../../config"
 
 export type ComparisonEnd = {
     url_to_repo: string,
@@ -57,9 +58,9 @@ export function gitDiffsNameOnly$(
     from_tag_branch_commit: ComparisonEnd, 
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
-    executedCommands: string[]
+    executedCommands: string[],
 ) {
-    return addRemotesAndCheckoutFromTagBranchCommit$(
+    return addRemotes$(
         projectDir,
         from_tag_branch_commit,
         to_tag_branch_commit,
@@ -92,12 +93,41 @@ export function gitDiffsNameOnly$(
     )
 }
 
+// This function is useful when we want to add remotes and checkout from a tag, branch or commit
+// This function can not be tested safely because it checks out from a tag, branch or commit
+// and this can generate errors if the repo has uncommitted changes
 export function addRemotesAndCheckoutFromTagBranchCommit$(
     projectDir: string, 
     from_tag_branch_commit: ComparisonEnd, 
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
     executedCommands: string[]
+) {
+    // if we are testing, we don't want to checkout from a tag, branch or commit
+    // because this can generate errors if the repo has uncommitted changes
+    const _checkout = getConfig().isTest ? false : true
+    return addRemotes$(
+        projectDir, 
+        from_tag_branch_commit, 
+        to_tag_branch_commit, 
+        use_ssh, 
+        executedCommands,
+        _checkout
+    )
+}
+
+
+// The checkout param is useful when we only want to add remotes
+// like in the case of tests where checking out can generate errors 
+// (e.g. "error: Your local changes to the following files would be overwritten by checkout" 
+// is an error that occurs if the test is run while the repo has uncommitted changes)
+export function addRemotes$(
+    projectDir: string, 
+    from_tag_branch_commit: ComparisonEnd, 
+    to_tag_branch_commit: ComparisonEnd, 
+    use_ssh: boolean, 
+    executedCommands: string[],
+    checkout: boolean = false
 ) {
     const addRemoteParams_from: AddRemoteParams = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
@@ -120,6 +150,13 @@ export function addRemotesAndCheckoutFromTagBranchCommit$(
             executedCommands
         )),
         concatMap(() => {
+            // if checkout is false, return an empty observable - this is useful when we only want to add remotes
+            // like in the case of tests where checking out can generate errors 
+            // (e.g. "error: Your local changes to the following files would be overwritten by checkout" 
+            // is an error that occurs if the test is run while the repo has uncommitted changes)
+            if (!checkout) {
+                return of('')
+            }
             return gitCheckout$(
                 projectDir,
                 comparisonEndString(from_tag_branch_commit),

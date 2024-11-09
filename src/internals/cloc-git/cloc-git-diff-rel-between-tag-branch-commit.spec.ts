@@ -6,6 +6,7 @@ import { ComparisonParams } from './cloc-diff-rel';
 import { getDefaultPromptTemplates } from '../prompt-templates/prompt-templates';
 import { ComparisonEnd } from '../git/git-diffs';
 import { DefaultMessageWriter } from '../message-writer/message-writer';
+import { getConfig } from '../../config';
 
 const executedCommands: string[] = []
 const languages = ['Markdown', "TypeScript"]
@@ -14,6 +15,10 @@ const llmModel = 'gpt-3.5-turbo'
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm'
 
 describe(`allDiffsForProjectWithExplanation$`, () => {
+    // set the config to test mode so that the function does not perform actions not allowed in test mode
+    // e.g. checkout a branch
+    getConfig().isTest = true
+
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo
         The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
@@ -313,7 +318,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         })
     }).timeout(100000);
 
-    it.only(`should return the diffs between a branch of the local repo and a branch on the remote repo
+    it(`should return the diffs between a branch of the local repo and a branch on the remote repo
         The git diff should compare "fork/first-branch-on-fork vs refs/tags/first-tag"`, (done) => {
         const from: ComparisonEnd = {
             tag_branch_commit: 'tags/first-tag',
@@ -380,6 +385,9 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             outdir: outDir,
             languages
         }
+        // set the config to test mode so that the function does not perform actions not allowed in test mode
+        // e.g. checkout a branch
+        getConfig().isTest = true
         writeAllDiffsForProjectWithExplanationToMarkdown$(params, DefaultMessageWriter).subscribe({
             error: (error: any) => done(error),
             complete: () => done()
