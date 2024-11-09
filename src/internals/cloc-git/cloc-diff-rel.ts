@@ -5,10 +5,9 @@ import { filter, skip, startWith, map, concatMap } from "rxjs"
 import { fromCsvObs } from "@enrico.piccinin/csv-tools"
 
 import { executeCommandNewProcessToLinesObs } from "../execute-command/execute-command"
-import { addRemotesAndCheckoutFromTagBranchCommit$, ComparisonEnd, comparisonEndString } from "../git/git-diffs"
+import { addRemotesAndCheckoutFromTagBranchCommit$, ComparisonEnd, comparisonEndString, GitRec } from "../git/git-diffs"
 
-export type ClocGitDiffRec = {
-    File: string
+export type ClocGitDiffRec = GitRec & {
     blank_same: string
     blank_modified: string
     blank_added: string
@@ -21,9 +20,6 @@ export type ClocGitDiffRec = {
     code_modified: string
     code_added: string
     code_removed: string,
-    projectDir: string,
-    fullFilePath: string
-    extension: string
 }
 
 export function hasCodeAddedRemovedModified(rec: ClocGitDiffRec) {

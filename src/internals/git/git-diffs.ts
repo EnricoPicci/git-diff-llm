@@ -1,9 +1,18 @@
-import { concatMap, of, reduce } from "rxjs"
+import { concatMap, map, of, reduce } from "rxjs"
 import { executeCommandNewProcessObs } from "../execute-command/execute-command"
 import { addRemote$, AddRemoteParams } from "./git-remote"
 import { isInGitCommitHashFormat } from "./git-commit-hash"
 import { gitCheckout$ } from "./git-checkout"
 import { getConfig } from "../../config"
+import path from "path"
+
+
+export type GitRec = {
+    File: string
+    projectDir: string,
+    fullFilePath: string
+    extension: string
+}
 
 export type ComparisonEnd = {
     url_to_repo: string,
@@ -92,7 +101,38 @@ export function gitDiffsNameOnly$(
             )
         }),
         // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
-        reduce((acc, curr) => acc + curr, '')
+        reduce((acc, curr) => acc + curr, ''),
+        map(diff => diff.trim())
+    )
+}
+
+export function gitRecsFileDiffs$(
+    projectDir: string, 
+    from_tag_branch_commit: ComparisonEnd, 
+    to_tag_branch_commit: ComparisonEnd, 
+    use_ssh: boolean, 
+    executedCommands: string[],
+) {
+    return gitDiffsNameOnly$(
+        projectDir,
+        from_tag_branch_commit,
+        to_tag_branch_commit,
+        use_ssh,
+        executedCommands
+    ).pipe(
+        map(filesWithDiff => {
+            const gitRecs: GitRec[] = filesWithDiff.split('\n').map(file => {
+                const fullFilePath = `${path.join(projectDir, file)}`
+                const extension = file.split('.').pop() || ''
+                return {
+                    File: file,
+                    projectDir,
+                    fullFilePath,
+                    extension
+                }
+            })
+            return gitRecs
+        })
     )
 }
 
