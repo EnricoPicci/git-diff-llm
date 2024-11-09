@@ -227,7 +227,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
         toArray(),
         concatMap((diffsWithExplanation) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
-            if (diffsWithExplanation.length > 0 && !hasClocInfoDetails(diffsWithExplanation[0])) {
+            if (diffsWithExplanation.length > 0 && hasClocInfoDetails(diffsWithExplanation[0])) {
                 appendNumLinesOfCode(mdJson, diffsWithExplanation)
             }
             const promptForSummaryTemplate = promptTemplates?.summary?.prompt
@@ -359,7 +359,7 @@ function appendCompResultToMdJson(
     mdJson.push({ h3: compFileWithUrl })
     mdJson.push({ p: compareResult.explanation })
     mdJson.push({ p: '' })
-    if (!hasClocInfoDetails(compareResult)) {
+    if (hasClocInfoDetails(compareResult)) {
         const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
         mdJson.push({ p: linesOfCodeInfo })
     }

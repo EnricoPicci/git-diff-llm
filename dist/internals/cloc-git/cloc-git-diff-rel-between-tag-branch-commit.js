@@ -133,7 +133,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter, outdir).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         var _a;
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
-        if (diffsWithExplanation.length > 0 && !(0, cloc_diff_rel_1.hasClocInfoDetails)(diffsWithExplanation[0])) {
+        if (diffsWithExplanation.length > 0 && (0, cloc_diff_rel_1.hasClocInfoDetails)(diffsWithExplanation[0])) {
             appendNumLinesOfCode(mdJson, diffsWithExplanation);
         }
         const promptForSummaryTemplate = (_a = promptTemplates === null || promptTemplates === void 0 ? void 0 : promptTemplates.summary) === null || _a === void 0 ? void 0 : _a.prompt;
@@ -216,7 +216,7 @@ function appendCompResultToMdJson(mdJson, compareResult) {
     mdJson.push({ h3: compFileWithUrl });
     mdJson.push({ p: compareResult.explanation });
     mdJson.push({ p: '' });
-    if (!(0, cloc_diff_rel_1.hasClocInfoDetails)(compareResult)) {
+    if ((0, cloc_diff_rel_1.hasClocInfoDetails)(compareResult)) {
         const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
         mdJson.push({ p: linesOfCodeInfo });
     }
