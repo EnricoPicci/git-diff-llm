@@ -10,7 +10,7 @@ import { ComparisonEnd, comparisonEndString, buildFileGitUrl, gitDiff$ } from ".
 import { explainGitDiffs$ } from "../chat/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
-import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams, hasCodeAddedRemovedModified } from "./cloc-diff-rel"
+import { ClocGitDiffRec, ComparisonParams, hasCodeAddedRemovedModified, comparisonResultFromClocDiffRelOrGitDiffForProject$ } from "./cloc-diff-rel"
 import { DefaultMessageWriter, MessageToClient, MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
 //********************************************************************************************************************** */
@@ -44,7 +44,7 @@ export function allDiffsForProject$(
 ): Observable<FileDiffWithGitDiffsAndFileContent> {
     let count = 0
     let totNumFiles = 0
-    return comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages).pipe(
+    return comparisonResultFromClocDiffRelOrGitDiffForProject$(comparisonParams, executedCommands, languages).pipe(
         // toArray to calculate the total number of files
         toArray(),
         tap(comapareResults => {

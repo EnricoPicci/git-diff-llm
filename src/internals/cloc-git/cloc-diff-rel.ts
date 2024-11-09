@@ -1,6 +1,6 @@
 import path from "path"
 
-import { filter, skip, startWith, map, concatMap, from } from "rxjs"
+import { filter, skip, startWith, map, concatMap, from, catchError } from "rxjs"
 
 import { fromCsvObs } from "@enrico.piccinin/csv-tools"
 
@@ -71,6 +71,32 @@ export function comparisonResultFromClocDiffRelForProject$(
         })
     )
 }
+
+// This function tries to calculate the git diffs on the project using cloc git-diff-rel
+// If cloc does not work, it falls back to git diff
+// The reason for this is that cloc requires the PERL compiler to be installed
+// and this is not always the case
+export function comparisonResultFromClocDiffRelOrGitDiffForProject$(
+    comparisonParams: ComparisonParams, executedCommands: string[], languages?: string[]
+) {
+    return comparisonResultFromClocDiffRelForProject$(
+        comparisonParams,
+        executedCommands,
+        languages
+    ).pipe(
+        // if cloc does not work, we fall back to git diff
+        // we use the git diff output to fill in the missing fields
+        // about number of lines changed
+        catchError(() => {
+            return comparisonResultFromGitDiffForProject$(
+                comparisonParams,
+                executedCommands,
+                languages
+            )
+        })
+    )
+}
+
 
 //********************************************************************************************************************** */
 //****************************               Internals              **************************************************** */
