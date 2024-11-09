@@ -16,7 +16,7 @@ export function summarizeDiffs$(
 ) {
     const diffs: string[] = []
     compareResults.forEach(compareResult => {
-        if (hasCodeAddedRemovedModified(compareResult)) {
+        if (hasCodeAddedRemovedModified(compareResult) && isForSummary(compareResult)) {
             const changeType = compareResult.added ? 'added' : compareResult.deleted ? 'removed' : compareResult.renamed ? 'renamed' : 'changed'
             diffs.push(`File path: ${compareResult.File} - type of diff: ${changeType}`)
             diffs.push(compareResult.explanation)
@@ -56,4 +56,9 @@ export function summarizeDiffs$(
             return of(`error in calling LLM to summarize all diffs for the project ${project}.\n${err.message}`)
         }),
     )
+}
+
+// need to see if there is a way to make this function more generic
+function isForSummary(explanationInput: FileDiffWithExplanation) {
+    return explanationInput.explanation.toLowerCase().includes('changed to improve readability')
 }
