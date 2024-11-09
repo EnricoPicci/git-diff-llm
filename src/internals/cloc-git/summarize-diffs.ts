@@ -3,6 +3,7 @@ import { FileDiffWithExplanation } from "./cloc-git-diff-rel-between-tag-branch-
 import {  getFullCompletion$ } from "../openai/openai";
 import { fillPromptTemplateSummarizeDiffs, getDefaultPromptTemplates, SummarizeDiffsPromptTemplateData } from "../prompt-templates/prompt-templates";
 import { DefaultMessageWriter, MessageWriter, newInfoMessage } from "../message-writer/message-writer";
+import { hasCodeAddedRemovedModified } from "./cloc-diff-rel";
 
 export function summarizeDiffs$(
     compareResults: FileDiffWithExplanation[],
@@ -15,12 +16,14 @@ export function summarizeDiffs$(
 ) {
     const diffs: string[] = []
     compareResults.forEach(compareResult => {
-        const changeType = compareResult.added ? 'added' : compareResult.deleted ? 'removed' : compareResult.renamed ? 'renamed' : 'changed'
-        diffs.push(`File path: ${compareResult.File} - type of diff: ${changeType}`)
-        diffs.push(compareResult.explanation)
-        diffs.push('')
-        diffs.push('---------------------------------------------------------------------------------------------')
-        diffs.push('')
+        if (hasCodeAddedRemovedModified(compareResult)) {
+            const changeType = compareResult.added ? 'added' : compareResult.deleted ? 'removed' : compareResult.renamed ? 'renamed' : 'changed'
+            diffs.push(`File path: ${compareResult.File} - type of diff: ${changeType}`)
+            diffs.push(compareResult.explanation)
+            diffs.push('')
+            diffs.push('---------------------------------------------------------------------------------------------')
+            diffs.push('')
+        }
     })
     const msgDiffsWithExplanation = newInfoMessage(diffs)
     msgDiffsWithExplanation.id = 'diffs-with-explanation'

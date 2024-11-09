@@ -27,7 +27,8 @@ export type ClocGitDiffRec = {
 }
 
 export function hasCodeAddedRemovedModified(rec: ClocGitDiffRec) {
-    return rec.code_added !== '0' || rec.code_removed !== '0' || rec.code_modified !== '0'
+    const resp = rec.code_added.trim() !== '0' || rec.code_removed.trim() !== '0' || rec.code_modified.trim() !== '0'
+    return resp
 }
 
 export type ComparisonParams = {

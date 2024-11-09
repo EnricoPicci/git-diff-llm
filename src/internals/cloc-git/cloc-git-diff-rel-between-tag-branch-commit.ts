@@ -143,7 +143,7 @@ export function allDiffsForProjectWithExplanation$(
             // there can be diffs which are returned by git diff but have no code changes
             // (the code chaged lines are calculated by cloc)
             // in these cases there is no point in calling LLM to explain the diffs
-            if (hasCodeAddedRemovedModified(comparisonResult)) {
+            if (!hasCodeAddedRemovedModified(comparisonResult)) {
                 console.log(`No code changes for file ${comparisonResult.fullFilePath}`)
                 executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`)
                 return of({ ...comparisonResult, explanation: 'No code changes' })
@@ -355,7 +355,8 @@ function appendCompResultToMdJson(
     const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
 
     mdJson.push({ p: '------------------------------------------------------------------------------------------------' })
-    mdJson.push({ h3: compareResult.File })
+    const compFileWithUrl = `[${compareResult.File}](${compareResult.fileGitUrl})`
+    mdJson.push({ h3: compFileWithUrl })
     mdJson.push({ p: compareResult.explanation })
     mdJson.push({ p: '' })
     mdJson.push({ p: linesOfCodeInfo })
