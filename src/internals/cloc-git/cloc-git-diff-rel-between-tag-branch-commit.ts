@@ -10,7 +10,7 @@ import { ComparisonEnd, comparisonEndString, gitDiff$ } from "../git/git-diffs"
 import { explainGitDiffs$ } from "../chat/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
-import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams } from "./cloc-diff-rel"
+import { comparisonResultFromClocDiffRelForProject$, ClocGitDiffRec, ComparisonParams, hasCodeAddedRemovedModified } from "./cloc-diff-rel"
 import { DefaultMessageWriter, MessageToClient, MessageWriter, newInfoMessage } from "../message-writer/message-writer"
 
 //********************************************************************************************************************** */
@@ -129,6 +129,14 @@ export function allDiffsForProjectWithExplanation$(
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
         mergeMap(comparisonResult => {
+            // there can be diffs which are returned by git diff but have no code changes
+            // (the code chaged lines are calculated by cloc)
+            // in these cases there is no point in calling LLM to explain the diffs
+            if (hasCodeAddedRemovedModified(comparisonResult)) {
+                console.log(`No code changes for file ${comparisonResult.fullFilePath}`)
+                executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`)
+                return of({ ...comparisonResult, explanation: 'No code changes' })
+            }
             return explainGitDiffs$(comparisonResult, promptTemplates, model,  executedCommands, messageWriter, outDirForChatLog,)
         }, concurrentLLMCalls),
         tap({

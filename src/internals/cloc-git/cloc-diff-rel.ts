@@ -26,6 +26,10 @@ export type ClocGitDiffRec = {
     extension: string
 }
 
+export function hasCodeAddedRemovedModified(rec: ClocGitDiffRec) {
+    return rec.code_added !== '0' || rec.code_removed !== '0' || rec.code_modified !== '0'
+}
+
 export type ComparisonParams = {
     projectDir: string
     url_to_repo: string,

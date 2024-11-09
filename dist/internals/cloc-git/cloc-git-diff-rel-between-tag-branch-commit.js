@@ -81,6 +81,17 @@ function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, m
     messageWriter.write(startingMsg);
     const startExecTime = new Date();
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
+        // there can be diffs which are returned by git diff but have no code changes
+        // (the code chaged lines are calculated by cloc)
+        // in these cases there is no point in calling LLM to explain the diffs
+        const codeChanged = parseInt(comparisonResult.code_modified) +
+            parseInt(comparisonResult.code_added) +
+            parseInt(comparisonResult.code_removed);
+        if (codeChanged === 0) {
+            console.log(`No code changes for file ${comparisonResult.fullFilePath}`);
+            executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`);
+            return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes' }));
+        }
         return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog);
     }, concurrentLLMCalls), (0, rxjs_1.tap)({
         complete: () => {

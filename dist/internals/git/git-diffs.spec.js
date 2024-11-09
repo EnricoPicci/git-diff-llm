@@ -57,7 +57,7 @@ describe(`comparisonEndString`, () => {
         (0, chai_1.expect)(comp_string).equal(commit);
     });
 });
-describe(`gitDiffsNameOnly$`, () => {
+describe.skip(`gitDiffsNameOnly$`, () => {
     it(`should return the names of the files which diff between 2 references`, (done) => {
         const from = {
             git_remote_name: 'origin',

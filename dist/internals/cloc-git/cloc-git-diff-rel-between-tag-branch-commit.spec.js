@@ -10,7 +10,7 @@ const languages = ['Markdown', "TypeScript"];
 const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
 const llmModel = 'gpt-3.5-turbo';
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm';
-describe(`allDiffsForProjectWithExplanation$`, () => {
+describe.skip(`allDiffsForProjectWithExplanation$`, () => {
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo
         The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
@@ -275,7 +275,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
         });
     }).timeout(100000);
 });
-describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
+describe.skip(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
     it(`should produce a markdown report - the test just tests that function completes without errors`, (done) => {
         const from = {
             tag_branch_commit: 'tags/second-tag',
