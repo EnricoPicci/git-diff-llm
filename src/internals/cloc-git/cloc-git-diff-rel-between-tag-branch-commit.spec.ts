@@ -57,6 +57,9 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
                 // git diff first-tag second-tag --name-only
                 // git diff first-tag second-tag --name-only
                 expect(diffs.length).equal(1)
+                const diff = diffs[0]
+                expect(diff.File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
+                expect(diff.fileGitUrl).equal('https://github.com/EnricoPicci/git-diff-llm/blob/second-tag/src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
             },
             error: (error: any) => done(error),
             complete: () => done()

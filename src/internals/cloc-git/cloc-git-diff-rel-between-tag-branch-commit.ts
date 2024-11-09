@@ -6,7 +6,7 @@ import json2md from 'json2md'
 import { toCsvObs } from "@enrico.piccinin/csv-tools"
 import { readLinesObs, writeFileObs } from "observable-fs"
 
-import { ComparisonEnd, comparisonEndString, gitDiff$ } from "../git/git-diffs"
+import { ComparisonEnd, comparisonEndString, buildFileGitUrl, gitDiff$ } from "../git/git-diffs"
 import { explainGitDiffs$ } from "../chat/explain-diffs"
 import { getDefaultPromptTemplates, PromptTemplates } from "../prompt-templates/prompt-templates"
 import { summarizeDiffs$ } from "./summarize-diffs"
@@ -28,7 +28,10 @@ export type FileStatus = {
     copied: null | boolean,
     renamed: null | boolean,
 }
-export type FileDiffWithGitDiffsAndFileContent = ClocGitDiffRec & FileStatus & {
+export type FileGitInfo = {
+    fileGitUrl: string
+}
+export type FileDiffWithGitDiffsAndFileContent = ClocGitDiffRec & FileStatus & FileGitInfo & {
     diffLines: string,
     fileContent: string,
 }
@@ -72,8 +75,13 @@ export function allDiffsForProject$(
                 map(diffLinesString => {
                     const diffLines = diffLinesString.toString()
                     const _lines = diffLines.split('\n')
+                    const fileGitUrl = buildFileGitUrl(
+                        comparisonParams.url_to_repo, 
+                        comparisonParams.from_tag_branch_commit.tag_branch_commit, 
+                        rec.File
+                    )
                     const _rec: FileDiffWithGitDiffsAndFileContent = {
-                        ...rec, diffLines, fileContent: '', deleted: null, added: null, copied: null, renamed: null
+                        ...rec, diffLines, fileContent: '', deleted: null, added: null, copied: null, renamed: null, fileGitUrl
                     }
                     if (_lines.length < 2) {
                         console.log(`No diff found for file ${rec.fullFilePath}`)
@@ -90,18 +98,21 @@ export function allDiffsForProject$(
                     } else if (secondLine.startsWith('rename ')) {
                         _rec.renamed = true
                     }
-                    return { ..._rec, diffLines }
+                    const __rec: FileDiffWithGitDiffsAndFileContent = { ..._rec, diffLines }
+                    return __rec
                 })
             )
         }),
-        concatMap((rec: FileDiffWithGitDiffsAndFileContent & { diffLines: string }) => {
+        concatMap((rec) => {
             return readLinesObs(rec.fullFilePath!).pipe(
                 map(lines => {
-                    return { ...rec, fileContent: lines.join('\n') } as FileDiffWithGitDiffsAndFileContent
+                    const _rec: FileDiffWithGitDiffsAndFileContent = { ...rec, fileContent: lines.join('\n') }
+                    return _rec
                 }),
                 catchError(err => {
                     if (err.code === 'ENOENT') {
-                        return of({ ...rec, fileContent: 'file not found' } as FileDiffWithGitDiffsAndFileContent)
+                        const _rec: FileDiffWithGitDiffsAndFileContent = { ...rec, fileContent: 'file not found' }
+                        return of(_rec)
                     }
                     throw err
                 })
@@ -110,7 +121,7 @@ export function allDiffsForProject$(
     )
 }
 
-export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus & {
+export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus& FileGitInfo & {
     explanation: string,
 }
 export function allDiffsForProjectWithExplanation$(

@@ -10,6 +10,9 @@ export type ComparisonEnd = {
     git_remote_name: string,
     tag_branch_commit: string
 }
+// execute git diff from a tag, branch or commit to another tag, branch or commit for a specific file
+// Eventually runs a command like this:
+// git diff refs/tags/first-tag refs/tags/second-tag -- path/to/file
 export function gitDiff$(
     projectDir: string,
     from_tag_branch_commit: ComparisonEnd,
@@ -180,4 +183,14 @@ export function tagBranchCommitPrefix(tagBranchCommit: string, gitRemoteName: st
         return ''
     }
     return gitRemoteName + '/'
+}
+
+// builds the url to the file on a specific tag, branch or commit following the pattern:
+// https://github.com/{owner}/{repo}/blob/{branch}/{path-to-file}
+// where github.com can be replaced by the remote git server
+//
+// The parameter repoUrl represents the equivalent of https://github.com/{owner}/{repo}
+export function buildFileGitUrl(repoUrl: string, tagBranchCommit: string, file: string) {
+    const _tagBranchCommit = tagBranchCommit.startsWith('tags/') ? tagBranchCommit.split('/')[1] : tagBranchCommit
+    return `${repoUrl}/blob/${_tagBranchCommit}/${file}`
 }

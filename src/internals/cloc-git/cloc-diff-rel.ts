@@ -68,7 +68,7 @@ export function comparisonResultFromClocDiffRelForProject$(
         map(rec => {
             const fullFilePath = path.join(projectDir, rec.File)
             const extension = path.extname(fullFilePath)
-            const recWithPojectDir = { ...rec, projectDir, fullFilePath, extension }
+            const recWithPojectDir: ClocGitDiffRec = { ...rec, projectDir, fullFilePath, extension }
             return recWithPojectDir
         })
     )
