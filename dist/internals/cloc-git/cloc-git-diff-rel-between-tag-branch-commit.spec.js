@@ -5,12 +5,16 @@ const chai_1 = require("chai");
 const cloc_git_diff_rel_between_tag_branch_commit_1 = require("./cloc-git-diff-rel-between-tag-branch-commit");
 const prompt_templates_1 = require("../prompt-templates/prompt-templates");
 const message_writer_1 = require("../message-writer/message-writer");
+const config_1 = require("../../config");
 const executedCommands = [];
 const languages = ['Markdown', "TypeScript"];
 const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
 const llmModel = 'gpt-3.5-turbo';
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm';
-describe.skip(`allDiffsForProjectWithExplanation$`, () => {
+describe(`allDiffsForProjectWithExplanation$`, () => {
+    // set the config to test mode so that the function does not perform actions not allowed in test mode
+    // e.g. checkout a branch
+    (0, config_1.getConfig)().isTest = true;
     //===================== TESTS ON LOCAL REPO =====================
     it(`should return the diffs between 2 tags of the local repo
         The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
@@ -32,15 +36,18 @@ describe.skip(`allDiffsForProjectWithExplanation$`, () => {
         };
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
-                // there is a difference of 2 files between the 2 tags 
+                // there is a difference of 1 file between the 2 tags 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
                 //
                 // if we switch the tags, the github web client does not show any change
                 // https://github.com/EnricoPicci/git-diff-llm/compare/second-tag...first-tag
                 // the git diff command shows the changes correctly in both cases
                 // git diff first-tag second-tag --name-only
-                // git diff first-tag second-tag --name-only
+                // git diff second-tag first-tag --name-only
                 (0, chai_1.expect)(diffs.length).equal(1);
+                const diff = diffs[0];
+                (0, chai_1.expect)(diff.File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts');
+                (0, chai_1.expect)(diff.fileGitUrl).equal('https://github.com/EnricoPicci/git-diff-llm/blob/second-tag/src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts');
             },
             error: (error) => done(error),
             complete: () => done()
@@ -275,7 +282,7 @@ describe.skip(`allDiffsForProjectWithExplanation$`, () => {
         });
     }).timeout(100000);
 });
-describe.skip(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
+describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
     it(`should produce a markdown report - the test just tests that function completes without errors`, (done) => {
         const from = {
             tag_branch_commit: 'tags/second-tag',
@@ -301,6 +308,9 @@ describe.skip(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             outdir: outDir,
             languages
         };
+        // set the config to test mode so that the function does not perform actions not allowed in test mode
+        // e.g. checkout a branch
+        (0, config_1.getConfig)().isTest = true;
         (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(params, message_writer_1.DefaultMessageWriter).subscribe({
             error: (error) => done(error),
             complete: () => done()

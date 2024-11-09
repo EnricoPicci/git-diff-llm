@@ -21,7 +21,7 @@ const message_writer_1 = require("../message-writer/message-writer");
 function allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter = message_writer_1.DefaultMessageWriter) {
     let count = 0;
     let totNumFiles = 0;
-    return (0, cloc_diff_rel_1.comparisonResultFromClocDiffRelForProject$)(comparisonParams, executedCommands, languages).pipe(
+    return (0, cloc_diff_rel_1.comparisonResultFromClocDiffRelOrGitDiffForProject$)(comparisonParams, executedCommands, languages).pipe(
     // toArray to calculate the total number of files
     (0, rxjs_1.toArray)(), (0, rxjs_1.tap)(comapareResults => {
         totNumFiles = comapareResults.length;
@@ -44,7 +44,8 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
         executedCommands).pipe((0, rxjs_1.map)(diffLinesString => {
             const diffLines = diffLinesString.toString();
             const _lines = diffLines.split('\n');
-            const _rec = Object.assign(Object.assign({}, rec), { diffLines, fileContent: '', deleted: null, added: null, copied: null, renamed: null });
+            const fileGitUrl = (0, git_diffs_1.buildFileGitUrl)(comparisonParams.url_to_repo, comparisonParams.from_tag_branch_commit.tag_branch_commit, rec.File);
+            const _rec = Object.assign(Object.assign({}, rec), { diffLines, fileContent: '', deleted: null, added: null, copied: null, renamed: null, fileGitUrl });
             if (_lines.length < 2) {
                 console.log(`No diff found for file ${rec.fullFilePath}`);
                 executedCommands.push(`===>>> No diff found for file ${rec.fullFilePath}`);
@@ -63,14 +64,17 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
             else if (secondLine.startsWith('rename ')) {
                 _rec.renamed = true;
             }
-            return Object.assign(Object.assign({}, _rec), { diffLines });
+            const __rec = Object.assign(Object.assign({}, _rec), { diffLines });
+            return __rec;
         }));
     }), (0, rxjs_1.concatMap)((rec) => {
         return (0, observable_fs_1.readLinesObs)(rec.fullFilePath).pipe((0, rxjs_1.map)(lines => {
-            return Object.assign(Object.assign({}, rec), { fileContent: lines.join('\n') });
+            const _rec = Object.assign(Object.assign({}, rec), { fileContent: lines.join('\n') });
+            return _rec;
         }), (0, rxjs_1.catchError)(err => {
             if (err.code === 'ENOENT') {
-                return (0, rxjs_1.of)(Object.assign(Object.assign({}, rec), { fileContent: 'file not found' }));
+                const _rec = Object.assign(Object.assign({}, rec), { fileContent: 'file not found' });
+                return (0, rxjs_1.of)(_rec);
             }
             throw err;
         }));
@@ -84,10 +88,7 @@ function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, m
         // there can be diffs which are returned by git diff but have no code changes
         // (the code chaged lines are calculated by cloc)
         // in these cases there is no point in calling LLM to explain the diffs
-        const codeChanged = parseInt(comparisonResult.code_modified) +
-            parseInt(comparisonResult.code_added) +
-            parseInt(comparisonResult.code_removed);
-        if (codeChanged === 0) {
+        if (!(0, cloc_diff_rel_1.hasCodeAddedRemovedModified)(comparisonResult)) {
             console.log(`No code changes for file ${comparisonResult.fullFilePath}`);
             executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`);
             return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes' }));
@@ -210,7 +211,8 @@ function appendNumLinesOfCode(mdJson, fileDiffsWithExplanation) {
 function appendCompResultToMdJson(mdJson, compareResult) {
     const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
     mdJson.push({ p: '------------------------------------------------------------------------------------------------' });
-    mdJson.push({ h3: compareResult.File });
+    const compFileWithUrl = `[${compareResult.File}](${compareResult.fileGitUrl})`;
+    mdJson.push({ h3: compFileWithUrl });
     mdJson.push({ p: compareResult.explanation });
     mdJson.push({ p: '' });
     mdJson.push({ p: linesOfCodeInfo });

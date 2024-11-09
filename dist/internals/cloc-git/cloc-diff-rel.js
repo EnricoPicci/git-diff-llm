@@ -3,22 +3,29 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.hasCodeAddedRemovedModified = hasCodeAddedRemovedModified;
 exports.comparisonResultFromClocDiffRelForProject$ = comparisonResultFromClocDiffRelForProject$;
+exports.comparisonResultFromClocDiffRelOrGitDiffForProject$ = comparisonResultFromClocDiffRelOrGitDiffForProject$;
+exports.comparisonResultFromGitDiffForProject$ = comparisonResultFromGitDiffForProject$;
 const path_1 = __importDefault(require("path"));
 const rxjs_1 = require("rxjs");
 const csv_tools_1 = require("@enrico.piccinin/csv-tools");
 const execute_command_1 = require("../execute-command/execute-command");
 const git_diffs_1 = require("../git/git-diffs");
+function hasCodeAddedRemovedModified(rec) {
+    const resp = rec.code_added.trim() !== '0' || rec.code_removed.trim() !== '0' || rec.code_modified.trim() !== '0';
+    return resp;
+}
+const clocGitDiffRecHeader = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed';
 function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages) {
     const projectDir = comparisonParams.projectDir;
-    const header = 'File,blank_same,blank_modified,blank_added,blank_removed,comment_same,comment_modified,comment_added,comment_removed,code_same,code_modified,code_added,code_removed';
     return clocDiffRel$(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
     languages, executedCommands).pipe((0, rxjs_1.filter)(line => line.trim().length > 0), 
     // skip the first line which is the header line
     // File, == blank, != blank, + blank, - blank, == comment, != comment, + comment, - comment, == code, != code, + code, - code, "github.com/AlDanial/cloc v 2.00 T=0.0747981071472168 s"
     (0, rxjs_1.skip)(1), 
     // start with the header line that we want to have
-    (0, rxjs_1.startWith)(header), (0, rxjs_1.map)(line => {
+    (0, rxjs_1.startWith)(clocGitDiffRecHeader), (0, rxjs_1.map)(line => {
         // remove trailing comma without using regular expressions
         const _line = line.trim();
         if (_line.endsWith(',')) {
@@ -30,6 +37,19 @@ function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCo
         const extension = path_1.default.extname(fullFilePath);
         const recWithPojectDir = Object.assign(Object.assign({}, rec), { projectDir, fullFilePath, extension });
         return recWithPojectDir;
+    }));
+}
+// This function tries to calculate the git diffs on the project using cloc git-diff-rel
+// If cloc does not work, it falls back to git diff
+// The reason for this is that cloc requires the PERL compiler to be installed
+// and this is not always the case
+function comparisonResultFromClocDiffRelOrGitDiffForProject$(comparisonParams, executedCommands, languages) {
+    return comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages).pipe(
+    // if cloc does not work, we fall back to git diff
+    // we use the git diff output to fill in the missing fields
+    // about number of lines changed
+    (0, rxjs_1.catchError)(() => {
+        return comparisonResultFromGitDiffForProject$(comparisonParams, executedCommands, languages);
     }));
 }
 //********************************************************************************************************************** */
@@ -67,6 +87,104 @@ function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, 
             cwd: projectDir
         };
         return (0, execute_command_1.executeCommandNewProcessToLinesObs)('run npx cloc --git-diff-rel --csv --by-file', command, args, options, executedCommands);
+    }));
+}
+// comparisonResultFromGitDiffForProject$ is a function that returns a stream of ClocGitDiffRec objects
+// using git diff rather than cloc git-diff-rel
+// It fills with 0 the fields about number of lines changed that are not present in the git diff output
+// It is used as a fallback when cloc does not work (e.g. because the PERL compiler, which is required by cloc, is not installed)
+function comparisonResultFromGitDiffForProject$(comparisonParams, executedCommands, languages) {
+    const projectDir = comparisonParams.projectDir;
+    return (0, git_diffs_1.gitRecsFileDiffs$)(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
+    executedCommands).pipe((0, rxjs_1.concatMap)(recs => {
+        return (0, rxjs_1.from)(recs);
+    }), (0, rxjs_1.map)(rec => {
+        const fillUpVal = '-';
+        const fillUp = {
+            blank_same: fillUpVal,
+            blank_modified: fillUpVal,
+            blank_added: fillUpVal,
+            blank_removed: fillUpVal,
+            comment_same: fillUpVal,
+            comment_modified: fillUpVal,
+            comment_added: fillUpVal,
+            comment_removed: fillUpVal,
+            code_same: fillUpVal,
+            code_modified: fillUpVal,
+            code_added: fillUpVal,
+            code_removed: fillUpVal,
+        };
+        const clocGitDiffRec = Object.assign(Object.assign({}, rec), fillUp);
+        return clocGitDiffRec;
+    }), (0, rxjs_1.filter)(rec => {
+        if ((languages === null || languages === void 0 ? void 0 : languages.length) === 0) {
+            return true;
+        }
+        const langExtMapping = {
+            '.py': 'Python',
+            '.js': 'JavaScript',
+            '.ts': 'TypeScript',
+            '.html': 'HTML',
+            '.css': 'CSS',
+            '.md': 'Markdown',
+            '.sh': 'Shell',
+            '.java': 'Java',
+            '.c': 'C',
+            '.cpp': 'C++',
+            '.cs': 'C#',
+            '.php': 'PHP',
+            '.rb': 'Ruby',
+            '.go': 'Go',
+            '.rs': 'Rust',
+            '.swift': 'Swift',
+            '.kt': 'Kotlin',
+            '.scala': 'Scala',
+            '.r': 'R',
+            '.pl': 'Perl',
+            '.lua': 'Lua',
+            '.hs': 'Haskell',
+            '.clj': 'Clojure',
+            '.groovy': 'Groovy',
+            '.ex': 'Elixir',
+            '.erl': 'Erlang',
+            '.dart': 'Dart',
+            '.fs': 'F#',
+            '.m': 'Objective-C',
+            '.rkt': 'Racket',
+            '.scm': 'Scheme',
+            '.lisp': 'Common Lisp',
+            '.ml': 'OCaml',
+            '.vb': 'Visual Basic',
+            '.pas': 'Pascal',
+            '.ada': 'Ada',
+            '.hx': 'Haxe',
+            '.jl': 'Julia',
+            '.ps1': 'PowerShell',
+            '.sql': 'SQL',
+            '.vhd': 'VHDL',
+            '.v': 'Verilog',
+            '.vi': 'LabVIEW',
+            '.ahk': 'AutoHotkey',
+            '.au3': 'AutoIt',
+            '.bat': 'Batch',
+            '.coffee': 'CoffeeScript',
+            '.d': 'D',
+            'Dockerfile': 'Dockerfile',
+            '.e': 'Eiffel',
+            '.elm': 'Elm',
+            '.f': 'Fortran',
+            '.feature': 'Gherkin',
+            '.gsp': 'Gosu',
+            '.hbs': 'Handlebars',
+            '.hcl': 'HCL',
+            '.idl': 'IDL',
+            '.json': 'JSON',
+        };
+        if (!languages) {
+            return true;
+        }
+        const fileExtension = path_1.default.extname(rec.File);
+        return languages.some(lang => langExtMapping[fileExtension] === lang);
     }));
 }
 //# sourceMappingURL=cloc-diff-rel.js.map
