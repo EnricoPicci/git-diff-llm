@@ -48,14 +48,14 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             toArray()
         ).subscribe({
             next: (diffs) => {
-                // there is a difference of 2 files between the 2 tags 
+                // there is a difference of 1 file between the 2 tags 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
                 //
                 // if we switch the tags, the github web client does not show any change
                 // https://github.com/EnricoPicci/git-diff-llm/compare/second-tag...first-tag
                 // the git diff command shows the changes correctly in both cases
                 // git diff first-tag second-tag --name-only
-                // git diff first-tag second-tag --name-only
+                // git diff second-tag first-tag --name-only
                 expect(diffs.length).equal(1)
                 const diff = diffs[0]
                 expect(diff.File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
