@@ -1,0 +1,1150 @@
+Full prompt: You are an expert java developer with 10 years of experience.
+You have to examine the changes that occurred to the file src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java from one version to the next and write a short summary of these changes and the reason they have been applied.
+
+This is the original src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java file:
+```
+package it.rgi.passvita.batch.statisticheCovip.quarterCovip;
+
+import it.rgi.dbobjects.EntVinvestimento;
+import it.rgi.dbobjects.EntVprestazinvest;
+import it.rgi.dbobjects.EntVprestazionirisc;
+import it.rgi.dbobjects.EntVversionepol;
+import it.rgi.passvita.ExceptionsLauncher;
+import it.rgi.passvita.VitaException;
+import it.rgi.webapp.utility.Data;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import it.rgi.dbobjects.EntCompagnie;
+import it.rgi.dbobjects.EntMovimento;
+import it.rgi.dbobjects.EntPolizza;
+import it.rgi.dbobjects.EntTitolo;
+import it.rgi.dbobjects.EntVpolizza;
+import it.rgi.dbobjects.EntVrata;
+import it.rgi.dbobjects.EntVratarischio;
+import it.rgi.dbobjects.EntVrischioass;
+import it.rgi.dbobjects.EntVversioneassic;
+import it.rgi.dbobjects.RelVpolizzaassic;
+import it.rgi.passvita.batch.UtilityQuery;
+import it.rgi.passvita.batch.statisticheCovip.utilitycovip.AbstractBeanCovip;
+import it.rgi.passvita.batch.statisticheCovip.utilitycovip.CostantsForXML;
+import it.rgi.passvita.batch.statisticheCovip.utilitycovip.GenericCostants;
+import it.rgi.passvita.utility.query.VitaQuery;
+import it.rgi.webapp.dbms.Connettore;
+import it.rgi.webapp.dbms.MetaInfo;
+import it.rgi.webapp.utility.database.CostantiQuery;
+import it.rgi.webapp.utility.database.Query;
+
+import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendAndFundExclusion;
+import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendAndJoinByVersion;
+import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendSelectMultiplication;
+import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendSelectFundPercentage;
+
+/**
+ * <em>Contributi a livello di comparto</em>
+ */
+public class CovipQuarterC0006100 extends AbstractQuarterVoice {
+
+	//position field on the query
+	private static final short IDX_QUERY_ETIPOADERENTE = 0;
+	private static final short IDX_IDPRODOTTO = 1;
+	private static final short IDX_IDVERSIONEPRODOTTO = 2;
+	private static final short IDX_QUERY_LINEA = 3;
+	private static final short IDX_QUERY_IDFONDO = 4;
+	private static final short IDX_NLORDOCONTRIBVOL = 5;
+	private static final short IDX_NLORDOCONTRIBDIP = 6;
+	private static final short IDX_NLORDOCONTRIBDAT = 7;
+	private static final short IDX_NLORDOCONTRIBTFR = 8;
+	private static final short IDX_EFFECT_DATE = 9;
+
+	private static final String A_PCMOVIMENTO_2 = "m2";
+	private static final String A_PERCENTUALE = "perc";
+
+	protected CovipQuarterC0006100(QuarterParameters parameters) {
+		super(GenericCostants.CONTRIBUTI_COMPARTO_C0006100, parameters);
+	}
+
+	@Override
+	protected Query buildQuery(Connettore connector) throws SQLException {
+		VitaQuery query = new VitaQuery();
+
+		//RAMO III
+		queryRamoTerzo(query, false);
+		query.append(UtilityQuery.UNION);
+		query.append(GenericCostants.ALL);
+		queryRamoTerzo(query, true);
+		
+		query.append(UtilityQuery.UNION);
+		query.append(GenericCostants.ALL);
+		
+		//RAMO I
+		queryRamoPrimo(query, false);
+		query.append(UtilityQuery.UNION);
+		query.append(GenericCostants.ALL);
+		queryRamoPrimo(query, true);
+
+		return query;
+	}
+
+	protected void queryRamoTerzo(final VitaQuery query, boolean isCollectiveAdhesion) {
+
+		query.appendSelect(null, GenericCostants.CONDIZIONE_PROFESSIONALE, null, true, true);
+		query.appendSelect(null, EntPolizza.IDPRODOTTO, null, true, false);
+		query.appendSelect(null, EntVversionepol.IDVERSIONE, null, true, false);
+		query.appendSelect(null, EntVinvestimento.IDLINEA, null, true, false);
+		query.appendSelect(null, EntVinvestimento.IDFONDO, null, true, false);
+		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBVOL, A_PERCENTUALE, true, false);
+		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBDIP, A_PERCENTUALE, true, false);
+		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBDAT, A_PERCENTUALE, true, false);
+		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBTFR, A_PERCENTUALE, true, false);
+		query.appendSelect(null, EntMovimento.DEFFETTO, null, false, false);
+
+		query.append(" FROM (");
+
+		query.append(buildInternalQueryRamoTerzo(isCollectiveAdhesion));
+
+		query.append(")");
+	}
+
+	private VitaQuery buildInternalQueryRamoTerzo(boolean isCollectiveAdhesion) {
+
+		VitaQuery query = new VitaQuery();
+
+		query.append(UtilityQuery.SELECT);
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.ETIPOADERENTE, GenericCostants.CONDIZIONE_PROFESSIONALE, true));
+		query.appendSelect(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, null, true, false);
+		query.appendSelect(UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDVERSIONE, null, true, false);
+		query.appendSelect(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDLINEA, null, true, false);
+		query.appendSelect(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDFONDO, null, true, false);
+
+		query.append(EntVratarischio.NLORDOCONTRIBVOL);
+		query.append(CostantiQuery.VIRGOLA);
+
+		query.append(EntVratarischio.NLORDOCONTRIBDIP);
+		query.append(CostantiQuery.VIRGOLA);
+
+		query.append(EntVratarischio.NLORDOCONTRIBDAT);
+		query.append(CostantiQuery.VIRGOLA);
+
+		query.append(EntVratarischio.NLORDOCONTRIBTFR);
+		query.append(CostantiQuery.VIRGOLA);
+
+		query.appendSelect(UtilityQuery.A_PCMOVIMENTO, EntMovimento.DEFFETTO, null, true, false);
+
+		appendSelectFundPercentage(query, UtilityQuery.A_PVVPRESTAZINVEST, A_PERCENTUALE, getMonetaryFunds(), false, false);
+
+		query.append(UtilityQuery.FROM);
+		query.append(UtilityQuery.buildFrom(EntCompagnie.NOME_TAVOLA, UtilityQuery.A_PACOMPAGNIE, true));
+		query.append(UtilityQuery.buildFrom(EntPolizza.NOME_TAVOLA, UtilityQuery.A_PCPOLIZZA, true));
+		query.append(UtilityQuery.buildFrom(EntVpolizza.NOME_TAVOLA, UtilityQuery.A_PVVPOLIZZA, true));
+		query.append(UtilityQuery.buildFrom(EntVversioneassic.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEASSIC, true));
+		query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, UtilityQuery.A_PCMOVIMENTO, true));
+		query.append(UtilityQuery.buildFrom(EntVrata.NOME_TAVOLA, UtilityQuery.A_PVVRATA, true));
+		query.append(UtilityQuery.buildFrom(EntVratarischio.NOME_TAVOLA, UtilityQuery.A_PVVRATARISCHIO, true));
+		query.append(UtilityQuery.buildFrom(RelVpolizzaassic.NOME_TAVOLA, UtilityQuery.A_PVVPOLIZZAASSIC, true));
+		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, true));
+		query.append(UtilityQuery.buildFrom(EntVversionepol.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEPOL, true));
+		query.append(UtilityQuery.buildFrom(EntVprestazionirisc.NOME_TAVOLA, UtilityQuery.A_PVVPRESTAZIONIRISC, true));
+		query.append(UtilityQuery.buildFrom(EntVprestazinvest.NOME_TAVOLA, UtilityQuery.A_PVVPRESTAZINVEST, true));
+		query.append(UtilityQuery.buildFrom(EntVrischioass.NOME_TAVOLA, UtilityQuery.A_PVVRISCHIOASS, false));
+
+		if(isCollectiveAdhesion) {
+			query.append(VitaQuery.VIRGOLA);
+			query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, ALIAS_MASTER_MOVEMENT, false));
+		}
+
+		query.append(UtilityQuery.WHERE);
+		query.appendCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, UtilityQuery.A_PACOMPAGNIE, EntCompagnie.IDCOMPAGNIA);
+		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, getCompanyId());
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.IDPOLIZZA);
+		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getProductTypes(), true));
+		query.append(CostantiQuery.AND);
+		query.appendCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDPOLIZZA,UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDASSICURATO, UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.IDASSICURATO);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDPOLIZZA);
+		appendAndJoinByVersion(query, UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDPOLIZZA, UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+
+		if(isCollectiveAdhesion) {
+			query.buildEspressioneIsNotNull(true, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+			query.appendAndCondizioneJoin(ALIAS_MASTER_MOVEMENT, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+			query.appendAndCondizioneJoin(ALIAS_MASTER_MOVEMENT, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+			query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, "0");
+		}
+		else {
+			query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+		}
+
+		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PGTITOLO, EntTitolo.ESTATO, new Object[]{EntTitolo.ENUM_ESTATO_INCASSATO, EntTitolo.ENUM_ESTATO_ARRETRATO_ABBINATO}, true));
+		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MIN_EQ, getEndPeriod());
+		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MAG_EQ, getStartPeriod());
+		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, CostantiQuery.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, CostantiQuery.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PVVRATA, EntVrata.IDMOVIMENTO);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATA, EntVrata.IDRATA, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRATA);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRISCHIOASS, UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDRISCHIOASS, UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDRATA, UtilityQuery.A_PVVRATA, EntVrata.IDRATA);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDPRESTAZIONE, UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDPRESTAZIONE);
+		appendAndFundExclusion(query, UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDFONDO, getMonetaryFunds());
+
+		query.append(CostantiQuery.AND);
+		query.append(GenericCostants.OPEN_PARHENTESIS);
+		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.ISNULL, null);
+		query.append(CostantiQuery.OR);
+		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.EQ, 0);
+		query.append(GenericCostants.CLOSE_PARHENTESIS);
+		query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, 0);
+		query.appendAndEspressione(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.ETIPORISCHIO, CostantiQuery.EQ, EntVrischioass.ENUM_ETIPORISCHIO_UNIT_LINKED);
+
+		appendDebugFilter(query);
+
+		return query;
+	}
+
+	protected void queryRamoPrimo(final VitaQuery query, boolean isCollectiveAdhesion) {
+		
+		query.append(UtilityQuery.SELECT);
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.ETIPOADERENTE, GenericCostants.CONDIZIONE_PROFESSIONALE, true));
+		query.appendSelect(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, null, true, false);
+		query.appendSelect(UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDVERSIONE, null, true, false);
+		query.append(" null as " + EntVinvestimento.IDLINEA + ", ");
+		query.append(" null as " + EntVinvestimento.IDFONDO + ", ");
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBVOL, null, false) + CostantiQuery.VIRGOLA);
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDIP, null, false) + CostantiQuery.VIRGOLA);
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDAT, null, false) + CostantiQuery.VIRGOLA);
+		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTFR, null, false) + CostantiQuery.VIRGOLA);
+		query.appendSelect(UtilityQuery.A_PCMOVIMENTO, EntMovimento.DEFFETTO, null, false, false);
+
+		query.append(UtilityQuery.FROM);
+		query.append(UtilityQuery.buildFrom(EntCompagnie.NOME_TAVOLA, UtilityQuery.A_PACOMPAGNIE, true));
+		query.append(UtilityQuery.buildFrom(EntPolizza.NOME_TAVOLA, UtilityQuery.A_PCPOLIZZA, true));
+		query.append(UtilityQuery.buildFrom(EntVpolizza.NOME_TAVOLA, UtilityQuery.A_PVVPOLIZZA, true));
+		query.append(UtilityQuery.buildFrom(RelVpolizzaassic.NOME_TAVOLA, UtilityQuery.A_PVVPOLIZZAASSIC, true));
+		query.append(UtilityQuery.buildFrom(EntVversioneassic.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEASSIC, true));
+		query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, UtilityQuery.A_PCMOVIMENTO, true));
+		query.append(UtilityQuery.buildFrom(EntVrata.NOME_TAVOLA, UtilityQuery.A_PVVRATA, true));
+		query.append(UtilityQuery.buildFrom(EntVratarischio.NOME_TAVOLA, UtilityQuery.A_PVVRATARISCHIO, true));
+		query.append(UtilityQuery.buildFrom(EntVrischioass.NOME_TAVOLA, UtilityQuery.A_PVVRISCHIOASS, true));
+		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, true));
+		query.append(UtilityQuery.buildFrom(EntVversionepol.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEPOL, false));
+		
+		if(isCollectiveAdhesion) {
+			query.append(VitaQuery.VIRGOLA);
+			query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, ALIAS_MASTER_MOVEMENT, false));
+		}
+		
+		query.append(UtilityQuery.WHERE);
+		query.appendCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, UtilityQuery.A_PACOMPAGNIE, EntCompagnie.IDCOMPAGNIA);
+		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, getCompanyId());
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.IDPOLIZZA);
+		query.appendIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getProductTypes(), true);
+		query.append(CostantiQuery.AND);
+		query.appendCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDPOLIZZA,UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDASSICURATO, UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.IDASSICURATO);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDPOLIZZA);
+		
+		if(isCollectiveAdhesion) {
+			query.buildEspressioneIsNotNull(true, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+			query.appendAndCondizioneJoin(ALIAS_MASTER_MOVEMENT, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+			query.appendAndCondizioneJoin(ALIAS_MASTER_MOVEMENT, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+			query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, "0");
+		}
+		else {
+			query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+		}
+		appendAndJoinByVersion(query, UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDPOLIZZA, UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+		query.appendIn(false, UtilityQuery.A_PGTITOLO, EntTitolo.ESTATO, new Object[]{EntTitolo.ENUM_ESTATO_INCASSATO, EntTitolo.ENUM_ESTATO_ARRETRATO_ABBINATO}, true);
+		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MIN_EQ, getEndPeriod());
+		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MAG_EQ, getStartPeriod());
+		query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, "0");
+		query.appendIn(true, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO,queryMovimentoPolizza() ,true);
+		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, CostantiQuery.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, CostantiQuery.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PVVRATA, EntVrata.IDMOVIMENTO);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATA, EntVrata.IDRATA, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRATA);
+		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRISCHIOASS);
+		query.appendAndEspressione(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.ETIPOUNIT, CostantiQuery.EQ, EntVrischioass.ENUM_ETIPOUNIT_BASE);
+		query.appendAndEspressione(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.ETIPOFISCALITA, CostantiQuery.EQ, EntVrischioass.ENUM_ETIPOFISCALITA_FIP);
+		query.appendAndEspressione(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.ETIPORISCHIO, CostantiQuery.NOTEQ, EntVrischioass.ENUM_ETIPORISCHIO_UNIT_LINKED);
+		query.append(CostantiQuery.AND);
+		query.append(GenericCostants.OPEN_PARHENTESIS);
+		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.ISNULL, null);
+		query.append(CostantiQuery.OR);
+		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.EQ, "0");
+		query.append(GenericCostants.CLOSE_PARHENTESIS);
+
+		appendDebugFilter(query);
+	}
+	private VitaQuery queryMovimentoPolizza() {
+		VitaQuery query = new VitaQuery();
+		query.append(UtilityQuery.SELECT);
+		query.append(UtilityQuery.buildSelect(A_PCMOVIMENTO_2,EntMovimento.IDMOVANNULLATO, null, false));
+		query.append(UtilityQuery.FROM);
+		query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, A_PCMOVIMENTO_2, false));
+		query.append(UtilityQuery.WHERE);
+		query.appendCondizioneJoin(A_PCMOVIMENTO_2, EntMovimento.IDPOLIZZA, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDPOLIZZA);
+		query.append(UtilityQuery.buildEspressioneIsNotNull(true, A_PCMOVIMENTO_2, EntMovimento.IDMOVANNULLATO));
+		return query;
+	}
+
+	@Override
+	protected boolean accept(Connettore connector, Object[] record) throws SQLException, IOException {
+		return super.accept(connector, record) && record[IDX_QUERY_ETIPOADERENTE] != null;
+	}
+
+	@Override
+	protected void elaborate(Connettore connettore, Object[] record, Map<String, AbstractBeanCovip> results) throws SQLException, IOException {
+		elabRecordOk(connettore, results, record);
+	}
+
+	protected void elabRecordOk(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) throws SQLException, IOException {
+		
+		if (record[IDX_QUERY_IDFONDO] != null) {
+			elabThirdMinisterialBranch(connector, mapResults, record);
+		} else {
+			elabFirstMinisterialBranch(connector, mapResults, record);
+		}
+	}
+
+	protected void elabThirdMinisterialBranch(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) {
+
+		Map<Short, String> indexes = new HashMap<>();
+		indexes.put(IDX_NLORDOCONTRIBVOL, CostantsForXML.CONTR_LAVORATORE);
+		indexes.put(IDX_NLORDOCONTRIBDIP, CostantsForXML.CONTR_LAVORATORE);
+		indexes.put(IDX_NLORDOCONTRIBDAT, CostantsForXML.CONTR_DATORE);
+		indexes.put(IDX_NLORDOCONTRIBTFR, CostantsForXML.CONTR_TFR);
+
+		indexes.forEach((index, type) -> {
+
+			try {
+				if (record[index] != null) {
+
+					KeyQuarter key = new KeyQuarter();
+
+					double importoFondo = 0;
+					String codiceFondo = getCovipFundCode(connector, record);
+					String condizioneProfessionale = record[IDX_QUERY_ETIPOADERENTE].toString();
+					int productId = getProductId(record);
+					int versionId = getProductVersion(record);
+					Integer lineId = (Integer) record[IDX_QUERY_LINEA];
+					Integer fundId = (Integer) record[IDX_QUERY_IDFONDO];
+					Data date = (Data) record[IDX_EFFECT_DATE];
+					String codiceComparto = getSectorCode(connector, productId, versionId, lineId, fundId, date);
+
+					key.setTipologiaContribuzione(type);
+					if (record[index] != null) {
+						importoFondo = Double.parseDouble(record[index].toString());
+					}
+					setKey(codiceFondo, condizioneProfessionale, codiceComparto, key);
+					chargeMap(mapResults, codiceComparto, importoFondo, key);
+				}
+			} catch (SQLException | IOException ex) {
+				throw ExceptionsLauncher.newException(connector, ex, VitaException.class);
+			}
+		});
+
+	}
+
+	protected void elabFirstMinisterialBranch(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) throws SQLException, IOException {
+		//Ramo I
+
+		String codiceFondo = getCovipFundCode(connector, record);
+		String condizioneProfessionale = record[IDX_QUERY_ETIPOADERENTE].toString();
+		String codiceComparto = GenericCostants.CODICE_COMPARTO_DEFAULT;
+		List<Short> contribution = getContribution(record);
+
+		for (Short aShort : contribution) {
+
+			KeyQuarter key = new KeyQuarter();
+
+			double importoFondo = 0;
+
+			if (aShort == IDX_NLORDOCONTRIBVOL) {
+                key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBVOL].toString());
+            } else if (aShort == IDX_NLORDOCONTRIBDIP) {
+                key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDIP].toString());
+            } else if (aShort == IDX_NLORDOCONTRIBDAT) {
+                key.setTipologiaContribuzione(CostantsForXML.CONTR_DATORE);
+                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDAT].toString());
+            } else if (aShort == IDX_NLORDOCONTRIBTFR) {
+                key.setTipologiaContribuzione(CostantsForXML.CONTR_TFR);
+                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBTFR].toString());
+            }
+
+            setKey(codiceFondo, condizioneProfessionale, codiceComparto, key);
+
+            chargeMap(mapResults, codiceComparto, importoFondo, key);
+        }
+	}
+	
+	
+	private void setKey(String codiceFondo, String condizioneProfessionale, String codiceComparto, KeyQuarter key) {
+		key.setCodiceVoce(getCodiceVoce());
+		key.setCodiceFondo(codiceFondo);
+		key.setCodiceSezione(GenericCostants.CODICE_SEZIONE_DEFAULT);
+		key.setCodiceComparto(codiceComparto);
+		key.setCondizioneProfessionale(condizioneProfessionale);
+
+	}
+	
+	
+	private void chargeMap(Map<String, AbstractBeanCovip> mapResults, String codiceComparto, double importoFondo, KeyQuarter key) {
+
+		String keyMap;
+		BeanCovipQuarter stat;
+		keyMap = key.getKey();
+
+		if (mapResults.containsKey(keyMap)){
+			stat = (BeanCovipQuarter) mapResults.get(keyMap);
+		} else {
+			stat = new BeanCovipQuarter();
+		}
+
+		stat.setCodiceVoce(getCodiceVoce());
+		stat.setCodiceSezione(GenericCostants.CODICE_SEZIONE_DEFAULT);
+		stat.setCodiceComparto(codiceComparto);
+		stat.setTipologiaContribuzione(key.getTipologiaContribuzione());
+		stat.setValoreStatisticoImporto(stat.getValoreStatisticoImporto()+importoFondo);
+
+		mapResults.put(keyMap, stat);
+	}
+	
+	private List<Short> getContribution(final Object[] record) {
+		ArrayList<Short> tmpArray = new ArrayList<>(4);
+		if (record[IDX_NLORDOCONTRIBVOL] != null){
+			tmpArray.add(IDX_NLORDOCONTRIBVOL);
+		}
+		if (record[IDX_NLORDOCONTRIBDIP] != null){
+			tmpArray.add(IDX_NLORDOCONTRIBDIP);
+		}
+		if (record[IDX_NLORDOCONTRIBDAT] != null){
+			tmpArray.add(IDX_NLORDOCONTRIBDAT);
+		}
+		if (record[IDX_NLORDOCONTRIBTFR] != null){
+			tmpArray.add(IDX_NLORDOCONTRIBTFR);
+		}
+		return tmpArray;
+	}
+
+	@Override
+	protected int[] buildTypes(Connettore connector) {
+		return new int[]{
+				MetaInfo.STRING,   // ETIPOADERENTE
+				MetaInfo.INTEGER,  // IDPRODOTTO
+				MetaInfo.INTEGER,  // IDVERSIONE
+				MetaInfo.INTEGER,  // IDLINEA
+				MetaInfo.INTEGER,  // IDFONDO
+				MetaInfo.DOUBLE,   // NLORDOCONTRIBVOL
+				MetaInfo.DOUBLE,   // NLORDOCONTRIBDIP
+				MetaInfo.DOUBLE,   // NLORDOCONTRIBDAT
+				MetaInfo.DOUBLE,   // NLORDOCONTRIBTFR
+				MetaInfo.DATE      // DEFFETTO
+		};
+	}
+
+	@Override
+	protected int getPolicyIndex() {
+		return -1;
+	}
+
+	@Override
+	protected int getProductIdIndex() {
+		return IDX_IDPRODOTTO;
+	}
+
+	@Override
+	protected int getProductVersionIndex() {
+		return IDX_IDVERSIONEPRODOTTO;
+	}
+
+}
+```
+
+These are the changes applied to the original src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java file in the format of Git diffs. In other words, the changes are in the format of lines that have been removed and lines that have been added. The lines that have been removed are prefixed with a minus sign (-) and the lines that have been added are prefixed with a plus sign (+). The unchanged lines are not shown.
+
+diff --git a/src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java b/src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java
+index cd756c4cd8..42f07d0d78 100644
+--- a/src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java
++++ b/src/main/java/it/rgi/passvita/batch/statisticheCovip/quarterCovip/CovipQuarterC0006100.java
+@@ -1,20 +1,23 @@
+ package it.rgi.passvita.batch.statisticheCovip.quarterCovip;
+ 
++import it.rgi.dbobjects.EntVinvestimento;
++import it.rgi.dbobjects.EntVprestazinvest;
++import it.rgi.dbobjects.EntVprestazionirisc;
++import it.rgi.dbobjects.EntVversionepol;
++import it.rgi.passvita.ExceptionsLauncher;
++import it.rgi.passvita.VitaException;
++import it.rgi.webapp.utility.Data;
+ import java.io.IOException;
+ import java.sql.SQLException;
+ import java.util.ArrayList;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+-import java.util.TreeMap;
+ 
+ import it.rgi.dbobjects.EntCompagnie;
+ import it.rgi.dbobjects.EntMovimento;
+ import it.rgi.dbobjects.EntPolizza;
+-import it.rgi.dbobjects.EntProdotti;
+-import it.rgi.dbobjects.EntRischi;
+-import it.rgi.dbobjects.EntTassiriv;
+ import it.rgi.dbobjects.EntTitolo;
+-import it.rgi.dbobjects.EntVpianoinvest;
+ import it.rgi.dbobjects.EntVpolizza;
+ import it.rgi.dbobjects.EntVrata;
+ import it.rgi.dbobjects.EntVratarischio;
+@@ -28,63 +31,40 @@ import it.rgi.passvita.batch.statisticheCovip.utilitycovip.GenericCostants;
+ import it.rgi.passvita.utility.query.VitaQuery;
+ import it.rgi.webapp.dbms.Connettore;
+ import it.rgi.webapp.dbms.MetaInfo;
+-import it.rgi.webapp.dbms.ObjectId;
+-import it.rgi.webapp.utility.ArrayIterator;
+-import it.rgi.webapp.utility.Data;
+ import it.rgi.webapp.utility.database.CostantiQuery;
+ import it.rgi.webapp.utility.database.Query;
+ 
+-public class CovipQuarterC0006100 extends CovipQuarterAbstract {
++import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendAndFundExclusion;
++import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendAndJoinByVersion;
++import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendSelectMultiplication;
++import static it.rgi.passvita.batch.statisticheCovip.utilitycovip.UtilityCovip.appendSelectFundPercentage;
+ 
+-	private Data startPeriod;
+-	private Data endPeriod;
+-	private ObjectId idCompany;
+-	private String codiceVoce;
+-	private Connettore connettore;
+-	private Map<String, AbstractBeanCovip> mapToElaborate;
++/**
++ * <em>Contributi a livello di comparto</em>
++ */
++public class CovipQuarterC0006100 extends AbstractQuarterVoice {
+ 
+ 	//position field on the query
+ 	private static final short IDX_QUERY_ETIPOADERENTE = 0;
+-	private static final short IDX_QUERY_CODCOVIP = 1;
+-	private static final short IDX_QUERY_LINEA = 2;
+-	private static final short IDX_NLORDOCONTRIBVOL = 3;
+-	private static final short IDX_NLORDOCONTRIBDIP = 4;
+-	private static final short IDX_NLORDOCONTRIBDAT = 5;
+-	private static final short IDX_NLORDOCONTRIBTFR = 6;
+-	private static final short IDX_ETIPOCONTRIBUTO = 7;
+-
+-	private static final String ETIPOCONTRIB = "999";
+-
+-	public static final  String  A_PVVPIANOINVESTIMENTO= "pvvpiano";
++	private static final short IDX_IDPRODOTTO = 1;
++	private static final short IDX_IDVERSIONEPRODOTTO = 2;
++	private static final short IDX_QUERY_LINEA = 3;
++	private static final short IDX_QUERY_IDFONDO = 4;
++	private static final short IDX_NLORDOCONTRIBVOL = 5;
++	private static final short IDX_NLORDOCONTRIBDIP = 6;
++	private static final short IDX_NLORDOCONTRIBDAT = 7;
++	private static final short IDX_NLORDOCONTRIBTFR = 8;
++	private static final short IDX_EFFECT_DATE = 9;
+ 
+ 	private static final String A_PCMOVIMENTO_2 = "m2";
+-	
+-	protected Map<String, AbstractBeanCovip> getMap(){
+-		 return mapToElaborate;
+-	}
++	private static final String A_PERCENTUALE = "perc";
+ 
+-	protected CovipQuarterC0006100(String codiceVoce, Data startPeriod, Data endPeriod, ObjectId idCompany, String extractionType) throws SQLException, IOException {
+-		super(codiceVoce, extractionType);
+-		this.codiceVoce = getCodiceVoce();
+-		this.startPeriod = startPeriod;
+-		this.endPeriod = endPeriod;
+-		this.idCompany = idCompany;
+-	}
+-	
+-	protected CovipQuarterC0006100(String codiceVoce, Data startPeriod, Data endPeriod, ObjectId idCompany, Connettore connettore, String extractionType) throws SQLException, IOException {
+-		super(codiceVoce, extractionType);
+-		this.codiceVoce = getCodiceVoce();
+-		this.startPeriod = startPeriod;
+-		this.endPeriod = endPeriod;
+-		this.idCompany = idCompany;
+-		this.setConnettore(connettore);
+-		Query query = this.buildQuery();
+-		ArrayIterator result = this.typeOfOutputQuery(query, connettore);
+-		mapToElaborate = elaborationCovip(result);
++	protected CovipQuarterC0006100(QuarterParameters parameters) {
++		super(GenericCostants.CONTRIBUTI_COMPARTO_C0006100, parameters);
+ 	}
+ 
+ 	@Override
+-	protected Query buildQuery() throws SQLException {
++	protected Query buildQuery(Connettore connector) throws SQLException {
+ 		VitaQuery query = new VitaQuery();
+ 
+ 		//RAMO III
+@@ -105,48 +85,53 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		return query;
+ 	}
+ 
++	protected void queryRamoTerzo(final VitaQuery query, boolean isCollectiveAdhesion) {
+ 
+-	
+-	
+-	protected VitaQuery queryRamoTerzo(final VitaQuery query, boolean isCollectiveAdhesion) {
+-		
++		query.appendSelect(null, GenericCostants.CONDIZIONE_PROFESSIONALE, null, true, true);
++		query.appendSelect(null, EntPolizza.IDPRODOTTO, null, true, false);
++		query.appendSelect(null, EntVversionepol.IDVERSIONE, null, true, false);
++		query.appendSelect(null, EntVinvestimento.IDLINEA, null, true, false);
++		query.appendSelect(null, EntVinvestimento.IDFONDO, null, true, false);
++		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBVOL, A_PERCENTUALE, true, false);
++		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBDIP, A_PERCENTUALE, true, false);
++		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBDAT, A_PERCENTUALE, true, false);
++		appendSelectMultiplication(query, null, EntVratarischio.NLORDOCONTRIBTFR, A_PERCENTUALE, true, false);
++		query.appendSelect(null, EntMovimento.DEFFETTO, null, false, false);
++
++		query.append(" FROM (");
++
++		query.append(buildInternalQueryRamoTerzo(isCollectiveAdhesion));
++
++		query.append(")");
++	}
++
++	private VitaQuery buildInternalQueryRamoTerzo(boolean isCollectiveAdhesion) {
++
++		VitaQuery query = new VitaQuery();
+ 
+-		
+ 		query.append(UtilityQuery.SELECT);
+ 		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.ETIPOADERENTE, GenericCostants.CONDIZIONE_PROFESSIONALE, true));
+-		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PPPRODOTTI, EntProdotti.CNUMISCRIZCOVIP, null, true));
+-		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.IDLINEA, null, true));
++		query.appendSelect(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, null, true, false);
++		query.appendSelect(UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDVERSIONE, null, true, false);
++		query.appendSelect(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDLINEA, null, true, false);
++		query.appendSelect(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDFONDO, null, true, false);
+ 
+ 		query.append(EntVratarischio.NLORDOCONTRIBVOL);
+-		query.append(GenericCostants.MOLTIPLICA);
+-		query.append(EntVpianoinvest.NPERCENTUALE);
+-		query.append(GenericCostants.DIVIDI);
+-		query.append(GenericCostants.PERCENTUALE);
+ 		query.append(CostantiQuery.VIRGOLA);
+ 
+ 		query.append(EntVratarischio.NLORDOCONTRIBDIP);
+-		query.append(GenericCostants.MOLTIPLICA);
+-		query.append(EntVpianoinvest.NPERCENTUALE);
+-		query.append(GenericCostants.DIVIDI);
+-		query.append(GenericCostants.PERCENTUALE);
+ 		query.append(CostantiQuery.VIRGOLA);
+ 
+ 		query.append(EntVratarischio.NLORDOCONTRIBDAT);
+-		query.append(GenericCostants.MOLTIPLICA);
+-		query.append(EntVpianoinvest.NPERCENTUALE);
+-		query.append(GenericCostants.DIVIDI);
+-		query.append(GenericCostants.PERCENTUALE);
+ 		query.append(CostantiQuery.VIRGOLA);
+ 
+ 		query.append(EntVratarischio.NLORDOCONTRIBTFR);
+-		query.append(GenericCostants.MOLTIPLICA);
+-		query.append(EntVpianoinvest.NPERCENTUALE);
+-		query.append(GenericCostants.DIVIDI);
+-		query.append(GenericCostants.PERCENTUALE);
+ 		query.append(CostantiQuery.VIRGOLA);
+ 
++		query.appendSelect(UtilityQuery.A_PCMOVIMENTO, EntMovimento.DEFFETTO, null, true, false);
++
++		appendSelectFundPercentage(query, UtilityQuery.A_PVVPRESTAZINVEST, A_PERCENTUALE, getMonetaryFunds(), false, false);
+ 
+-		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.ETIPOCONTRIBUTO, null, false));
+ 		query.append(UtilityQuery.FROM);
+ 		query.append(UtilityQuery.buildFrom(EntCompagnie.NOME_TAVOLA, UtilityQuery.A_PACOMPAGNIE, true));
+ 		query.append(UtilityQuery.buildFrom(EntPolizza.NOME_TAVOLA, UtilityQuery.A_PCPOLIZZA, true));
+@@ -155,26 +140,29 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, UtilityQuery.A_PCMOVIMENTO, true));
+ 		query.append(UtilityQuery.buildFrom(EntVrata.NOME_TAVOLA, UtilityQuery.A_PVVRATA, true));
+ 		query.append(UtilityQuery.buildFrom(EntVratarischio.NOME_TAVOLA, UtilityQuery.A_PVVRATARISCHIO, true));
+-		query.append(UtilityQuery.buildFrom(EntProdotti.NOME_TAVOLA, UtilityQuery.A_PPPRODOTTI, true));
+ 		query.append(UtilityQuery.buildFrom(RelVpolizzaassic.NOME_TAVOLA, UtilityQuery.A_PVVPOLIZZAASSIC, true));
+-		query.append(UtilityQuery.buildFrom(EntVpianoinvest.NOME_TAVOLA, UtilityQuery.A_PVVPIANOINVEST, true));
+-		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, false));
+-		
++		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, true));
++		query.append(UtilityQuery.buildFrom(EntVversionepol.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEPOL, true));
++		query.append(UtilityQuery.buildFrom(EntVprestazionirisc.NOME_TAVOLA, UtilityQuery.A_PVVPRESTAZIONIRISC, true));
++		query.append(UtilityQuery.buildFrom(EntVprestazinvest.NOME_TAVOLA, UtilityQuery.A_PVVPRESTAZINVEST, true));
++		query.append(UtilityQuery.buildFrom(EntVrischioass.NOME_TAVOLA, UtilityQuery.A_PVVRISCHIOASS, false));
++
+ 		if(isCollectiveAdhesion) {
+ 			query.append(VitaQuery.VIRGOLA);
+ 			query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, ALIAS_MASTER_MOVEMENT, false));
+ 		}
+-		
++
+ 		query.append(UtilityQuery.WHERE);
+ 		query.appendCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, UtilityQuery.A_PACOMPAGNIE, EntCompagnie.IDCOMPAGNIA);
+-		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, idCompany);
++		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, getCompanyId());
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.IDPOLIZZA);
+-		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getTipiProdottoQuery(), true));
++		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getProductTypes(), true));
+ 		query.append(CostantiQuery.AND);
+ 		query.appendCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDPOLIZZA,UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDASSICURATO, UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.IDASSICURATO);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDPOLIZZA);
+-		
++		appendAndJoinByVersion(query, UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDPOLIZZA, UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
++
+ 		if(isCollectiveAdhesion) {
+ 			query.buildEspressioneIsNotNull(true, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+ 			query.appendAndCondizioneJoin(ALIAS_MASTER_MOVEMENT, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVREGOLAZIONE);
+@@ -184,43 +172,48 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		else {
+ 			query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+ 		}
+-		
++
+ 		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PGTITOLO, EntTitolo.ESTATO, new Object[]{EntTitolo.ENUM_ESTATO_INCASSATO, EntTitolo.ENUM_ESTATO_ARRETRATO_ABBINATO}, true));
+-		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, UtilityQuery.MIN_EQ, endPeriod);
+-		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, UtilityQuery.MAG_EQ, startPeriod);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, Query.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, Query.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, UtilityQuery.A_PPPRODOTTI, EntProdotti.IDPRODOTTO);
++		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MIN_EQ, getEndPeriod());
++		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MAG_EQ, getStartPeriod());
++		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, CostantiQuery.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
++		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, CostantiQuery.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PVVRATA, EntVrata.IDMOVIMENTO);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATA, EntVrata.IDRATA, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRATA);
+-		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.IDRISCHIOASS, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRISCHIOASS);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.NVERFINE, CostantiQuery.MAG_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.NVERINIZIO, CostantiQuery.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.append(CostantiQuery.AND);
+-		query.append(UtilityQuery.buildIn(false, UtilityQuery.A_PVVPIANOINVEST, EntVpianoinvest.ETIPOCONTRIBUTO, getTipiContributoQuery(), false));
++		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRISCHIOASS, UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS);
++		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDRISCHIOASS, UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS);
++		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDRATA, UtilityQuery.A_PVVRATA, EntVrata.IDRATA);
++		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDPRESTAZIONE, UtilityQuery.A_PVVPRESTAZIONIRISC, EntVprestazionirisc.IDPRESTAZIONE);
++		appendAndFundExclusion(query, UtilityQuery.A_PVVPRESTAZINVEST, EntVprestazinvest.IDFONDO, getMonetaryFunds());
++
+ 		query.append(CostantiQuery.AND);
+ 		query.append(GenericCostants.OPEN_PARHENTESIS);
+ 		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.ISNULL, null);
+ 		query.append(CostantiQuery.OR);
+-		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.EQ, "0");
++		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.EQ, 0);
+ 		query.append(GenericCostants.CLOSE_PARHENTESIS);
+-		query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, "0");
++		query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, 0);
++		query.appendAndEspressione(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.ETIPORISCHIO, CostantiQuery.EQ, EntVrischioass.ENUM_ETIPORISCHIO_UNIT_LINKED);
++
++		appendDebugFilter(query);
+ 
+ 		return query;
+ 	}
+ 
+-	protected VitaQuery queryRamoPrimo(final VitaQuery query, boolean isCollectiveAdhesion) {
++	protected void queryRamoPrimo(final VitaQuery query, boolean isCollectiveAdhesion) {
+ 		
+-		String codiceComparto= GenericCostants.CODICE_COMPARTO_DEFAULT;
+ 		query.append(UtilityQuery.SELECT);
+ 		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.ETIPOADERENTE, GenericCostants.CONDIZIONE_PROFESSIONALE, true));
+-		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PPPRODOTTI, EntProdotti.CNUMISCRIZCOVIP, null, true));
+-		query.append(UtilityQuery.buildSelect(null,codiceComparto, EntVpianoinvest.IDLINEA, true));
+-		query.append(UtilityQuery.SUM + GenericCostants.OPEN_PARHENTESIS + UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBVOL, null, false) + GenericCostants.CLOSE_PARHENTESIS + UtilityQuery.VIRGOLA);
+-		query.append(UtilityQuery.SUM + GenericCostants.OPEN_PARHENTESIS + UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDIP, null, false) + GenericCostants.CLOSE_PARHENTESIS + UtilityQuery.VIRGOLA);
+-		query.append(UtilityQuery.SUM + GenericCostants.OPEN_PARHENTESIS + UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDAT, null, false) + GenericCostants.CLOSE_PARHENTESIS + UtilityQuery.VIRGOLA);
+-		query.append(UtilityQuery.SUM + GenericCostants.OPEN_PARHENTESIS + UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTFR, null, false) + GenericCostants.CLOSE_PARHENTESIS + UtilityQuery.VIRGOLA);
+-		query.append(UtilityQuery.buildSelect(null, ETIPOCONTRIB, EntVpianoinvest.ETIPOCONTRIBUTO, false));
++		query.appendSelect(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, null, true, false);
++		query.appendSelect(UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDVERSIONE, null, true, false);
++		query.append(" null as " + EntVinvestimento.IDLINEA + ", ");
++		query.append(" null as " + EntVinvestimento.IDFONDO + ", ");
++		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBVOL, null, false) + CostantiQuery.VIRGOLA);
++		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDIP, null, false) + CostantiQuery.VIRGOLA);
++		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBDAT, null, false) + CostantiQuery.VIRGOLA);
++		query.append(UtilityQuery.buildSelect(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTFR, null, false) + CostantiQuery.VIRGOLA);
++		query.appendSelect(UtilityQuery.A_PCMOVIMENTO, EntMovimento.DEFFETTO, null, false, false);
++
+ 		query.append(UtilityQuery.FROM);
+ 		query.append(UtilityQuery.buildFrom(EntCompagnie.NOME_TAVOLA, UtilityQuery.A_PACOMPAGNIE, true));
+ 		query.append(UtilityQuery.buildFrom(EntPolizza.NOME_TAVOLA, UtilityQuery.A_PCPOLIZZA, true));
+@@ -230,11 +223,9 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		query.append(UtilityQuery.buildFrom(EntMovimento.NOME_TAVOLA, UtilityQuery.A_PCMOVIMENTO, true));
+ 		query.append(UtilityQuery.buildFrom(EntVrata.NOME_TAVOLA, UtilityQuery.A_PVVRATA, true));
+ 		query.append(UtilityQuery.buildFrom(EntVratarischio.NOME_TAVOLA, UtilityQuery.A_PVVRATARISCHIO, true));
+-		query.append(UtilityQuery.buildFrom(EntProdotti.NOME_TAVOLA, UtilityQuery.A_PPPRODOTTI, true));
+ 		query.append(UtilityQuery.buildFrom(EntVrischioass.NOME_TAVOLA, UtilityQuery.A_PVVRISCHIOASS, true));
+-		query.append(UtilityQuery.buildFrom(EntRischi.NOME_TAVOLA, UtilityQuery.A_PPRISCHI, true));
+-		query.append(UtilityQuery.buildFrom(EntTassiriv.NOME_TAVOLA, UtilityQuery.A_PPTASSIRIV, true));
+-		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, false));
++		query.append(UtilityQuery.buildFrom(EntTitolo.NOME_TAVOLA, UtilityQuery.A_PGTITOLO, true));
++		query.append(UtilityQuery.buildFrom(EntVversionepol.NOME_TAVOLA, UtilityQuery.A_PVVVERSIONEPOL, false));
+ 		
+ 		if(isCollectiveAdhesion) {
+ 			query.append(VitaQuery.VIRGOLA);
+@@ -243,9 +234,9 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		
+ 		query.append(UtilityQuery.WHERE);
+ 		query.appendCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, UtilityQuery.A_PACOMPAGNIE, EntCompagnie.IDCOMPAGNIA);
+-		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, idCompany);
++		query.appendAndEspressione(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDCOMPAGNIA, CostantiQuery.EQ, getCompanyId());
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.IDPOLIZZA);
+-		query.appendIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getTipiProdottoQuery(), true);
++		query.appendIn(false, UtilityQuery.A_PVVPOLIZZA, EntVpolizza.ETIPOPRODOTTO, getProductTypes(), true);
+ 		query.append(CostantiQuery.AND);
+ 		query.appendCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDPOLIZZA,UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PVVPOLIZZAASSIC, RelVpolizzaassic.IDASSICURATO, UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.IDASSICURATO);
+@@ -260,15 +251,14 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		else {
+ 			query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDGRUPPOTITOLI, UtilityQuery.A_PGTITOLO, EntTitolo.IDTITOLO);
+ 		}
+-		
++		appendAndJoinByVersion(query, UtilityQuery.A_PVVVERSIONEPOL, EntVversionepol.IDPOLIZZA, UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPOLIZZA);
+ 		query.appendIn(false, UtilityQuery.A_PGTITOLO, EntTitolo.ESTATO, new Object[]{EntTitolo.ENUM_ESTATO_INCASSATO, EntTitolo.ENUM_ESTATO_ARRETRATO_ABBINATO}, true);
+-		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, UtilityQuery.MIN_EQ, endPeriod);
+-		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, UtilityQuery.MAG_EQ, startPeriod);
++		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MIN_EQ, getEndPeriod());
++		query.appendAndEspressione(UtilityQuery.A_PGTITOLO, EntTitolo.DEFFETTIVOINCASSO, CostantiQuery.MAG_EQ, getStartPeriod());
+ 		query.appendAndEspressione(UtilityQuery.A_PCMOVIMENTO, EntMovimento.BANNULLATO, CostantiQuery.EQ, "0");
+ 		query.appendIn(true, UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO,queryMovimentoPolizza() ,true);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, Query.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, Query.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+-		query.appendAndCondizioneJoin(UtilityQuery.A_PCPOLIZZA, EntPolizza.IDPRODOTTO, UtilityQuery.A_PPPRODOTTI, EntProdotti.IDPRODOTTO);
++		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERINIZIO, CostantiQuery.MIN_EQ, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
++		query.appendCondizioneJoin(UtilityQuery.A_PVVVERSIONEASSIC, EntVversioneassic.NVERFINE, CostantiQuery.MAG, UtilityQuery.A_PCMOVIMENTO, EntMovimento.NVERSIONE, true);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PCMOVIMENTO, EntMovimento.IDMOVIMENTO, UtilityQuery.A_PVVRATA, EntVrata.IDMOVIMENTO);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRATA, EntVrata.IDRATA, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRATA);
+ 		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIOASS, UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.IDRISCHIOASS);
+@@ -281,10 +271,8 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		query.append(CostantiQuery.OR);
+ 		query.appendEspressione(UtilityQuery.A_PVVRATARISCHIO, EntVratarischio.NLORDOCONTRIBTRASF, CostantiQuery.EQ, "0");
+ 		query.append(GenericCostants.CLOSE_PARHENTESIS);
+-		query.appendAndCondizioneJoin(UtilityQuery.A_PVVRISCHIOASS, EntVrischioass.IDRISCHIO, UtilityQuery.A_PPRISCHI, EntRischi.IDRISCHIO);
+-		query.appendAndCondizioneJoin(UtilityQuery.A_PPRISCHI, EntRischi.IDTASSORIV, UtilityQuery.A_PPTASSIRIV, EntTassiriv.IDTASSORIV);
+-		query.append(UtilityQuery.buildGroupBy(new String[][]{{UtilityQuery.A_PPPRODOTTI,EntProdotti.CNUMISCRIZCOVIP},{UtilityQuery.A_PVVVERSIONEASSIC,EntVversioneassic.ETIPOADERENTE},{UtilityQuery.A_PPTASSIRIV,EntTassiriv.IDTASSORIV}}));
+-		return query;
++
++		appendDebugFilter(query);
+ 	}
+ 	private VitaQuery queryMovimentoPolizza() {
+ 		VitaQuery query = new VitaQuery();
+@@ -299,113 +287,109 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 	}
+ 
+ 	@Override
+-	public Map<String, AbstractBeanCovip> elaborationCovip(final ArrayIterator iterResult) throws SQLException, IOException {
+-		ArrayIterator resultset = iterResult;
+-		Map<String, AbstractBeanCovip> mapResults = new TreeMap<String, AbstractBeanCovip>();
+-		ArrayList arrayResultSet = (ArrayList) resultset.toArrayList();
+-		for (int i = 0; i < arrayResultSet.size(); i++) {
+-			final Object[]  record = (Object[]) arrayResultSet.get(i);
+-			String codiceSezione = GenericCostants.CODICE_SEZIONE_DEFAULT;
+-			if (checkDataFromDB(record)){
+-				elabRecordOk(mapResults, record, codiceSezione);
+-			}
+-		}
+-		return mapResults;
++	protected boolean accept(Connettore connector, Object[] record) throws SQLException, IOException {
++		return super.accept(connector, record) && record[IDX_QUERY_ETIPOADERENTE] != null;
+ 	}
+ 
+-	protected Map<String, AbstractBeanCovip> elabRecordOk(Map<String, AbstractBeanCovip> mapResults, final Object[] record, String codiceSezione) {
+-		
+-		ObjectId idtipoContributo = (ObjectId) record[IDX_ETIPOCONTRIBUTO];
++	@Override
++	protected void elaborate(Connettore connettore, Object[] record, Map<String, AbstractBeanCovip> results) throws SQLException, IOException {
++		elabRecordOk(connettore, results, record);
++	}
+ 
+-		if (idtipoContributo.toString().equals(ETIPOCONTRIB)){
+-			elabFirstMinisterialBranch(mapResults, record, codiceSezione, idtipoContributo);
++	protected void elabRecordOk(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) throws SQLException, IOException {
++		
++		if (record[IDX_QUERY_IDFONDO] != null) {
++			elabThirdMinisterialBranch(connector, mapResults, record);
+ 		} else {
+-			elabThirdMinisterialBranch(mapResults, record, codiceSezione, idtipoContributo);
++			elabFirstMinisterialBranch(connector, mapResults, record);
+ 		}
+-		return mapResults;
+ 	}
+ 
+-	protected void elabThirdMinisterialBranch(Map<String, AbstractBeanCovip> mapResults, final Object[] record, String codiceSezione, ObjectId idtipoContributo) {
+-
+-		KeyQuarter key = new KeyQuarter();
+-		
+-		double importoFondo = 0;
+-		String codiceFondo = record[IDX_QUERY_CODCOVIP].toString();
+-		String condizioneProfessionale = record[IDX_QUERY_ETIPOADERENTE].toString();
+-		String codiceComparto = record[IDX_QUERY_LINEA].toString();
+-
+-		//Ramo Terzo
+-		if (idtipoContributo.equals(EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_VOLONTARIO)){
+-			key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+-			if (record[IDX_NLORDOCONTRIBVOL] != null){
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBVOL].toString());
+-			}
+-		} else if (idtipoContributo.equals(EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_DIPENDENTE__DA_STIPENDIO_)){
+-			key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+-			if (record[IDX_NLORDOCONTRIBDIP] != null){
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDIP].toString());
+-			}
+-		} else if (idtipoContributo.equals(EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_DATORE_LAVORO)){
+-			key.setTipologiaContribuzione(CostantsForXML.CONTR_DATORE);
+-			if (record[IDX_NLORDOCONTRIBDAT] != null){
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDAT].toString());
++	protected void elabThirdMinisterialBranch(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) {
++
++		Map<Short, String> indexes = new HashMap<>();
++		indexes.put(IDX_NLORDOCONTRIBVOL, CostantsForXML.CONTR_LAVORATORE);
++		indexes.put(IDX_NLORDOCONTRIBDIP, CostantsForXML.CONTR_LAVORATORE);
++		indexes.put(IDX_NLORDOCONTRIBDAT, CostantsForXML.CONTR_DATORE);
++		indexes.put(IDX_NLORDOCONTRIBTFR, CostantsForXML.CONTR_TFR);
++
++		indexes.forEach((index, type) -> {
++
++			try {
++				if (record[index] != null) {
++
++					KeyQuarter key = new KeyQuarter();
++
++					double importoFondo = 0;
++					String codiceFondo = getCovipFundCode(connector, record);
++					String condizioneProfessionale = record[IDX_QUERY_ETIPOADERENTE].toString();
++					int productId = getProductId(record);
++					int versionId = getProductVersion(record);
++					Integer lineId = (Integer) record[IDX_QUERY_LINEA];
++					Integer fundId = (Integer) record[IDX_QUERY_IDFONDO];
++					Data date = (Data) record[IDX_EFFECT_DATE];
++					String codiceComparto = getSectorCode(connector, productId, versionId, lineId, fundId, date);
++
++					key.setTipologiaContribuzione(type);
++					if (record[index] != null) {
++						importoFondo = Double.parseDouble(record[index].toString());
++					}
++					setKey(codiceFondo, condizioneProfessionale, codiceComparto, key);
++					chargeMap(mapResults, codiceComparto, importoFondo, key);
++				}
++			} catch (SQLException | IOException ex) {
++				throw ExceptionsLauncher.newException(connector, ex, VitaException.class);
+ 			}
+-		} else if (idtipoContributo.equals(EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_TFR)){
+-			key.setTipologiaContribuzione(CostantsForXML.CONTR_TFR);
+-			if (record[IDX_NLORDOCONTRIBTFR] != null){
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBTFR].toString());
+-			}
+-		}
+-		key = setKey(codiceFondo, condizioneProfessionale,codiceComparto, codiceSezione, key);
+-		chargeMap(mapResults, codiceComparto, codiceSezione, importoFondo, key);
++		});
+ 
+ 	}
+ 
+-	protected void elabFirstMinisterialBranch(Map<String, AbstractBeanCovip> mapResults, final Object[] record, String codiceSezione, ObjectId idtipoContributo) {
++	protected void elabFirstMinisterialBranch(Connettore connector, Map<String, AbstractBeanCovip> mapResults, final Object[] record) throws SQLException, IOException {
+ 		//Ramo I
+-		KeyQuarter key = new KeyQuarter();
+-		
+-		double importoFondo = 0;
+-		String codiceFondo = record[IDX_QUERY_CODCOVIP].toString();
++
++		String codiceFondo = getCovipFundCode(connector, record);
+ 		String condizioneProfessionale = record[IDX_QUERY_ETIPOADERENTE].toString();
+-		String codiceComparto = record[IDX_QUERY_LINEA].toString();
+-		List<Short> contribution = getContribution(record, idtipoContributo);
++		String codiceComparto = GenericCostants.CODICE_COMPARTO_DEFAULT;
++		List<Short> contribution = getContribution(record);
+ 
+-		for (int j = 0; j < contribution.size(); j++) {
+-			if (contribution.get(j).equals(IDX_NLORDOCONTRIBVOL)){
+-				key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBVOL].toString());
+-			}
+-			if (contribution.get(j).equals(IDX_NLORDOCONTRIBDIP)){
+-				key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDIP].toString());
+-			}
+-			if (contribution.get(j).equals(IDX_NLORDOCONTRIBDAT)){
+-				key.setTipologiaContribuzione(CostantsForXML.CONTR_DATORE);
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDAT].toString());
+-			}
+-			if (contribution.get(j).equals(IDX_NLORDOCONTRIBTFR)){
+-				key.setTipologiaContribuzione(CostantsForXML.CONTR_TFR);
+-				importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBTFR].toString());
+-			}
+-			key = setKey(codiceFondo, condizioneProfessionale,codiceComparto, codiceSezione, key);
+-			chargeMap(mapResults, codiceComparto, codiceSezione, importoFondo, key);
+-		}
++		for (Short aShort : contribution) {
++
++			KeyQuarter key = new KeyQuarter();
++
++			double importoFondo = 0;
++
++			if (aShort == IDX_NLORDOCONTRIBVOL) {
++                key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
++                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBVOL].toString());
++            } else if (aShort == IDX_NLORDOCONTRIBDIP) {
++                key.setTipologiaContribuzione(CostantsForXML.CONTR_LAVORATORE);
++                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDIP].toString());
++            } else if (aShort == IDX_NLORDOCONTRIBDAT) {
++                key.setTipologiaContribuzione(CostantsForXML.CONTR_DATORE);
++                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBDAT].toString());
++            } else if (aShort == IDX_NLORDOCONTRIBTFR) {
++                key.setTipologiaContribuzione(CostantsForXML.CONTR_TFR);
++                importoFondo = Double.parseDouble(record[IDX_NLORDOCONTRIBTFR].toString());
++            }
++
++            setKey(codiceFondo, condizioneProfessionale, codiceComparto, key);
++
++            chargeMap(mapResults, codiceComparto, importoFondo, key);
++        }
+ 	}
+ 	
+ 	
+-	public KeyQuarter setKey(String codiceFondo, String condizioneProfessionale,String codiceComparto, String codiceSezione, KeyQuarter key) {
+-		key.setCodiceVoce(codiceVoce);
++	private void setKey(String codiceFondo, String condizioneProfessionale, String codiceComparto, KeyQuarter key) {
++		key.setCodiceVoce(getCodiceVoce());
+ 		key.setCodiceFondo(codiceFondo);
+-		key.setCodiceSezione(codiceSezione);
++		key.setCodiceSezione(GenericCostants.CODICE_SEZIONE_DEFAULT);
+ 		key.setCodiceComparto(codiceComparto);
+ 		key.setCondizioneProfessionale(condizioneProfessionale);
+ 
+-		return key;
+ 	}
+ 	
+ 	
+-	public void chargeMap(Map<String, AbstractBeanCovip> mapResults, String codiceComparto, String codiceSezione, double importoFondo, KeyQuarter key) {
++	private void chargeMap(Map<String, AbstractBeanCovip> mapResults, String codiceComparto, double importoFondo, KeyQuarter key) {
+ 
+ 		String keyMap;
+ 		BeanCovipQuarter stat;
+@@ -417,8 +401,8 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 			stat = new BeanCovipQuarter();
+ 		}
+ 
+-		stat.setCodiceVoce(codiceVoce);
+-		stat.setCodiceSezione(codiceSezione);
++		stat.setCodiceVoce(getCodiceVoce());
++		stat.setCodiceSezione(GenericCostants.CODICE_SEZIONE_DEFAULT);
+ 		stat.setCodiceComparto(codiceComparto);
+ 		stat.setTipologiaContribuzione(key.getTipologiaContribuzione());
+ 		stat.setValoreStatisticoImporto(stat.getValoreStatisticoImporto()+importoFondo);
+@@ -426,62 +410,52 @@ public class CovipQuarterC0006100 extends CovipQuarterAbstract {
+ 		mapResults.put(keyMap, stat);
+ 	}
+ 	
+-	public List<Short> getContribution(final Object[] record, ObjectId idtipoContributo) {
+-		ArrayList<Short> tmpArray = new ArrayList<Short>();
+-		if (idtipoContributo.toString().equals(ETIPOCONTRIB)){
+-			if (record[IDX_NLORDOCONTRIBVOL] != null){
+-				tmpArray.add(IDX_NLORDOCONTRIBVOL);
+-			}
+-			if (record[IDX_NLORDOCONTRIBDIP] != null){
+-				tmpArray.add(IDX_NLORDOCONTRIBDIP);
+-			}
+-			if (record[IDX_NLORDOCONTRIBDAT] != null){
+-				tmpArray.add(IDX_NLORDOCONTRIBDAT);
+-			}
+-			if (record[IDX_NLORDOCONTRIBTFR] != null){
+-				tmpArray.add(IDX_NLORDOCONTRIBTFR);
+-			}
++	private List<Short> getContribution(final Object[] record) {
++		ArrayList<Short> tmpArray = new ArrayList<>(4);
++		if (record[IDX_NLORDOCONTRIBVOL] != null){
++			tmpArray.add(IDX_NLORDOCONTRIBVOL);
++		}
++		if (record[IDX_NLORDOCONTRIBDIP] != null){
++			tmpArray.add(IDX_NLORDOCONTRIBDIP);
++		}
++		if (record[IDX_NLORDOCONTRIBDAT] != null){
++			tmpArray.add(IDX_NLORDOCONTRIBDAT);
++		}
++		if (record[IDX_NLORDOCONTRIBTFR] != null){
++			tmpArray.add(IDX_NLORDOCONTRIBTFR);
+ 		}
+ 		return tmpArray;
+ 	}
+ 
++	@Override
++	protected int[] buildTypes(Connettore connector) {
++		return new int[]{
++				MetaInfo.STRING,   // ETIPOADERENTE
++				MetaInfo.INTEGER,  // IDPRODOTTO
++				MetaInfo.INTEGER,  // IDVERSIONE
++				MetaInfo.INTEGER,  // IDLINEA
++				MetaInfo.INTEGER,  // IDFONDO
++				MetaInfo.DOUBLE,   // NLORDOCONTRIBVOL
++				MetaInfo.DOUBLE,   // NLORDOCONTRIBDIP
++				MetaInfo.DOUBLE,   // NLORDOCONTRIBDAT
++				MetaInfo.DOUBLE,   // NLORDOCONTRIBTFR
++				MetaInfo.DATE      // DEFFETTO
++		};
++	}
+ 
+-	// Check the value extract from the DB. If there is a null value return false
+-		private boolean checkDataFromDB(Object[] record){
+-			boolean ret;
+-			if ((record[IDX_QUERY_CODCOVIP] != null) && (record[IDX_QUERY_ETIPOADERENTE] != null)
+-					&& (record[IDX_ETIPOCONTRIBUTO] != null)
+-					 ){
+-				ret = true;
+-			} else {
+-				ret = false;
+-			}
+-			return ret;
+-		}
+-
+-		/**
+-		 * Execute the query and return the ResultSet.
+-		 *
+-		 * @param query
+-		 * @return
+-		 * @throws IOException
+-		 * @throws SQLException
+-		 */
+-		@Override
+-		protected ArrayIterator typeOfOutputQuery(final Query query,  Connettore connector) throws IOException, SQLException {
+-			final int[] tipiOutput = new int[]{MetaInfo.STRING,MetaInfo.STRING,MetaInfo.STRING,MetaInfo.DOUBLE,MetaInfo.DOUBLE,MetaInfo.DOUBLE,MetaInfo.DOUBLE,MetaInfo.OBJECTID};
+-			return query.select(connector, tipiOutput);
+-		}
++	@Override
++	protected int getPolicyIndex() {
++		return -1;
++	}
+ 
+-		protected Object[] getTipiContributoQuery() {
+-			return new Object[]{EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_VOLONTARIO,EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_DIPENDENTE__DA_STIPENDIO_,EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_DATORE_LAVORO, EntVpianoinvest.ENUM_ETIPOCONTRIBUTO_TFR};
+-		}
+-		public Connettore getConnettore() {
+-			return connettore;
+-		}
+-		public void setConnettore(Connettore connettore) {
+-			this.connettore = connettore;
+-		}
++	@Override
++	protected int getProductIdIndex() {
++		return IDX_IDPRODOTTO;
++	}
+ 
++	@Override
++	protected int getProductVersionIndex() {
++		return IDX_IDVERSIONEPRODOTTO;
++	}
+ 
+ }
+\ No newline at end of file
+
+
+Summarize these changes in not more than three sentences.
+If the changes are primarly to improve readability, respond exactly that "changed to improve readability" and do not add any further detail. 
+Do not add any kind of judgment in the summary.
+Now take a deep breath and respond.
+Response: Changed to improve readability.
