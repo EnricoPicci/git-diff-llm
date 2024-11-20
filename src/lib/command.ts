@@ -10,8 +10,8 @@ console.log(`Starting git-diff-llm server. Version: ${version}\n`);
 
 startWebServer();
 
-const clientAddress = path.join(__dirname, '..', '..', 'src', 'core', 'browser-client.html');
-console.log(`clientAddress: file:/${clientAddress}\n`);
-console.log(`clientAddress (if using wsl and Ubuntu): file://wsl.localhost/Ubuntu${clientAddress}\n\n`);
+const clientPartialUrl = path.join(__dirname, '..', '..', 'src', 'core', 'browser-client.html');
+console.log(`url to paste on the browser: file:/${clientPartialUrl}\n`);
+console.log(`url to paste on the browser (if using wsl and Ubuntu): file://wsl.localhost/Ubuntu${clientPartialUrl}\n\n`);
 
 // npm run tsc && node dist/lib/command.js

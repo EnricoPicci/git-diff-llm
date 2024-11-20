@@ -35,7 +35,8 @@ function addRemote$(projectDir, params, executedCommands) {
             const command = `cd ${projectDir} && git remote remove ${baseRemoteName} && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`;
             return (0, execute_command_1.executeCommandObs$)('remove remote and add it again with new url', command, executedCommands).pipe((0, rxjs_1.last)());
         }
-        throw (err);
+        console.error(`Error adding remote: ${err}`);
+        return (0, rxjs_1.of)(err);
     }));
 }
 function listRemotes$(gitRepoPath, executedCommands) {

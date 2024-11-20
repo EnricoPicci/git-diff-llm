@@ -14,7 +14,8 @@
         "lint:fix": "eslint src/**/*.ts --fix",
         "prepublishOnly": "npm version patch",
         "version": "npm run tsc && git add -A dist",
-        "postversion": "git push"
+        "postversion": "git push",
+        "start": "npm run tsc && node dist/lib/command.js"
     },
     "keywords": [],
     "author": "",

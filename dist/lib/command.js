@@ -11,8 +11,8 @@ const packageJson = require('../../package.json');
 const version = packageJson.version;
 console.log(`Starting git-diff-llm server. Version: ${version}\n`);
 (0, start_web_server_1.startWebServer)();
-const clientAddress = path_1.default.join(__dirname, '..', '..', 'src', 'core', 'browser-client.html');
-console.log(`clientAddress: file:/${clientAddress}\n`);
-console.log(`clientAddress (if using wsl and Ubuntu): file://wsl.localhost/Ubuntu${clientAddress}\n\n`);
+const clientPartialUrl = path_1.default.join(__dirname, '..', '..', 'src', 'core', 'browser-client.html');
+console.log(`url to paste on the browser: file:/${clientPartialUrl}\n`);
+console.log(`url to paste on the browser (if using wsl and Ubuntu): file://wsl.localhost/Ubuntu${clientPartialUrl}\n\n`);
 // npm run tsc && node dist/lib/command.js
 //# sourceMappingURL=command.js.map

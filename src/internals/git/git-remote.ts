@@ -1,4 +1,4 @@
-import { catchError, last} from "rxjs"
+import { catchError, last, of} from "rxjs"
 import { executeCommandObs$ } from "../execute-command/execute-command"
 import { convertHttpsToSshUrl } from "./convert-ssh-https-url"
 
@@ -43,7 +43,8 @@ export function addRemote$(
                     last()
                 )
             }
-            throw (err)
+            console.error(`Error adding remote: ${err}`)
+            return of(err)
         }),
     )
 }
