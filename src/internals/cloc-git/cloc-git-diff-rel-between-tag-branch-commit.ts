@@ -121,7 +121,7 @@ export function allDiffsForProject$(
     )
 }
 
-export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus& FileGitInfo & {
+export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus & FileGitInfo & {
     explanation: string,
 }
 export function allDiffsForProjectWithExplanation$(
@@ -225,7 +225,7 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
         comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter, outdir
     ).pipe(
         toArray(),
-        concatMap((diffsWithExplanation) => {
+        concatMap((diffsWithExplanation: FileDiffWithExplanation[]) => {
             appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length)
             if (diffsWithExplanation.length > 0 && hasClocInfoDetails(diffsWithExplanation[0])) {
                 appendNumLinesOfCode(mdJson, diffsWithExplanation)
@@ -246,8 +246,17 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
                 })
             )
         }),
+        map((diffWithExplanation) => {
+            // sum the lines of code modified, added, removed for each file and sort the files in descending order of the sum of these lines
+            diffWithExplanation.sort((a, b) => {
+                const sumA = parseInt(a.code_modified) + parseInt(a.code_added) + parseInt(a.code_removed)
+                const sumB = parseInt(b.code_modified) + parseInt(b.code_added) + parseInt(b.code_removed)
+                return sumB - sumA
+            })
+            return diffWithExplanation
+        }),
         concatMap(diffs => diffs),
-        reduce((mdJson, diffWithExplanation) => {
+        reduce((mdJson, diffWithExplanation: FileDiffWithExplanation) => {
             appendCompResultToMdJson(mdJson, diffWithExplanation)
             return mdJson
         }, mdJson),
