@@ -141,6 +141,14 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
             appendSummaryToMdJson(mdJson, summary);
             return diffsWithExplanation;
         }));
+    }), (0, rxjs_1.map)((diffWithExplanation) => {
+        // sum the lines of code modified, added, removed for each file and sort the files in descending order of the sum of these lines
+        diffWithExplanation.sort((a, b) => {
+            const sumA = parseInt(a.code_modified) + parseInt(a.code_added) + parseInt(a.code_removed);
+            const sumB = parseInt(b.code_modified) + parseInt(b.code_added) + parseInt(b.code_removed);
+            return sumB - sumA;
+        });
+        return diffWithExplanation;
     }), (0, rxjs_1.concatMap)(diffs => diffs), (0, rxjs_1.reduce)((mdJson, diffWithExplanation) => {
         appendCompResultToMdJson(mdJson, diffWithExplanation);
         return mdJson;
