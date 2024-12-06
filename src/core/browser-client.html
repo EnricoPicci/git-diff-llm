@@ -69,6 +69,7 @@
             100% { transform: rotate(360deg); }
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
 </head>
 <body>
     <form>
@@ -189,6 +190,7 @@
     <div id="messages"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
     <script>
         // ws is a global variable to store the websocket connection
         let ws = null;
@@ -546,10 +548,16 @@
                     const diffLinesRow = document.createElement('tr');
                     const diffLinesCell = document.createElement('td');
                     diffLinesCell.colSpan = 3;
-                    const diffLines = document.createElement('div');
-                    diffLines.textContent = diff.diffLines;
-                    diffLines.id = 'difflines';
-                    diffLinesCell.appendChild(diffLines);
+                    const diffLinesContent = document.createElement('div');
+                    const diffHtml = Diff2Html.html(diff.diffLines, {
+                        inputFormat: 'diff',
+                        outputFormat: 'side-by-side',
+                        drawFileList: false,
+                        showFiles: false,
+                        matching: 'lines'
+                    });
+                    diffLinesContent.innerHTML = diffHtml;
+                    diffLinesCell.appendChild(diffLinesContent);
                     diffLinesRow.appendChild(diffLinesCell);
                     // insert the newly created diffLinesRow after the current row
                     row.insertAdjacentElement('afterend', diffLinesRow);
