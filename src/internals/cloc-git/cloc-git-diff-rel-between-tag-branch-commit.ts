@@ -424,5 +424,5 @@ function gitWebClientCommand(
         const urlRepoName = toUrlParts[toUrlParts.length - 1]
         toTagBranchCommit = `${repoOwner}:${urlRepoName}:${toTagBranchCommit}`
     }
-    return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
+    return `${repoUrl}/compare/${toTagBranchCommit}...${fromTagBranchCommit}`;
 }

@@ -265,6 +265,6 @@ function gitWebClientCommand(repoUrl, from_tag_branch_commit, to_tag_branch_comm
         const urlRepoName = toUrlParts[toUrlParts.length - 1];
         toTagBranchCommit = `${repoOwner}:${urlRepoName}:${toTagBranchCommit}`;
     }
-    return `${repoUrl}/compare/${fromTagBranchCommit}...${toTagBranchCommit}`;
+    return `${repoUrl}/compare/${toTagBranchCommit}...${fromTagBranchCommit}`;
 }
 //# sourceMappingURL=cloc-git-diff-rel-between-tag-branch-commit.js.map
