@@ -46,6 +46,24 @@ function startWebServer() {
     app.get('/', (_, res) => {
         res.send(`git-diff-llm server started. Version: ${version}`);
     });
+    // Serve static files from current directory
+    app.use(express_1.default.static(__dirname));
+    // Specific route for html pages
+    app.get('/browser-client.html', (_req, res) => {
+        const cwd = process.cwd();
+        console.log(`Serving browser-client.html from ${cwd}`);
+        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'browser-client.html'));
+    });
+    app.get('/file-viewer.html', (_req, res) => {
+        const cwd = process.cwd();
+        console.log(`Serving file-viewer.html from ${cwd}`);
+        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'file-viewer.html'));
+    });
+    app.get('/git-diff-viewer.html', (_req, res) => {
+        const cwd = process.cwd();
+        console.log(`Serving git-diff-viewer.html from ${cwd}`);
+        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'git-diff-viewer.html'));
+    });
     const actions = {
         "generate-report": launch_report_1.launchGenerateReport,
         "chat": chat_1.chat,
@@ -202,6 +220,8 @@ function startWebServer() {
     // Use server.listen instead of app.listen to allow WebSocket connections
     server.listen(port, () => {
         console.log(`git-diff-llm server is running at http://localhost:${port}`);
+        console.log('Press Ctrl+C to stop the server');
+        console.log('Open the client in a browser at http://localhost:3000/browser-client.html');
     });
 }
 // npm run tsc && node dist/lib/command.js

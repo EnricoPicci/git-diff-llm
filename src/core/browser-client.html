@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 900px;
+            /* max-width: 900px; */
             margin: 40px auto;
             padding: 20px;
             background-color: #f4f4f4;
@@ -33,6 +33,26 @@
             color: white;
             border: none;
             cursor: pointer;
+        }
+        table {
+            vertical-align: top;
+        }
+        td {
+            vertical-align: top;
+        }
+        #filecontent {
+            white-space: pre-wrap;
+            font-family: monospace;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin: 20px;
+        }
+        #difflines {
+            white-space: pre-wrap;
+            font-family: monospace;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin: 20px;
         }
         .spinner {
             display: none;
@@ -153,8 +173,9 @@
     <table id="diffs-generated" style="display: none; border: 1;">
         <thead>
             <tr>
-                <th>Project</th>
                 <th>File</th>
+                <th>LoC diffs</th>
+                <th>Comment</th>
             </tr>
         </thead>
         <tbody>
@@ -503,17 +524,36 @@
                 fileCell.textContent = diff.File;
                 fileCell.style.cursor = 'pointer';
                 fileCell.addEventListener('click', () => {
-                    // Get base directory from current URL
-                    const currentPath = window.location.pathname;
-                    const baseDir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-                    const encodedContent = encodeURIComponent(diff.fileContent);
-                    const url = `file://${baseDir}file-page.html?content=${encodedContent}`;
-                    window.open(url, '_blank');
+                    // append a new row to the table below the current row with the diff content
+                    const fileContentRow = document.createElement('tr');
+                    const fileContentCell = document.createElement('td');
+                    fileContentCell.colSpan = 3;
+                    const fileContent = document.createElement('div');
+                    fileContent.id = 'filecontent';
+                    fileContent.textContent = diff.fileContent;
+                    fileContentCell.appendChild(fileContent);
+                    fileContentRow.appendChild(fileContentCell);
+                    // insert the newly created fileContentRow after the current row
+                    row.insertAdjacentElement('afterend', fileContentRow);
                 });
                 row.appendChild(fileCell);
 
                 const linesOfCode = document.createElement('td');
                 linesOfCode.textContent = diff.linesOfCodeString;
+                linesOfCode.style.cursor = 'pointer';
+                linesOfCode.addEventListener('click', () => {
+                    // append a new row to the table below the current row with the diff content
+                    const diffLinesRow = document.createElement('tr');
+                    const diffLinesCell = document.createElement('td');
+                    diffLinesCell.colSpan = 3;
+                    const diffLines = document.createElement('div');
+                    diffLines.textContent = diff.diffLines;
+                    diffLines.id = 'difflines';
+                    diffLinesCell.appendChild(diffLines);
+                    diffLinesRow.appendChild(diffLinesCell);
+                    // insert the newly created diffLinesRow after the current row
+                    row.insertAdjacentElement('afterend', diffLinesRow);
+                });
                 row.appendChild(linesOfCode);
 
                 const explanationCell = document.createElement('td');

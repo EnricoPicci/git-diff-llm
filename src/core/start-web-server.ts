@@ -48,9 +48,29 @@ process.on('SIGINT', handleShutdown);
 process.on('SIGTERM', handleShutdown);
 
 export function startWebServer() {
-    app.get('/', (_: Request, res: Response) => {
-      res.send(`git-diff-llm server started. Version: ${version}`);
-    });
+  app.get('/', (_: Request, res: Response) => {
+    res.send(`git-diff-llm server started. Version: ${version}`);
+  });  
+
+  // Serve static files from current directory
+  app.use(express.static(__dirname));
+
+  // Specific route for html pages
+  app.get('/browser-client.html', (_req, res) => {
+    const cwd = process.cwd();
+    console.log(`Serving browser-client.html from ${cwd}`);
+    res.sendFile(path.join(cwd, 'src', 'core', 'browser-client.html'));
+});
+  app.get('/file-viewer.html', (_req, res) => {
+    const cwd = process.cwd();
+    console.log(`Serving file-viewer.html from ${cwd}`);
+    res.sendFile(path.join(cwd, 'src', 'core', 'file-viewer.html'));
+  });
+  app.get('/git-diff-viewer.html', (_req, res) => {
+    const cwd = process.cwd();
+    console.log(`Serving git-diff-viewer.html from ${cwd}`);
+    res.sendFile(path.join(cwd, 'src', 'core', 'git-diff-viewer.html'));
+  });
 
   // WebSocket connection
   type EnrichedWebSocket = ws.WebSocket & { id: string };
@@ -230,7 +250,9 @@ export function startWebServer() {
   // Use server.listen instead of app.listen to allow WebSocket connections
   server.listen(port, () => {
     console.log(`git-diff-llm server is running at http://localhost:${port}`);
-  });
+    console.log('Press Ctrl+C to stop the server');
+    console.log('Open the client in a browser at http://localhost:3000/browser-client.html');
+  })
 }
 
 // npm run tsc && node dist/lib/command.js
