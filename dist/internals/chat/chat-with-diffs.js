@@ -12,7 +12,7 @@ const openai_1 = require("../openai/openai");
 const message_writer_1 = require("../message-writer/message-writer");
 const observable_fs_1 = require("observable-fs");
 function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
-    const promptForChat = buildFullPrompt(input);
+    const promptForChat = buildFullPromptForChat(input);
     const llmModel = input.llmModel;
     const msgText = `Chat with LLM with all diffs`;
     const msg = (0, message_writer_1.newInfoMessage)(msgText);
@@ -33,7 +33,7 @@ function chatWithDiffs$(input, executedCommands, messageWriter = message_writer_
 }
 function chatWithDiffsAndWriteChat$(input, projectDir, outputDirName, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter) {
     const outDir = path_1.default.join(projectDir, outputDirName);
-    const promptForChat = buildFullPrompt(input);
+    const promptForChat = buildFullPromptForChat(input);
     return (0, observable_fs_1.appendFileObs)(path_1.default.join(outDir, 'chat-log.txt'), `Full prompt: ${promptForChat}\n`).pipe((0, rxjs_1.concatMap)(() => {
         return chatWithDiffs$(input, executedCommands, messageWriter);
     }), (0, rxjs_1.concatMap)((response) => {
@@ -55,7 +55,7 @@ function fillPromptForChat(prompt, diffs, languageSpecilization) {
         .replace(/{{languages}}/g, languageSpecilization)
         .replace(/{{prompt}}/g, prompt);
 }
-function buildFullPrompt(input) {
+function buildFullPromptForChat(input) {
     const diffs = input.diffs;
     const languages = input.languages;
     const prompt = input.prompt;

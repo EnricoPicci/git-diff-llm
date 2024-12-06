@@ -121,8 +121,9 @@ export function allDiffsForProject$(
     )
 }
 
-export type FileDiffWithExplanation = ClocGitDiffRec & FileStatus & FileGitInfo & {
+export type FileDiffWithExplanation = FileDiffWithGitDiffsAndFileContent & {
     explanation: string,
+    linesOfCodeString: string,
 }
 export function allDiffsForProjectWithExplanation$(
     comparisonParams: ComparisonParams,
@@ -139,16 +140,21 @@ export function allDiffsForProjectWithExplanation$(
 
     const startExecTime = new Date()
     return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe(
-        mergeMap(comparisonResult => {
+        mergeMap((comparisonResult: FileDiffWithGitDiffsAndFileContent) => {
+            const linesOfCodeString = buildLinesOfCodeInfoString(comparisonResult)
             // there can be diffs which are returned by git diff but have no code changes
             // (the code chaged lines are calculated by cloc)
             // in these cases there is no point in calling LLM to explain the diffs
             if (!hasCodeAddedRemovedModified(comparisonResult)) {
                 console.log(`No code changes for file ${comparisonResult.fullFilePath}`)
                 executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`)
-                return of({ ...comparisonResult, explanation: 'No code changes' })
+                return of({ ...comparisonResult, explanation: 'No code changes', linesOfCodeString })
             }
-            return explainGitDiffs$(comparisonResult, promptTemplates, model,  executedCommands, messageWriter, outDirForChatLog,)
+            return explainGitDiffs$(comparisonResult, promptTemplates, model,  executedCommands, messageWriter, outDirForChatLog,).pipe(
+                map((explanationRec) => {
+                    return { ...explanationRec, linesOfCodeString }
+                })
+            )
         }, concurrentLLMCalls),
         tap({
             complete: () => {
@@ -254,6 +260,11 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
                 return sumB - sumA
             })
             return diffWithExplanation
+        }),
+        tap(diffs => {   
+            const msg = newInfoMessage(diffs)
+            msg.id = 'diffs-generated'
+            messageWriter.write(msg)
         }),
         concatMap(diffs => diffs),
         reduce((mdJson, diffWithExplanation: FileDiffWithExplanation) => {
@@ -369,9 +380,13 @@ function appendCompResultToMdJson(
     mdJson.push({ p: compareResult.explanation })
     mdJson.push({ p: '' })
     if (hasClocInfoDetails(compareResult)) {
-        const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
+        const linesOfCodeInfo = buildLinesOfCodeInfoString(compareResult)
         mdJson.push({ p: linesOfCodeInfo })
     }
+}
+
+function buildLinesOfCodeInfoString(compareResult: ClocGitDiffRec) {
+    return `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`
 }
 
 function appendPromptsToMdJson(

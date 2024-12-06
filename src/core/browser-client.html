@@ -150,6 +150,17 @@
         <button type="button" onclick="sendChatMessage()">Send</button>
     </div>
     
+    <table id="diffs-generated" style="display: none; border: 1;">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>File</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be inserted here -->
+        </tbody>
+    </table>
 
     <div id="report"></div>
 
@@ -174,6 +185,8 @@
         let is_second_repo_used_as_to_repo = true;
         // diffsWithExplanation is a global variable to store the diffs with explanation produced by the server
         let diffsWithExplanation = null;
+        // diffsGenerated is a global variable to store if the diffs have been generated
+        let diffsGenerated = false;
         // use_ssh is a global variable to store if the user wants to use SSH to clone the repo
         let use_ssh = false;
         
@@ -208,6 +221,9 @@
                     downloadForm.style.display = 'block';
                     const startChatButton = document.getElementById('start-chat');
                     startChatButton.style.display = 'block';
+                } else if (messageId === 'diffs-generated') {
+                    diffsGenerated = message.data;
+                    fillDiffsGeneratedTable(diffsGenerated)
                 } else if (messageId === 'diffs-with-explanation') {
                     diffsWithExplanation = message.data;
                 } else if (messageId === 'chat') {
@@ -477,6 +493,39 @@
                 marked.parse(report);
         }
 
+        function fillDiffsGeneratedTable(diffsGenerated) {
+            diffsGenerated = diffsGenerated;
+            const reportContainer = document.getElementById('diffs-generated');
+            diffsGenerated.forEach(diff => {
+                const row = document.createElement('tr');
+
+                const fileCell = document.createElement('td');
+                fileCell.textContent = diff.File;
+                fileCell.style.cursor = 'pointer';
+                fileCell.addEventListener('click', () => {
+                    // Get base directory from current URL
+                    const currentPath = window.location.pathname;
+                    const baseDir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                    const encodedContent = encodeURIComponent(diff.fileContent);
+                    const url = `file://${baseDir}file-page.html?content=${encodedContent}`;
+                    window.open(url, '_blank');
+                });
+                row.appendChild(fileCell);
+
+                const linesOfCode = document.createElement('td');
+                linesOfCode.textContent = diff.linesOfCodeString;
+                row.appendChild(linesOfCode);
+
+                const explanationCell = document.createElement('td');
+                explanationCell.textContent = diff.explanation;
+                row.appendChild(explanationCell);
+
+                reportContainer.querySelector('tbody').appendChild(row);
+            });
+
+            reportContainer.style.display = 'block';
+        }
+
         function downloadOutput() {
             const url = `http://localhost:3000/api/v1/download-output?tempDir=${tempDir}`;
             fetch(url)
@@ -509,34 +558,34 @@
         }
 
         
-    function startChat() {
-        const chatContainer = document.getElementById('chat-container');
-        chatContainer.style.display = 'block';
-    }
-
-    function sendChatMessage() {
-        const chatInput = document.getElementById('chat-input');
-        const prompt = chatInput.value;
-        if (prompt.trim() === '') return;
-
-        // Display the prompt in the chat history
-        const chatHistory = document.getElementById('chat-history');
-        chatHistory.value += `You\n: ${prompt}\n`;
-
-        // Send the message to the backend
-        const diffs = diffsWithExplanation;
-        const data = {
-            diffs,
-            languages: document.getElementById('languages').value,
-            llmModel: document.getElementById('llm-model').value,
-            promptTemplate: prompt,
-            tempDir
+        function startChat() {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.style.display = 'block';
         }
-        sendWebsocketMessage(JSON.stringify({ action: 'chat', data }));
 
-        // Clear the input field
-        chatInput.value = '';
-    }
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chat-input');
+            const prompt = chatInput.value;
+            if (prompt.trim() === '') return;
+
+            // Display the prompt in the chat history
+            const chatHistory = document.getElementById('chat-history');
+            chatHistory.value += `You\n: ${prompt}\n`;
+
+            // Send the message to the backend
+            const diffs = diffsWithExplanation;
+            const data = {
+                diffs,
+                languages: document.getElementById('languages').value,
+                llmModel: document.getElementById('llm-model').value,
+                promptTemplate: prompt,
+                tempDir
+            }
+            sendWebsocketMessage(JSON.stringify({ action: 'chat', data }));
+
+            // Clear the input field
+            chatInput.value = '';
+        }
     </script>
 </body>
 </html>

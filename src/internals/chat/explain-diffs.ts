@@ -23,15 +23,7 @@ export type ExplanationInput = FileInfo & {
 export type ExplanationRec = FileInfo & {
     explanation: string
 }
-// The type returned by explanationsFromComparisonResult$ is this
-// Omit<T & FileInfo & {
-//     explanation: string | null;
-//     fileContent: string;
-//     diffLines: string;
-// }, "fileContent" | "diffLines">
-// 
-// which means that it returns an object that is T & FileInfo & {explanation: string | null}
-// since it omits the properties 'fileContent' and 'diffLines'
+
 export function explainGitDiffs$<T>(
     explanationInput: T & ExplanationInput, 
     promptTemplates: PromptTemplates, 
@@ -104,19 +96,19 @@ export function explainGitDiffs$<T>(
                 ) : 
                 of(rec)
         }),
-        map(rec => {
-            // remove the file content and the diffLines to avoid writing it to the json file
-            // this is shown in the type assigned to _rec, which is
-            // Omit<T & FileInfo & {
-            //     explanation: string | null;
-            //     fileContent: string;
-            //     diffLines: string;
-            // }, "fileContent" | "diffLines">
-            // 
-            // which means that it returns a new object that is the same as T & FileInfo & {explanation: string | null}
-            // since it omits the properties 'fileContent' and 'diffLines'
-            const { fileContent, diffLines, ..._rec } = rec
-            return _rec
-        })
+        // map(rec => {
+        //     // remove the file content and the diffLines to avoid writing it to the json file
+        //     // this is shown in the type assigned to _rec, which is
+        //     // Omit<T & FileInfo & {
+        //     //     explanation: string | null;
+        //     //     fileContent: string;
+        //     //     diffLines: string;
+        //     // }, "fileContent" | "diffLines">
+        //     // 
+        //     // which means that it returns a new object that is the same as T & FileInfo & {explanation: string | null}
+        //     // since it omits the properties 'fileContent' and 'diffLines'
+        //     const { fileContent, diffLines, ..._rec } = rec
+        //     return _rec
+        // })
     )
 }

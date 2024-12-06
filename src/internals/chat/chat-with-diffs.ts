@@ -18,7 +18,7 @@ export function chatWithDiffs$(
     executedCommands: string[],
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
-    const promptForChat = buildFullPrompt(input)
+    const promptForChat = buildFullPromptForChat(input)
     const llmModel = input.llmModel
 
     const msgText = `Chat with LLM with all diffs`
@@ -49,7 +49,7 @@ export function chatWithDiffsAndWriteChat$(
     messageWriter: MessageWriter = DefaultMessageWriter
 ) {
     const outDir = path.join(projectDir, outputDirName)
-    const promptForChat = buildFullPrompt(input)
+    const promptForChat = buildFullPromptForChat(input)
     return appendFileObs(path.join(outDir, 'chat-log.txt'), `Full prompt: ${promptForChat}\n`).pipe(
         concatMap(() => {
             return chatWithDiffs$(input, executedCommands, messageWriter)
@@ -79,7 +79,7 @@ function fillPromptForChat(prompt: string, diffs: string[], languageSpecilizatio
         .replace(/{{prompt}}/g, prompt)
 }
 
-function buildFullPrompt(
+function buildFullPromptForChat(
     input: ChatWithDiffsParams,
 ) {
     const diffs = input.diffs

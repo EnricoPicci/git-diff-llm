@@ -84,16 +84,19 @@ function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, m
     const startingMsg = (0, message_writer_1.newInfoMessage)(`Starting all diffs with explanations`);
     messageWriter.write(startingMsg);
     const startExecTime = new Date();
-    return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.mergeMap)(comparisonResult => {
+    return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.mergeMap)((comparisonResult) => {
+        const linesOfCodeString = buildLinesOfCodeInfoString(comparisonResult);
         // there can be diffs which are returned by git diff but have no code changes
         // (the code chaged lines are calculated by cloc)
         // in these cases there is no point in calling LLM to explain the diffs
         if (!(0, cloc_diff_rel_1.hasCodeAddedRemovedModified)(comparisonResult)) {
             console.log(`No code changes for file ${comparisonResult.fullFilePath}`);
             executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`);
-            return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes' }));
+            return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes', linesOfCodeString }));
         }
-        return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog);
+        return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog).pipe((0, rxjs_1.map)((explanationRec) => {
+            return Object.assign(Object.assign({}, explanationRec), { linesOfCodeString });
+        }));
     }, concurrentLLMCalls), (0, rxjs_1.tap)({
         complete: () => {
             console.log(`\n\nCompleted all diffs with explanations in ${new Date().getTime() - startExecTime.getTime()} ms\n\n`);
@@ -149,6 +152,10 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
             return sumB - sumA;
         });
         return diffWithExplanation;
+    }), (0, rxjs_1.tap)(diffs => {
+        const msg = (0, message_writer_1.newInfoMessage)(diffs);
+        msg.id = 'diffs-generated';
+        messageWriter.write(msg);
     }), (0, rxjs_1.concatMap)(diffs => diffs), (0, rxjs_1.reduce)((mdJson, diffWithExplanation) => {
         appendCompResultToMdJson(mdJson, diffWithExplanation);
         return mdJson;
@@ -225,9 +232,12 @@ function appendCompResultToMdJson(mdJson, compareResult) {
     mdJson.push({ p: compareResult.explanation });
     mdJson.push({ p: '' });
     if ((0, cloc_diff_rel_1.hasClocInfoDetails)(compareResult)) {
-        const linesOfCodeInfo = `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
+        const linesOfCodeInfo = buildLinesOfCodeInfoString(compareResult);
         mdJson.push({ p: linesOfCodeInfo });
     }
+}
+function buildLinesOfCodeInfoString(compareResult) {
+    return `lines of code: ${compareResult.code_same} same, ${compareResult.code_modified} modified, ${compareResult.code_added} added, ${compareResult.code_removed} removed`;
 }
 function appendPromptsToMdJson(mdJson, promptTemplates) {
     const promptSectionTitle = [
