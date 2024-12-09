@@ -523,6 +523,9 @@
         function generateReport() {
             const reportContainer = document.getElementById('report');
             reportContainer.innerHTML = '';
+            const diffsTable = document.getElementById('diffs-generated');
+            // clear diffsTable 
+            diffsTable.querySelector('tbody').innerHTML = '';
 
             const action = 'generate-report';
 
@@ -570,7 +573,7 @@
 
         function fillDiffsGeneratedTable(diffsGenerated) {
             diffsGenerated = diffsGenerated;
-            const reportContainer = document.getElementById('diffs-generated');
+            const diffsTable = document.getElementById('diffs-generated');
             diffsGenerated.forEach(diff => {
                 const row = document.createElement('tr');
                 // detailRows is a dictionary that adds the rows that are created to show various detailed aspects of the row
@@ -663,10 +666,10 @@
                 explanationCell.textContent = diff.explanation;
                 row.appendChild(explanationCell);
 
-                reportContainer.querySelector('tbody').appendChild(row);
+                diffsTable.querySelector('tbody').appendChild(row);
             });
 
-            reportContainer.style.display = 'block';
+            diffsTable.style.display = 'block';
 
             // change the button text to "Generate a new Report"
             const launchReportForm = document.getElementById('launchReport');
