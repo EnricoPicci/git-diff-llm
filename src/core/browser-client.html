@@ -37,6 +37,9 @@
         table {
             vertical-align: top;
         }
+        tr {
+            border: 1px solid black;
+        }
         td {
             vertical-align: top;
         }
@@ -47,12 +50,28 @@
             border: 1px solid #ccc;
             margin: 20px;
         }
-        #difflines {
-            white-space: pre-wrap;
-            font-family: monospace;
-            padding: 20px;
-            border: 1px solid #ccc;
-            margin: 20px;
+        #diffs-generated {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #diffs-generated th,
+        #diffs-generated td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        #diffs-generated tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        #diffs-generated tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        #diffs-generated th {
+            background-color: lightsteelblue;
+            color: white;
         }
         .spinner {
             display: none;
@@ -171,7 +190,7 @@
         <button type="button" onclick="sendChatMessage()">Send</button>
     </div>
     
-    <table id="diffs-generated" style="display: none; border: 1;">
+    <table id="diffs-generated" style="display: none">
         <thead>
             <tr>
                 <th>File</th>
@@ -521,22 +540,45 @@
             const reportContainer = document.getElementById('diffs-generated');
             diffsGenerated.forEach(diff => {
                 const row = document.createElement('tr');
+                // detailRows is a dictionary that adds the rows that are created to show various detailed aspects of the row
+                row.detailRows = {};
 
                 const fileCell = document.createElement('td');
                 fileCell.textContent = diff.File;
                 fileCell.style.cursor = 'pointer';
                 fileCell.addEventListener('click', () => {
-                    // append a new row to the table below the current row with the diff content
-                    const fileContentRow = document.createElement('tr');
-                    const fileContentCell = document.createElement('td');
-                    fileContentCell.colSpan = 3;
-                    const fileContent = document.createElement('div');
-                    fileContent.id = 'filecontent';
-                    fileContent.textContent = diff.fileContent;
-                    fileContentCell.appendChild(fileContent);
-                    fileContentRow.appendChild(fileContentCell);
-                    // insert the newly created fileContentRow after the current row
-                    row.insertAdjacentElement('afterend', fileContentRow);
+                    // Append a new row to the table below the current row with the file content and remove it if it already exists
+                    // This is the mechanism to show/hide the content of a file when clicking on the file name cell
+                    // It is a toggle mechanism
+                    // Check if there's already a content row after this row
+                    const nextRow = row.nextElementSibling;
+                    const fileContentRowClassName = 'file-content-row'
+                    if (nextRow && nextRow.classList.contains(fileContentRowClassName)) {
+                        // If exists, remove it
+                        nextRow.remove();
+                        // remove the entry from the detailRows dictionary
+                        delete row.detailRows[fileContentRowClassName];
+                    } else if (row.detailRows[fileContentRowClassName]) {
+                        // it the row is in the detailRows dictionary, it means it exists
+                        const rowAlreadyCreated = row.detailRows[fileContentRowClassName];
+                        // remove it from its current position
+                        rowAlreadyCreated.remove();
+                        // then move it just after the current row to show it
+                        row.insertAdjacentElement('afterend', rowAlreadyCreated);
+                    } else {
+                        // If doesn't exist, create and insert it
+                        const fileContentRow = document.createElement('tr');
+                        row.detailRows[fileContentRowClassName] = fileContentRow;
+                        fileContentRow.classList.add(fileContentRowClassName); // Add class for identification
+                        const fileContentCell = document.createElement('td');
+                        fileContentCell.colSpan = 3;
+                        const fileContent = document.createElement('div');
+                        fileContent.id = 'filecontent';
+                        fileContent.textContent = diff.fileContent;
+                        fileContentCell.appendChild(fileContent);
+                        fileContentRow.appendChild(fileContentCell);
+                        row.insertAdjacentElement('afterend', fileContentRow);
+                    }
                 });
                 row.appendChild(fileCell);
 
@@ -544,23 +586,43 @@
                 linesOfCode.textContent = diff.linesOfCodeString;
                 linesOfCode.style.cursor = 'pointer';
                 linesOfCode.addEventListener('click', () => {
-                    // append a new row to the table below the current row with the diff content
-                    const diffLinesRow = document.createElement('tr');
-                    const diffLinesCell = document.createElement('td');
-                    diffLinesCell.colSpan = 3;
-                    const diffLinesContent = document.createElement('div');
-                    const diffHtml = Diff2Html.html(diff.diffLines, {
-                        inputFormat: 'diff',
-                        outputFormat: 'side-by-side',
-                        drawFileList: false,
-                        showFiles: false,
-                        matching: 'lines'
-                    });
-                    diffLinesContent.innerHTML = diffHtml;
-                    diffLinesCell.appendChild(diffLinesContent);
-                    diffLinesRow.appendChild(diffLinesCell);
-                    // insert the newly created diffLinesRow after the current row
-                    row.insertAdjacentElement('afterend', diffLinesRow);
+                    // append a new row to the table below the current row with the diff content and remove it if it already exists
+                    // this is the mechanism to show/hide the diff content when clicking on the lines of code cell
+                    // it is a toggle mechanism
+                    // check if there's already a diffLinesRow after this row
+                    const nextRow = row.nextElementSibling;
+                    const diffLinesRowClassName = 'diffs-row'
+                    if (nextRow && nextRow.classList.contains(diffLinesRowClassName)) {
+                        // If exists, remove it
+                        nextRow.remove();
+                    } else if (row.detailRows[diffLinesRowClassName]) {
+                        // it the row is in the detailRows dictionary, it means it exists
+                        const rowAlreadyCreated = row.detailRows[diffLinesRowClassName];
+                        // remove it from its current position
+                        rowAlreadyCreated.remove();
+                        // then move it just after the current row to show it
+                        row.insertAdjacentElement('afterend', rowAlreadyCreated);
+                    }
+                    else {
+                        const diffLinesRow = document.createElement('tr');
+                        row.detailRows[diffLinesRowClassName] = diffLinesRow;
+                        diffLinesRow.classList.add(diffLinesRowClassName); // Add class for identification
+                        const diffLinesCell = document.createElement('td');
+                        diffLinesCell.colSpan = 3;
+                        const diffLinesContent = document.createElement('div');
+                        const diffHtml = Diff2Html.html(diff.diffLines, {
+                            inputFormat: 'diff',
+                            outputFormat: 'side-by-side',
+                            drawFileList: false,
+                            showFiles: false,
+                            matching: 'lines'
+                        });
+                        diffLinesContent.innerHTML = diffHtml;
+                        diffLinesCell.appendChild(diffLinesContent);
+                        diffLinesRow.appendChild(diffLinesCell);
+                        // insert the newly created diffLinesRow after the current row
+                        row.insertAdjacentElement('afterend', diffLinesRow);
+                    }
                 });
                 row.appendChild(linesOfCode);
 
