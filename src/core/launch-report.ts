@@ -25,6 +25,7 @@ export function launchGenerateReport(webSocket: ws.WebSocket, data: any) {
   const is_second_repo_used_as_to_repo = data.is_second_repo_used_as_to_repo
   const use_ssh = data.use_ssh
   const llmModel = data.llmModel
+  const diffsKey = data.diffsKey
   const outputDirName = data.outputDirName
   const promptFromClient = data.prompt
 
@@ -70,6 +71,7 @@ ${JSON.stringify(data, null, 2)}`
     comparisonParams: comparisonParams,
     promptTemplates: promptTemplates,
     outdir: path.join(projectDir, outputDirName),
+    diffsKey,
     llmModel,
     languages
   }

@@ -11,6 +11,7 @@ const languages = ['Markdown', "TypeScript"];
 const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();
 const llmModel = 'gpt-3.5-turbo';
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm';
+const diffsKey = '';
 describe(`allDiffsForProjectWithExplanation$`, () => {
     // set the config to test mode so that the function does not perform actions not allowed in test mode
     // e.g. checkout a branch
@@ -34,7 +35,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from,
             to_tag_branch_commit: to,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 file between the 2 tags 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
@@ -71,7 +72,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from, // older branch
             to_tag_branch_commit: to, // newer tag
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 3 files of type TypeScript or Markdown between the tag and the branch
                 // there is a fourth file changed but this is with extension .txt and is not counted
@@ -102,7 +103,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from,
             to_tag_branch_commit: to,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // there is a second file changed but this is with extension .txt and is not counted
@@ -140,7 +141,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from, // older commit
             to_tag_branch_commit: to, // branch newer than the commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // https://github.com/EnricoPicci/git-diff-llm/compare/965e1e43ca3b1e834d1146f90e60bf6fb42ed88b...second-branch-on-upstream
@@ -171,7 +172,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from, // branch older than the commit
             to_tag_branch_commit: to, // newer commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the branch and the commit
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-branch-on-upstream...4fd71654b5d044e67c6fc1c1f0fa06155036152f
@@ -202,7 +203,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from, // older commit
             to_tag_branch_commit: to, // newer commit
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 1 files of type TypeScript or Markdown between the 2 commits
                 // https://github.com/EnricoPicci/git-diff-llm/compare/965e1e43ca3b1e834d1146f90e60bf6fb42ed88b...5e8d5278ec8fb203adfcca33d5bbc15fb626d71f
@@ -241,7 +242,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from,
             to_tag_branch_commit: to,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 4 files between the 2 tags, but one of these files is a txt file and 
                 // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
@@ -270,12 +271,70 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             from_tag_branch_commit: from,
             to_tag_branch_commit: to,
         };
-        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, languages).pipe((0, rxjs_1.toArray)()).subscribe({
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages).pipe((0, rxjs_1.toArray)()).subscribe({
             next: (diffs) => {
                 // there is a difference of 5 files between the upstream branch and the remote tag, but one of these files is a txt file and 
                 // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...git-diff-llm:git-diff-llm:first-branch-on-fork
                 (0, chai_1.expect)(diffs.length).equal(4);
+            },
+            error: (error) => done(error),
+            complete: () => done()
+        });
+    }).timeout(100000);
+    //===================== TESTS TWO ROUNDS OF PROPMPTS =====================
+    it(`should work also when the function allDiffsForProjectWithExplanation$ is called 2 times -
+        the second time the calculation of the file diffs should not be repeated 
+        this test checks that the expected messages are received by the client (the client is the test in this case).
+        The test also test that the results are as expected.
+        The test does not test if the calculation of the diffs is actually done only one time since this is an internal detail.
+        The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
+        const messagesReceived = [];
+        const messageWriterForAssertion = {
+            write: (msg) => {
+                messagesReceived.push(msg);
+            }
+        };
+        const from = {
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const to = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        };
+        const comparisonParams = {
+            projectDir: './',
+            url_to_repo: url_to_repo,
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
+        };
+        (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages, messageWriterForAssertion).pipe((0, rxjs_1.concatMap)(() => {
+            const diffsStoredMessages = messagesReceived.filter(msg => msg.id === 'diffs-stored');
+            // the server should send only one message with the diffs stored
+            (0, chai_1.expect)(diffsStoredMessages.length).equal(1);
+            const diffsKey = diffsStoredMessages[0].data;
+            return (0, cloc_git_diff_rel_between_tag_branch_commit_1.allDiffsForProjectWithExplanation$)(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages, messageWriterForAssertion);
+        }), (0, rxjs_1.toArray)()).subscribe({
+            next: (diffs) => {
+                // there should be only one message with the diffs stored
+                const diffsStoredMessages = messagesReceived.filter(msg => msg.id === 'diffs-stored');
+                (0, chai_1.expect)(diffsStoredMessages.length).equal(1);
+                // Here we repeat the same test as the first test just to check that the function completes with the expected results
+                // there is a difference of 1 file between the 2 tags 
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
+                //
+                // if we switch the tags, the github web client does not show any change
+                // https://github.com/EnricoPicci/git-diff-llm/compare/second-tag...first-tag
+                // the git diff command shows the changes correctly in both cases
+                // git diff first-tag second-tag --name-only
+                // git diff second-tag first-tag --name-only
+                (0, chai_1.expect)(diffs.length).equal(1);
+                const diff = diffs[0];
+                (0, chai_1.expect)(diff.File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts');
+                (0, chai_1.expect)(diff.fileGitUrl).equal('https://github.com/EnricoPicci/git-diff-llm/blob/second-tag/src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts');
             },
             error: (error) => done(error),
             complete: () => done()
@@ -306,6 +365,7 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             promptTemplates,
             llmModel: llmModel,
             outdir: outDir,
+            diffsKey,
             languages
         };
         // set the config to test mode so that the function does not perform actions not allowed in test mode

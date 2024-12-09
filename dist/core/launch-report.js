@@ -23,6 +23,7 @@ function launchGenerateReport(webSocket, data) {
     const is_second_repo_used_as_to_repo = data.is_second_repo_used_as_to_repo;
     const use_ssh = data.use_ssh;
     const llmModel = data.llmModel;
+    const diffsKey = data.diffsKey;
     const outputDirName = data.outputDirName;
     const promptFromClient = data.prompt;
     // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
@@ -67,6 +68,7 @@ ${JSON.stringify(data, null, 2)}`;
         comparisonParams: comparisonParams,
         promptTemplates: promptTemplates,
         outdir: path_1.default.join(projectDir, outputDirName),
+        diffsKey,
         llmModel,
         languages
     };

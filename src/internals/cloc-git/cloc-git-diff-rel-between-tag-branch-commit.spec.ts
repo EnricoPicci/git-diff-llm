@@ -1,11 +1,11 @@
-import { toArray } from 'rxjs';
+import { concatMap, toArray } from 'rxjs';
 
 import { expect } from 'chai';
 import {  allDiffsForProjectWithExplanation$, GenerateMdReportParams, writeAllDiffsForProjectWithExplanationToMarkdown$ } from './cloc-git-diff-rel-between-tag-branch-commit';
 import { ComparisonParams } from './cloc-diff-rel';
 import { getDefaultPromptTemplates } from '../prompt-templates/prompt-templates';
 import { ComparisonEnd } from '../git/git-diffs';
-import { DefaultMessageWriter } from '../message-writer/message-writer';
+import { DefaultMessageWriter, MessageToClient, MessageWriter } from '../message-writer/message-writer';
 import { getConfig } from '../../config';
 
 const executedCommands: string[] = []
@@ -13,6 +13,7 @@ const languages = ['Markdown', "TypeScript"]
 const promptTemplates = getDefaultPromptTemplates()
 const llmModel = 'gpt-3.5-turbo'
 const url_to_repo = 'https://github.com/EnricoPicci/git-diff-llm'
+const diffsKey = ''
 
 describe(`allDiffsForProjectWithExplanation$`, () => {
     // set the config to test mode so that the function does not perform actions not allowed in test mode
@@ -43,6 +44,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -89,6 +91,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -129,6 +132,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -176,6 +180,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -216,6 +221,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -256,6 +262,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -306,6 +313,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -344,6 +352,7 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
             promptTemplates,
             llmModel,
             executedCommands,
+            diffsKey,
             languages
         ).pipe(
             toArray()
@@ -353,6 +362,86 @@ describe(`allDiffsForProjectWithExplanation$`, () => {
                 // therefore is not counted since the filter on the languages is ['Markdown', "TypeScript"] 
                 // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...git-diff-llm:git-diff-llm:first-branch-on-fork
                 expect(diffs.length).equal(4)
+            },
+            error: (error: any) => done(error),
+            complete: () => done()
+        })
+    }).timeout(100000);
+
+    //===================== TESTS TWO ROUNDS OF PROPMPTS =====================
+    it(`should work also when the function allDiffsForProjectWithExplanation$ is called 2 times -
+        the second time the calculation of the file diffs should not be repeated 
+        this test checks that the expected messages are received by the client (the client is the test in this case).
+        The test also test that the results are as expected.
+        The test does not test if the calculation of the diffs is actually done only one time since this is an internal detail.
+        The git diff should compare "refs/tags/first-tag vs refs/tags/second-tag"`, (done) => {
+            const messagesReceived: MessageToClient[] = []
+        const messageWriterForAssertion: MessageWriter = {
+            write: (msg) => {
+                messagesReceived.push(msg);
+            }
+        }
+        const from: ComparisonEnd = {
+            tag_branch_commit: 'tags/second-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        }
+        const to: ComparisonEnd = {
+            tag_branch_commit: 'tags/first-tag',
+            url_to_repo,
+            git_remote_name: 'origin'
+        }
+        const comparisonParams: ComparisonParams = {
+            projectDir: './',
+            url_to_repo: url_to_repo,
+            from_tag_branch_commit: from,
+            to_tag_branch_commit: to,
+        }
+        allDiffsForProjectWithExplanation$(
+            comparisonParams,
+            promptTemplates,
+            llmModel,
+            executedCommands,
+            diffsKey,
+            languages,
+            messageWriterForAssertion
+        ).pipe(
+            concatMap(() => {
+                const diffsStoredMessages = messagesReceived.filter(msg => msg.id === 'diffs-stored')
+                // the server should send only one message with the diffs stored
+                expect(diffsStoredMessages.length).equal(1)
+                const diffsKey = diffsStoredMessages[0].data
+                return allDiffsForProjectWithExplanation$(
+                    comparisonParams,
+                    promptTemplates,
+                    llmModel,
+                    executedCommands,
+                    diffsKey,
+                    languages,
+                    messageWriterForAssertion
+                )
+            }),
+            toArray()
+        ).subscribe({
+            next: (diffs) => {
+                // there should be only one message with the diffs stored
+                const diffsStoredMessages = messagesReceived.filter(msg => msg.id === 'diffs-stored')
+                expect(diffsStoredMessages.length).equal(1)
+
+                // Here we repeat the same test as the first test just to check that the function completes with the expected results
+
+                // there is a difference of 1 file between the 2 tags 
+                // https://github.com/EnricoPicci/git-diff-llm/compare/first-tag...second-tag
+                //
+                // if we switch the tags, the github web client does not show any change
+                // https://github.com/EnricoPicci/git-diff-llm/compare/second-tag...first-tag
+                // the git diff command shows the changes correctly in both cases
+                // git diff first-tag second-tag --name-only
+                // git diff second-tag first-tag --name-only
+                expect(diffs.length).equal(1)
+                const diff = diffs[0]
+                expect(diff.File).equal('src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
+                expect(diff.fileGitUrl).equal('https://github.com/EnricoPicci/git-diff-llm/blob/second-tag/src/internals/cloc-git/cloc-git-diff-rel-between-tag-branch-commit.spec.ts')
             },
             error: (error: any) => done(error),
             complete: () => done()
@@ -386,6 +475,7 @@ describe(`writeAllDiffsForProjectWithExplanationToMarkdown$`, () => {
             promptTemplates,
             llmModel: llmModel,
             outdir: outDir,
+            diffsKey,
             languages
         }
         // set the config to test mode so that the function does not perform actions not allowed in test mode

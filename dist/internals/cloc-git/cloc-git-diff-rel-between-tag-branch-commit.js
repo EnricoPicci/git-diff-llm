@@ -80,34 +80,37 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
         }));
     }));
 }
-function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages, messageWriter = message_writer_1.DefaultMessageWriter, outDirForChatLog, concurrentLLMCalls = 5) {
+function allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, diffsKey, languages, messageWriter = message_writer_1.DefaultMessageWriter, outDirForChatLog, concurrentLLMCalls = 5) {
     const startingMsg = (0, message_writer_1.newInfoMessage)(`Starting all diffs with explanations`);
     messageWriter.write(startingMsg);
     const startExecTime = new Date();
-    return allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.mergeMap)((comparisonResult) => {
-        const linesOfCodeString = buildLinesOfCodeInfoString(comparisonResult);
-        // there can be diffs which are returned by git diff but have no code changes
-        // (the code chaged lines are calculated by cloc)
-        // in these cases there is no point in calling LLM to explain the diffs
-        if (!(0, cloc_diff_rel_1.hasCodeAddedRemovedModified)(comparisonResult)) {
-            console.log(`No code changes for file ${comparisonResult.fullFilePath}`);
-            executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`);
-            return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes', linesOfCodeString }));
-        }
-        return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog).pipe((0, rxjs_1.map)((explanationRec) => {
-            return Object.assign(Object.assign({}, explanationRec), { linesOfCodeString });
-        }));
+    // search in the store for diffs with the key diffsKey and the from_tag_branch_commit and to_tag_branch_commit values
+    // if the diffs are found in the store, we reuse them, otherwise we calculate the diffs and store them in the store
+    const diffs = DiffsStore.getStore().getDiffs(diffsKey, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit);
+    // if diffsKey is defined, it means that it has been passed by the client, which means that it was already
+    // generated in the first round of prompts and we can reuse it to fetch the diffs from the store
+    // otherwise we calculate the file diffs, store the diffs, generate a new key and send the key back to the client
+    const diffs$ = diffs ? (0, rxjs_1.from)(diffs) : allDiffsForProject$(comparisonParams, executedCommands, languages, messageWriter).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((compareResults) => {
+        const store = DiffsStore.getStore();
+        const newDiffsKey = store.storeDiffs(compareResults, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit);
+        const msg = (0, message_writer_1.newInfoMessage)(newDiffsKey);
+        msg.id = 'diffs-stored';
+        messageWriter.write(msg);
+        return (0, rxjs_1.from)(compareResults);
+    }));
+    return diffs$.pipe((0, rxjs_1.mergeMap)((comparisonResult) => {
+        return buildExplanation(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog);
     }, concurrentLLMCalls), (0, rxjs_1.tap)({
         complete: () => {
             console.log(`\n\nCompleted all diffs with explanations in ${new Date().getTime() - startExecTime.getTime()} ms\n\n`);
         }
     }));
 }
-function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, promptTemplates, outdir, model, languages) {
+function writeAllDiffsForProjectWithExplanationToCsv$(comparisonParams, promptTemplates, outdir, model, diffsKey, languages) {
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
     const projectDirName = path_1.default.basename(comparisonParams.projectDir);
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, languages, message_writer_1.DefaultMessageWriter, outdir).pipe(
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, model, executedCommands, diffsKey, languages, message_writer_1.DefaultMessageWriter, outdir).pipe(
     // replace any ',' in the explanation with a '-'
     (0, rxjs_1.map)((diffWithExplanation) => {
         diffWithExplanation.explanation = diffWithExplanation.explanation.replace(/,/g, '-');
@@ -126,6 +129,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     const promptTemplates = params.promptTemplates;
     const outdir = params.outdir;
     const llmModel = params.llmModel;
+    const diffsKey = params.diffsKey;
     const languages = params.languages;
     const timeStampYYYYMMDDHHMMSS = new Date().toISOString().replace(/:/g, '-').split('.')[0];
     const executedCommands = [];
@@ -133,7 +137,7 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
     const repoUrl = comparisonParams.url_to_repo;
     const gitWebClientCommandUrl = gitWebClientCommand(repoUrl, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit);
     const mdJson = initializeMarkdown(comparisonParams, gitWebClientCommandUrl, languages);
-    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, languages, messageWriter, outdir).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
+    return allDiffsForProjectWithExplanation$(comparisonParams, promptTemplates, llmModel, executedCommands, diffsKey, languages, messageWriter, outdir).pipe((0, rxjs_1.toArray)(), (0, rxjs_1.concatMap)((diffsWithExplanation) => {
         var _a;
         appendNumFilesWithDiffsToMdJson(mdJson, diffsWithExplanation.length);
         if (diffsWithExplanation.length > 0 && (0, cloc_diff_rel_1.hasClocInfoDetails)(diffsWithExplanation[0])) {
@@ -173,10 +177,51 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
         }));
     }));
 }
-//********************************************************************************************************************** */
-//****************************               Internals              **************************************************** */
-//********************************************************************************************************************** */
-// these functions may be exported for testing purposes
+class DiffsStore {
+    constructor() {
+        this.store = new Map();
+    }
+    static getStore() {
+        if (!DiffsStore.instance) {
+            DiffsStore.instance = new DiffsStore();
+        }
+        return DiffsStore.instance;
+    }
+    storeDiffs(diffs, fromTagBranchCommit, toTagBranchCommit) {
+        // generate a unique identifier for the diffs
+        const key = new Date().getTime().toString();
+        const value = { diffs, fromTagBranchCommit, toTagBranchCommit };
+        this.store.set(key, value);
+        return key;
+    }
+    getDiffs(key, fromTagBranchCommit, toTagBranchCommit) {
+        const storeValue = this.store.get(key);
+        if (!storeValue) {
+            return undefined;
+        }
+        if (storeValue.fromTagBranchCommit.tag_branch_commit !== fromTagBranchCommit.tag_branch_commit) {
+            return undefined;
+        }
+        if (storeValue.toTagBranchCommit.tag_branch_commit !== toTagBranchCommit.tag_branch_commit) {
+            return undefined;
+        }
+        return storeValue.diffs;
+    }
+}
+function buildExplanation(comparisonResult, promptTemplates, model, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter, outDirForChatLog) {
+    const linesOfCodeString = buildLinesOfCodeInfoString(comparisonResult);
+    // there can be diffs which are returned by git diff but have no code changes
+    // (the code chaged lines are calculated by cloc)
+    // in these cases there is no point in calling LLM to explain the diffs
+    if (!(0, cloc_diff_rel_1.hasCodeAddedRemovedModified)(comparisonResult)) {
+        console.log(`No code changes for file ${comparisonResult.fullFilePath}`);
+        executedCommands.push(`===>>> No code changes for file ${comparisonResult.fullFilePath}`);
+        return (0, rxjs_1.of)(Object.assign(Object.assign({}, comparisonResult), { explanation: 'No code changes', linesOfCodeString }));
+    }
+    return (0, explain_diffs_1.explainGitDiffs$)(comparisonResult, promptTemplates, model, executedCommands, messageWriter, outDirForChatLog).pipe((0, rxjs_1.map)((explanationRec) => {
+        return Object.assign(Object.assign({}, explanationRec), { linesOfCodeString });
+    }));
+}
 const writeCompareResultsToMarkdown$ = (mdJson, projectDirName, outFile) => {
     const mdAsString = (0, json2md_1.default)(mdJson);
     return (0, observable_fs_1.writeFileObs)(outFile, [mdAsString])
