@@ -44,8 +44,9 @@ function chatAboutFilesAndWriteChat$(input, projectDir, outputDirName, executedC
             // 'chat' is the id of a message that represents the response and not a reasoning step
             msg.id = 'chat';
             messageWriter.write(msg);
-            const resp = { explanation: msgText, prompt: '' };
-            return (0, rxjs_1.of)(resp);
+            // const resp: FullCompletionReponse = { explanation: msgText, prompt: '' }
+            // return of(resp)
+            return rxjs_1.EMPTY;
         }
         return askQuestionAboutFiles$(input, filesIdentified, executedCommands, messageWriter);
     }), 

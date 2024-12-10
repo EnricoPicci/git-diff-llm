@@ -666,7 +666,27 @@
                 row.appendChild(linesOfCode);
 
                 const explanationCell = document.createElement('td');
-                explanationCell.textContent = diff.explanation;
+                const textarea = document.createElement('textarea');
+                textarea.value = diff.explanation;
+                textarea.rows = 4;
+                textarea.style.width = '100%';
+                textarea.style.resize = 'none';
+                textarea.readOnly = true; // Make it readonly to prevent editing
+                explanationCell.appendChild(textarea);
+
+                // Wait for next animation frame after DOM update
+                requestAnimationFrame(() => {
+                    // Set initial height to auto to get proper scrollHeight
+                    textarea.style.height = 'auto';
+                    // Add some padding to prevent scrollbar
+                    textarea.style.height = (textarea.scrollHeight + 2) + 'px';
+                });
+
+                // Update height on input if needed
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight + 2) + 'px';
+                });
                 row.appendChild(explanationCell);
 
                 diffsTable.querySelector('tbody').appendChild(row);
