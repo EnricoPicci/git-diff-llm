@@ -67,6 +67,7 @@ function startWebServer() {
     const actions = {
         "generate-report": launch_report_1.launchGenerateReport,
         "chat": chat_1.chat,
+        "chat-about-files": chat_1.chatAboutFiles$,
     };
     wss.on('connection', (ws) => {
         const connectionId = (0, uuid_1.v4)();

@@ -193,7 +193,7 @@
         <label for="llm-model">LLM Model:</label>
         <input type="text" id="llm-model" name="llm-model" placeholder="LLM model to use, e.g. gpt-4o" value="gpt-3.5-turbo">
         <p>
-        <label for="languages">Programming languanges:</label>
+        <label for="languages">Programming languages:</label>
         <input type="text" id="languages" name="languages" placeholder="programming languages to consider, e.g. TypeScript, Java" value="TypeScript, Java, Python, Html">
         <p>
         <label for="prompt">Prompt:</label>
@@ -301,6 +301,9 @@
                 } else if (messageId === 'chat') {
                     const chatHistory = document.getElementById('chat-history');
                     chatHistory.value += `Server\n: ${message.data}\n\n\n`;
+                } else if (messageId === 'chat-reasoning') {
+                    const chatHistory = document.getElementById('chat-history');
+                    chatHistory.value += `Chat reasoning\n: ${message.data}\n\n\n`;
                 } else if (messageId === 'diffs-stored') {
                     diffsKey = message.data;
                 } else {
@@ -717,23 +720,24 @@
 
         function sendChatMessage() {
             const chatInput = document.getElementById('chat-input');
-            const prompt = chatInput.value;
-            if (prompt.trim() === '') return;
+            const question = chatInput.value;
+            if (question.trim() === '') return;
+
+            const languages = document.getElementById('languages').value;
 
             // Display the prompt in the chat history
             const chatHistory = document.getElementById('chat-history');
-            chatHistory.value += `You\n: ${prompt}\n`;
+            chatHistory.value += `You\n: ${question}\n`;
 
             // Send the message to the backend
-            const diffs = diffsWithExplanation;
             const data = {
-                diffs,
-                languages: document.getElementById('languages').value,
                 llmModel: document.getElementById('llm-model').value,
-                promptTemplate: prompt,
-                tempDir
+                question,
+                languages,
+                tempDir,
+                diffsKey
             }
-            sendWebsocketMessage(JSON.stringify({ action: 'chat', data }));
+            sendWebsocketMessage(JSON.stringify({ action: 'chat-about-files', data }));
 
             // Clear the input field
             chatInput.value = '';

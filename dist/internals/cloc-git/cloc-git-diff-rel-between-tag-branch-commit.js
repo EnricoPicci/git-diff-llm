@@ -7,6 +7,8 @@ exports.allDiffsForProject$ = allDiffsForProject$;
 exports.allDiffsForProjectWithExplanation$ = allDiffsForProjectWithExplanation$;
 exports.writeAllDiffsForProjectWithExplanationToCsv$ = writeAllDiffsForProjectWithExplanationToCsv$;
 exports.writeAllDiffsForProjectWithExplanationToMarkdown$ = writeAllDiffsForProjectWithExplanationToMarkdown$;
+exports.getDiffsFromStore = getDiffsFromStore;
+exports.getFileNamesFromDiffs = getFileNamesFromDiffs;
 const path_1 = __importDefault(require("path"));
 const rxjs_1 = require("rxjs");
 const json2md_1 = __importDefault(require("json2md"));
@@ -177,6 +179,12 @@ function writeAllDiffsForProjectWithExplanationToMarkdown$(params, messageWriter
         }));
     }));
 }
+function getDiffsFromStore(key) {
+    return DiffsStore.getStore().getDiffsFromWithKey(key);
+}
+function getFileNamesFromDiffs(diffs) {
+    return diffs.map(diff => diff.File);
+}
 class DiffsStore {
     constructor() {
         this.store = new Map();
@@ -206,6 +214,9 @@ class DiffsStore {
             return undefined;
         }
         return storeValue.diffs;
+    }
+    getDiffsFromWithKey(key) {
+        return this.store.get(key);
     }
 }
 function buildExplanation(comparisonResult, promptTemplates, model, executedCommands, messageWriter = message_writer_1.DefaultMessageWriter, outDirForChatLog) {

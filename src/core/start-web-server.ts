@@ -13,7 +13,7 @@ import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
 import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
 import { launchGenerateReport } from './launch-report';
-import { chat } from './chat';
+import { chat, chatAboutFiles$ } from './chat';
 import { getDefaultPromptTemplates } from '../internals/prompt-templates/prompt-templates';
 
 const app = express();
@@ -77,6 +77,7 @@ export function startWebServer() {
   const actions: {[key: string]: (webSocket: EnrichedWebSocket, data: any) => void} = {
     "generate-report": launchGenerateReport,
     "chat": chat,
+    "chat-about-files": chatAboutFiles$,
   }
 
   wss.on('connection', (ws: EnrichedWebSocket) => {

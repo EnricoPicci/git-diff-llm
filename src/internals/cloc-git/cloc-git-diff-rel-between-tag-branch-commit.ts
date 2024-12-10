@@ -315,6 +315,14 @@ export function writeAllDiffsForProjectWithExplanationToMarkdown$(
     )
 }
 
+export function getDiffsFromStore(key: string) {
+    return DiffsStore.getStore().getDiffsFromWithKey(key)
+}
+
+export function getFileNamesFromDiffs(diffs: FileDiffWithGitDiffsAndFileContent[]) {
+    return diffs.map(diff => diff.File)
+}
+
 
 //********************************************************************************************************************** */
 //****************************               Internals              **************************************************** */
@@ -378,6 +386,10 @@ class DiffsStore {
             return undefined
         }
         return storeValue.diffs
+    }
+
+    getDiffsFromWithKey(key: string) {
+        return this.store.get(key)
     }
 }
 
