@@ -99,6 +99,17 @@
             width: 65%; /* Comment column - gets more space */
         }
 
+        /* Set specific column widths */
+        #diffs-table th:nth-child(1),
+        #diffs-table td:nth-child(1) {
+            width: 5%; /* File column */
+        }
+
+        #diffs-table th:nth-child(2),
+        #diffs-table td:nth-child(2) {
+            width: 100%; /* LoC diffs column */
+        }
+
         .spinner {
             display: none;
             border: 4px solid #f3f3f3;
@@ -691,6 +702,18 @@
                         diffLinesRow.classList.add(diffLinesRowClassName); // Add class for identification
                         const diffLinesCell = document.createElement('td');
                         diffLinesCell.colSpan = 3;
+                        // create a table body to hold the diff content
+                        const diffLinesTable = document.createElement('table'); 
+                        diffLinesTable.classList.add('diffs-table');
+                        diffLinesTable.id = 'diffs-table';
+                        diffLinesCell.appendChild(diffLinesTable);
+                        // add a row to the table
+                        const diffLinesTableRow = document.createElement('tr');
+                        diffLinesTable.appendChild(diffLinesTableRow);
+                        // add a cell to the row
+                        const diffLinesTableCell = document.createElement('td');
+                        diffLinesTableRow.appendChild(diffLinesTableCell);
+                        // create a div to hold the diff content
                         const diffLinesContent = document.createElement('div');
                         const diffHtml = Diff2Html.html(diff.diffLines, {
                             inputFormat: 'diff',
@@ -700,7 +723,7 @@
                             matching: 'lines'
                         });
                         diffLinesContent.innerHTML = diffHtml;
-                        diffLinesCell.appendChild(diffLinesContent);
+                        diffLinesTableCell.appendChild(diffLinesContent);
                         diffLinesRow.appendChild(diffLinesCell);
                         // insert the newly created diffLinesRow after the current row
                         row.insertAdjacentElement('afterend', diffLinesRow);
