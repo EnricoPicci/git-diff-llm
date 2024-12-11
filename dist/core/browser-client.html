@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>git-diff-llm web client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            /* max-width: 900px; */
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            width: 95%;
+        }
+        .dropdown-container {
+            margin-bottom: 20px;
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        table {
+            vertical-align: top;
+        }
+        tr {
+            border: 1px solid black;
+        }
+        td {
+            vertical-align: top;
+        }
+        #filecontent {
+            white-space: pre-wrap;
+            font-family: monospace;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin: 20px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        #diffs-generated {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px; /* Minimum width before scroll starts */
+        }
+
+        #diffs-generated th,
+        #diffs-generated td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            word-break: break-word; /* Breaks long words */
+            max-width: 300px; /* Maximum width for cells */
+        }
+
+        #diffs-generated tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        #diffs-generated tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        #diffs-generated th {
+            background-color: lightsteelblue;
+            color: white;
+        }
+
+        /* Set specific column widths */
+        #diffs-generated th:nth-child(1),
+        #diffs-generated td:nth-child(1) {
+            width: 20%; /* File column */
+        }
+
+        #diffs-generated th:nth-child(2),
+        #diffs-generated td:nth-child(2) {
+            width: 15%; /* LoC diffs column */
+        }
+
+        #diffs-generated th:nth-child(3),
+        #diffs-generated td:nth-child(3) {
+            width: 65%; /* Comment column - gets more space */
+        }
+
+        .spinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+</head>
+<body>
+    <form>
+        <label for="repo-url">Repo URL:</label>
+        <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm" class="input-field">
+        <div>
+            <label for="use-ssh-checkbox">Use SSH</label>
+            <input type="checkbox" id="use-ssh-checkbox" name="use-ssh-checkbox" onchange="setSsh()">
+            <button type="button" onclick="cloneRepo()">Clone</button>
+        </div>
+    </form>
+    
+    <div  id="compareRepoContainer"  style="display: none;">
+        <div>
+            <label for="compareRepo">Compare with other remote repo</label>
+            <input type="checkbox" id="compareRepo" name="compareRepo" onchange="toggleRemoteRemoteUrl()">
+        </div>
+        <div id="remoteUrlContainer" style="display: none;">
+            <label for="secondRepoUrl">Project url:</label>
+            <input type="text" id="secondRepoUrl" name="secondRepoUrl" class="input-field">
+        </div>
+        <div id="secondRepoDirectionContainer" style="display: none;">
+            <label>Direction:</label>
+            <div>
+                <input type="radio" id="fromRepo" name="repoDirection" value="from" onchange="setSecondRepoDirection(this.value)">
+                <label for="fromRepo">From</label>
+            </div>
+            <div>
+                <input type="radio" id="toRepo" name="repoDirection" value="to" checked onchange="setSecondRepoDirection(this.value)">
+                <label for="toRepo">To</label>
+            </div>
+        </div>        
+        <button id="confirm" type="button" onclick="addSecondRepo()" style="display: none;">confirm</button>
+    </div>
+
+    <div class="spinner" id="loadingSpinner"></div>
+    
+    <div  id="fromTagBranchCommit"  style="display: none;">
+        <p>FROM Tag, Branch or Commit (typically the newest)</p>
+        <div id="fromTagBranchCommit">
+            <div class="dropdown-container">
+                <label for="fromTags">Tags:</label>
+                <select id="fromTags" name="tags"></select>
+            </div>
+
+            <div class="dropdown-container">
+                <label for="fromBranches">Branches:</label>
+                <select id="fromBranches" name="branches"></select>
+            </div>
+
+            <div class="dropdown-container">
+                <label for="fromCommits">Commits:</label>
+                <select id="fromCommits" name="commits"></select>
+            </div>
+        </div>
+    </div>
+
+    <div  id="toTagBranchCommit"  style="display: none;">
+        <p>TO Tag, Branch or Commit (typically the oldest)</p>
+        <div class="dropdown-container">
+            <label for="toTags">Tags:</label>
+            <select id="toTags" name="tags"></select>
+        </div>
+        <div class="dropdown-container">
+            <label for="toBranches">Branches:</label>
+            <select id="toBranches" name="branches"></select>
+        </div>
+
+        <div class="dropdown-container">
+            <label for="toCommits">Commits:</label>
+            <select id="toCommits" name="commits"></select>
+        </div>
+    </div>
+
+    <form id="launchReport" style="display: none;">
+        <label for="llm-model">LLM Model:</label>
+        <input type="text" id="llm-model" name="llm-model" placeholder="LLM model to use, e.g. gpt-4o" value="gpt-3.5-turbo">
+        <p>
+        <label for="languages">Programming languages:</label>
+        <input type="text" id="languages" name="languages" placeholder="programming languages to consider, e.g. TypeScript, Java" value="TypeScript, Java, Python, Html">
+        <p>
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt" name="prompt" placeholder="Enter your prompt here..." style="width: 100%; height: 300px;"></textarea>
+        <p>
+        <button type="button" onclick="generateReport()">Generate Report</button>
+    </form> 
+    
+    <form id="stop" style="display: none;">
+        <button type="button" onclick="stopGeneratingReport()">Stop Report Generation</button>
+    </form>
+    
+    <p></p>
+    <form id="download" style="display: none;">
+        <button type="button" onclick="downloadOutput()">Download Report</button>
+    </form>
+    
+    <!-- <p></p>
+    <button id="start-chat" type="button" onclick="startChat()" style="display: none;">Chat</button> -->
+
+    <p></p>
+    <div id="chat-container" style="display: none;">
+        <textarea id="chat-history" readonly style="width: 100%; height: 200px;"></textarea>
+        <textarea id="chat-input" placeholder="Type your message here..." style="width: 100%; height: 50px;"></textarea>
+        <button type="button" onclick="sendChatMessage()">Send</button>
+    </div>
+    
+    <div class="table-container">
+        <table id="diffs-generated" style="display: none">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>LoC diffs</th>
+                    <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="report"></div>
+
+    <h3>Messages:</h3>
+    <div id="messages"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+    <script>
+        // ws is a global variable to store the websocket connection
+        let ws = null;
+        // connectionId is a global variable to store the connection ID
+        let connectionId = null;
+
+        // tempDir is a global variable to store the temporary directory created by the server when cloning a repo
+        let tempDir = '';
+        // isFromTag and isToTag are global variables to store if the selected option is a tag
+        let isFromTag = false;
+        let isToTag = false;
+        // second_repo_used_as_from_repo and second_repo_used_as_to_repo are global variables to store if the second repo is used as from or to repo
+        // the default is to use the second repo as the to repo
+        let is_second_repo_used_as_from_repo = false
+        let is_second_repo_used_as_to_repo = true;
+        // diffsWithExplanation is a global variable to store the diffs with explanation produced by the server
+        let diffsWithExplanation = null;
+        // diffsGenerated is a global variable to store if the diffs have been generated
+        let diffsGenerated = false;
+        // use_ssh is a global variable to store if the user wants to use SSH to clone the repo
+        let use_ssh = false;
+        // diffsKey is a global variable to store the key used to store the diffs calculated in the first round of prompt
+        let diffsKey = '';
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('http://localhost:3000/api/v1/default-prompts')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('prompt').value = data.changedFile.prompt;
+                })
+                .catch(error => console.error('Error fetching default prompts:', error));
+        });
+
+        startWebsocketConnection();
+
+        function startWebsocketConnection() {
+            ws = new WebSocket('ws://localhost:3000');
+            ws.onopen = function() {
+                console.log('Websocket connection opened');
+            };
+            ws.onmessage = function(wsMessage) {
+                const message = JSON.parse(wsMessage.data);
+                console.log('Message received:', message);
+
+                const messageId = message.id;
+                if (messageId === 'connection-established') {
+                    connectionId = message.data;
+                    console.log('Connection ID:', connectionId);
+                } else if (messageId === 'report-generated') {
+                    const report = message.data;
+                    fillReport(report);
+                    const downloadForm = document.getElementById('download');
+                    downloadForm.style.display = 'block';
+                    const startChatButton = document.getElementById('start-chat');
+                    startChatButton.style.display = 'block';
+                } else if (messageId === 'diffs-generated') {
+                    diffsGenerated = message.data;
+                    fillDiffsGeneratedTable(diffsGenerated)
+                } else if (messageId === 'diffs-with-explanation') {
+                    diffsWithExplanation = message.data;
+                } else if (messageId === 'chat') {
+                    const chatHistory = document.getElementById('chat-history');
+                    chatHistory.value += `Server\n: ${message.data}\n\n\n`;
+                } else if (messageId === 'chat-reasoning') {
+                    const chatHistory = document.getElementById('chat-history');
+                    chatHistory.value += `Chat reasoning\n: ${message.data}\n\n\n`;
+                } else if (messageId === 'diffs-stored') {
+                    diffsKey = message.data;
+                } else {
+                    // message is generated by the server as an object of type MessageToClient
+                    const messageData = message.data;
+                    const _message = typeof messageData === 'string' ? messageData : JSON.stringify(messageData);
+                    displayMessage(_message);
+                }
+            };
+            ws.onerror = function(error) {
+                console.error('Websocket error:', error);
+            };
+            ws.onclose = function() {
+                console.log('Websocket connection closed');
+            };
+        }
+
+        function sendWebsocketMessage(msg) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(msg);
+            } else {
+                console.error('Websocket connection is not open');
+            }
+        }
+
+        function setSsh() {
+            const sshCheckbox = document.getElementById('use-ssh-checkbox');
+            use_ssh = sshCheckbox.checked;
+        }
+
+        async function cloneRepo() {
+            const repoUrl = document.getElementById('repo-url').value;
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            loadingSpinner.style.display = 'block';
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/clone-repo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ repoUrl, use_ssh })
+                });
+                const data = await response.json();
+                tempDir = data.tempDir;
+                console.log('TempDir:', data.tempDir);
+                await populate_From_DropdownsAndSetupInterations();
+                await populate_To_DropdownsAndSetupInterations();
+                const fromTagBranchCommitContainer = document.getElementById('fromTagBranchCommit');
+                fromTagBranchCommitContainer.style.display = 'block';
+                const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+                toTagBranchCommitContainer.style.display = 'block';
+                const compareRepoContainer = document.getElementById('compareRepoContainer');
+                compareRepoContainer.style.display = 'block';
+                const compareRepoCheckbox = document.getElementById('compareRepo');
+                compareRepoCheckbox.checked = false;
+                const launchReportForm = document.getElementById('launchReport');
+                launchReportForm.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        async function populate_From_DropdownsAndSetupInterations(gitRemote) {
+            // Dropdown elements
+            const tagsDropdown = document.getElementById('fromTags');
+            const branchesDropdown = document.getElementById('fromBranches');
+            const commitsDropdown = document.getElementById('fromCommits');
+
+            // Initial population of dropdowns
+            const remoteParam = gitRemote ? `&remote=${gitRemote}` : '';
+            const params = `?tempDir=${tempDir}${remoteParam}`;
+            populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
+            populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
+            populateDropdown(commitsDropdown, `http://localhost:3000/api/v1/list-commits${params}`, 'commits');
+
+            // Setup dropdown interactions
+            setupDropdownInteraction(tagsDropdown, [branchesDropdown, commitsDropdown]);
+            setupDropdownInteraction(branchesDropdown, [tagsDropdown, commitsDropdown]);
+            setupDropdownInteraction(commitsDropdown, [tagsDropdown, branchesDropdown]);
+        }
+        
+        async function populate_To_DropdownsAndSetupInterations(gitRemote) {
+            // Dropdown elements
+            const tagsDropdown = document.getElementById('toTags');
+            const branchesDropdown = document.getElementById('toBranches');
+            const commitsDropdown = document.getElementById('toCommits');
+
+            // Initial population of dropdowns
+            const remoteParam = gitRemote ? `&remote=${gitRemote}` : '';
+            const params = `?tempDir=${tempDir}${remoteParam}`;
+            populateDropdown(tagsDropdown, `http://localhost:3000/api/v1/list-tags${params}`, 'tags');
+            populateDropdown(branchesDropdown, `http://localhost:3000/api/v1/list-branches${params}`, 'branches');
+            populateDropdown(commitsDropdown, `http://localhost:3000/api/v1/list-commits${params}`, 'commits');
+
+            // Setup dropdown interactions
+            setupDropdownInteraction(tagsDropdown, [branchesDropdown, commitsDropdown]);
+            setupDropdownInteraction(branchesDropdown, [tagsDropdown, commitsDropdown]);
+            setupDropdownInteraction(commitsDropdown, [tagsDropdown, branchesDropdown]);
+        }
+
+        // Function to populate a dropdown
+        async function populateDropdown(dropdown, url, dataKey) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Clear existing options
+                dropdown.innerHTML = '<option value="">Select an option</option>';
+                
+                // Add new options
+                data[dataKey].forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching dropdown data:', error);
+                dropdown.innerHTML = '<option value="">Error loading data</option>';
+            }
+        }
+
+        // Function to reset other dropdowns when a selection is made
+        function setupDropdownInteraction(dropdown, otherDropdowns) {
+            dropdown.addEventListener('change', (event) => {
+                const srcEl = event.target;
+                if (srcEl.id === 'fromTags') {
+                    isFromTag = true;
+                } else if (srcEl.id === 'toTags') {
+                    isToTag = true;
+                } else {
+                    // If the selection is not a tag and comes from the "from" dropdown, reset the isFromTag flag
+                    if (srcEl.id === 'fromBranches' || srcEl.id === 'fromCommits') {
+                        isFromTag = false;
+                    }
+                    // If the selection is not a tag and comes from the "to" dropdown, reset the isToTag flag
+                    if (srcEl.id === 'toBranches' || srcEl.id === 'toCommits') {
+                        isToTag = false;
+                    }
+                }
+                // Reset other dropdowns
+                otherDropdowns.forEach(otherDropdown => {
+                    otherDropdown.selectedIndex = 0;
+                });
+            });
+        }
+
+        function toggleRemoteRemoteUrl() {
+            const remoteUrlContainer = document.getElementById('remoteUrlContainer');
+            const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+            const compareRepoCheckbox = document.getElementById('compareRepo');
+            const confirmButton = document.getElementById('confirm');
+            const launchReportForm = document.getElementById('launchReport');
+            const secondRepoDirectionContainer = document.getElementById('secondRepoDirectionContainer');
+            if (compareRepoCheckbox.checked) {
+                remoteUrlContainer.style.display = 'block';
+                // toTagBranchCommitContainer.style.display = 'none';
+                confirmButton.style.display = 'block';
+                // launchReportForm.style.display = 'none';
+                secondRepoDirectionContainer.style.display = 'block';
+            } else {
+                remoteUrlContainer.style.display = 'none';
+                // toTagBranchCommitContainer.style.display = 'block';
+                confirmButton.style.display = 'none';
+                // launchReportForm.style.display = 'block';
+                secondRepoDirectionContainer.style.display = 'none';
+                // populate_To_DropdownsAndSetupInterations();
+            }
+        }
+        
+        function setSecondRepoDirection(value) {
+            if (value === 'from') {
+                is_second_repo_used_as_from_repo = true;
+                is_second_repo_used_as_to_repo = false;
+            } else if (value === 'to') {
+                is_second_repo_used_as_from_repo = false;
+                is_second_repo_used_as_to_repo = true;
+            }
+        }
+
+        async function addSecondRepo() {
+            const secondRepoUrl = document.getElementById('secondRepoUrl').value;
+            // the remote name is the last part of the URL
+            const remoteUrlParts = secondRepoUrl.split('/');
+            const remoteName = remoteUrlParts[remoteUrlParts.length - 1]; 
+            const _body = { tempDir, remoteName, use_ssh };
+            _body.remoteUrl = secondRepoUrl;
+            console.log('Body:', _body);
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/add-remote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(_body)
+                });
+                const data = await response.json();
+                if (is_second_repo_used_as_from_repo) {
+                    await populate_From_DropdownsAndSetupInterations(remoteName);
+                    await populate_To_DropdownsAndSetupInterations();
+                }
+                if (is_second_repo_used_as_to_repo) {
+                    await populate_To_DropdownsAndSetupInterations(remoteName);
+                    await populate_From_DropdownsAndSetupInterations();
+                }
+                const toTagBranchCommitContainer = document.getElementById('toTagBranchCommit');
+                toTagBranchCommitContainer.style.display = 'block';
+                const launchReportForm = document.getElementById('launchReport');
+                launchReportForm.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function generateReport() {
+            const reportContainer = document.getElementById('report');
+            reportContainer.innerHTML = '';
+            const diffsTable = document.getElementById('diffs-generated');
+            // clear diffsTable 
+            diffsTable.querySelector('tbody').innerHTML = '';
+
+            const action = 'generate-report';
+
+            const url_to_repo = document.getElementById('repo-url').value;
+            let from_tag_branch_commit = document.getElementById('fromTags').value || 
+                                            document.getElementById('fromBranches').value || 
+                                            document.getElementById('fromCommits').value;
+            let to_tag_branch_commit = document.getElementById('toTags').value ||
+                                            document.getElementById('toBranches').value ||
+                                            document.getElementById('toCommits').value;
+            if (isFromTag) {
+                from_tag_branch_commit = `tags/${from_tag_branch_commit}`;
+            }
+            if (isToTag) {
+                to_tag_branch_commit = `tags/${to_tag_branch_commit}`;
+            }
+
+            const llmModelEl = document.getElementById('llm-model')
+            const llmModel = llmModelEl.value;
+
+            const prompt = document.getElementById('prompt').value;
+                                            
+            const data = {
+                tempDir,
+                url_to_repo,
+                from_tag_branch_commit,
+                to_tag_branch_commit,
+                url_to_second_repo: document.getElementById('secondRepoUrl').value,
+                is_second_repo_used_as_from_repo,
+                is_second_repo_used_as_to_repo,
+                use_ssh,
+                prompt,
+                llmModel,
+                diffsKey,
+                languages: document.getElementById('languages').value
+            }
+            const message = JSON.stringify({ action, data });
+            sendWebsocketMessage(message);
+
+            const stopForm = document.getElementById('stop');
+            stopForm.style.display = 'block';
+        }
+
+        function fillReport(report) {
+            document.getElementById('report').innerHTML =
+                marked.parse(report);
+        }
+
+        function fillDiffsGeneratedTable(diffsGenerated) {
+            diffsGenerated = diffsGenerated;
+            const diffsTable = document.getElementById('diffs-generated');
+            diffsGenerated.forEach(diff => {
+                const row = document.createElement('tr');
+                // detailRows is a dictionary that adds the rows that are created to show various detailed aspects of the row
+                row.detailRows = {};
+
+                const fileCell = document.createElement('td');
+                fileCell.textContent = diff.File;
+                fileCell.style.cursor = 'pointer';
+                fileCell.addEventListener('click', () => {
+                    // Append a new row to the table below the current row with the file content and remove it if it already exists
+                    // This is the mechanism to show/hide the content of a file when clicking on the file name cell
+                    // It is a toggle mechanism
+                    // Check if there's already a content row after this row
+                    const nextRow = row.nextElementSibling;
+                    const fileContentRowClassName = 'file-content-row'
+                    if (nextRow && nextRow.classList.contains(fileContentRowClassName)) {
+                        // If exists, remove it
+                        nextRow.remove();
+                        // remove the entry from the detailRows dictionary
+                        delete row.detailRows[fileContentRowClassName];
+                    } else if (row.detailRows[fileContentRowClassName]) {
+                        // it the row is in the detailRows dictionary, it means it exists
+                        const rowAlreadyCreated = row.detailRows[fileContentRowClassName];
+                        // remove it from its current position
+                        rowAlreadyCreated.remove();
+                        // then move it just after the current row to show it
+                        row.insertAdjacentElement('afterend', rowAlreadyCreated);
+                    } else {
+                        // If doesn't exist, create and insert it
+                        const fileContentRow = document.createElement('tr');
+                        row.detailRows[fileContentRowClassName] = fileContentRow;
+                        fileContentRow.classList.add(fileContentRowClassName); // Add class for identification
+                        const fileContentCell = document.createElement('td');
+                        fileContentCell.colSpan = 3;
+                        const fileContent = document.createElement('div');
+                        fileContent.id = 'filecontent';
+                        fileContent.textContent = diff.fileContent;
+                        fileContentCell.appendChild(fileContent);
+                        fileContentRow.appendChild(fileContentCell);
+                        row.insertAdjacentElement('afterend', fileContentRow);
+                    }
+                });
+                row.appendChild(fileCell);
+
+                const linesOfCode = document.createElement('td');
+                linesOfCode.textContent = diff.linesOfCodeString;
+                linesOfCode.style.cursor = 'pointer';
+                linesOfCode.addEventListener('click', () => {
+                    // append a new row to the table below the current row with the diff content and remove it if it already exists
+                    // this is the mechanism to show/hide the diff content when clicking on the lines of code cell
+                    // it is a toggle mechanism
+                    // check if there's already a diffLinesRow after this row
+                    const nextRow = row.nextElementSibling;
+                    const diffLinesRowClassName = 'diffs-row'
+                    if (nextRow && nextRow.classList.contains(diffLinesRowClassName)) {
+                        // If exists, remove it
+                        nextRow.remove();
+                    } else if (row.detailRows[diffLinesRowClassName]) {
+                        // it the row is in the detailRows dictionary, it means it exists
+                        const rowAlreadyCreated = row.detailRows[diffLinesRowClassName];
+                        // remove it from its current position
+                        rowAlreadyCreated.remove();
+                        // then move it just after the current row to show it
+                        row.insertAdjacentElement('afterend', rowAlreadyCreated);
+                    }
+                    else {
+                        const diffLinesRow = document.createElement('tr');
+                        row.detailRows[diffLinesRowClassName] = diffLinesRow;
+                        diffLinesRow.classList.add(diffLinesRowClassName); // Add class for identification
+                        const diffLinesCell = document.createElement('td');
+                        diffLinesCell.colSpan = 3;
+                        const diffLinesContent = document.createElement('div');
+                        const diffHtml = Diff2Html.html(diff.diffLines, {
+                            inputFormat: 'diff',
+                            outputFormat: 'side-by-side',
+                            drawFileList: false,
+                            showFiles: false,
+                            matching: 'lines'
+                        });
+                        diffLinesContent.innerHTML = diffHtml;
+                        diffLinesCell.appendChild(diffLinesContent);
+                        diffLinesRow.appendChild(diffLinesCell);
+                        // insert the newly created diffLinesRow after the current row
+                        row.insertAdjacentElement('afterend', diffLinesRow);
+                    }
+                });
+                row.appendChild(linesOfCode);
+
+                const explanationCell = document.createElement('td');
+                const textarea = document.createElement('textarea');
+                textarea.value = diff.explanation;
+                textarea.rows = 4;
+                textarea.style.width = '100%';
+                textarea.style.resize = 'none';
+                textarea.readOnly = true; // Make it readonly to prevent editing
+                explanationCell.appendChild(textarea);
+
+                // Wait for next animation frame after DOM update
+                requestAnimationFrame(() => {
+                    // Set initial height to auto to get proper scrollHeight
+                    textarea.style.height = 'auto';
+                    // Add some padding to prevent scrollbar
+                    textarea.style.height = (textarea.scrollHeight + 2) + 'px';
+                });
+
+                // Update height on input if needed
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight + 2) + 'px';
+                });
+                row.appendChild(explanationCell);
+
+                diffsTable.querySelector('tbody').appendChild(row);
+            });
+
+            diffsTable.style.display = 'block';
+
+            // change the button text to "Generate a new Report"
+            const launchReportForm = document.getElementById('launchReport');
+            launchReportForm.style.display = 'block';
+            const launchReportButton = launchReportForm.querySelector('button');
+            launchReportButton.textContent = 'Generate a new Report';
+        }
+
+        function stopGeneratingReport() {
+            const action = 'stop-processing';
+            const data = { tempDir };
+            const message = JSON.stringify({ action, data });
+            sendWebsocketMessage(message);
+            const stopForm = document.getElementById('stop');
+            stopForm.style.display = 'none';
+        }
+
+        function downloadOutput() {
+            const url = `http://localhost:3000/api/v1/download-output?tempDir=${tempDir}`;
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'report.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error downloading report:', error);
+                });
+        }
+        
+        function displayMessage(message) {
+            const messagesContainer = document.getElementById('messages');
+            const messageElement = document.createElement('p');
+            messageElement.textContent = message;
+            messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+        }
+
+        
+        function startChat() {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.style.display = 'block';
+        }
+
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chat-input');
+            const question = chatInput.value;
+            if (question.trim() === '') return;
+
+            const languages = document.getElementById('languages').value;
+
+            // Display the prompt in the chat history
+            const chatHistory = document.getElementById('chat-history');
+            chatHistory.value += `You\n: ${question}\n`;
+
+            // Send the message to the backend
+            const data = {
+                llmModel: document.getElementById('llm-model').value,
+                question,
+                languages,
+                tempDir,
+                diffsKey
+            }
+            sendWebsocketMessage(JSON.stringify({ action: 'chat-about-files', data }));
+
+            // Clear the input field
+            chatInput.value = '';
+        }
+    </script>
+</body>
+</html>

@@ -8,7 +8,7 @@
     },
     "scripts": {
         "test": "mocha -r ts-node/register src/**/*.spec.ts src/**/**/*.spec.ts",
-        "tsc": "tsc --outDir dist",
+        "tsc": "tsc --outDir dist && cp src/core/browser-client.html dist/core/",
         "tsc-version": "tsc --version",
         "lint": "eslint src/**/*.ts",
         "lint:fix": "eslint src/**/*.ts --fix",

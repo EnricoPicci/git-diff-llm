@@ -52,19 +52,8 @@ function startWebServer() {
     app.use(express_1.default.static(__dirname));
     // Specific route for html pages
     app.get('/browser-client.html', (_req, res) => {
-        const cwd = process.cwd();
-        console.log(`Serving browser-client.html from ${cwd}`);
-        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'browser-client.html'));
-    });
-    app.get('/file-viewer.html', (_req, res) => {
-        const cwd = process.cwd();
-        console.log(`Serving file-viewer.html from ${cwd}`);
-        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'file-viewer.html'));
-    });
-    app.get('/git-diff-viewer.html', (_req, res) => {
-        const cwd = process.cwd();
-        console.log(`Serving git-diff-viewer.html from ${cwd}`);
-        res.sendFile(path_1.default.join(cwd, 'src', 'core', 'git-diff-viewer.html'));
+        console.log(`Serving browser-client.html from ${__dirname}`);
+        res.sendFile(path_1.default.join(__dirname, 'src', 'core', 'browser-client.html'));
     });
     const actions = {
         "generate-report": launch_report_1.launchGenerateReport,

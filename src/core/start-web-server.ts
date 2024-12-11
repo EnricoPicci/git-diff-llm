@@ -59,20 +59,9 @@ export function startWebServer() {
 
   // Specific route for html pages
   app.get('/browser-client.html', (_req, res) => {
-    const cwd = process.cwd();
-    console.log(`Serving browser-client.html from ${cwd}`);
-    res.sendFile(path.join(cwd, 'src', 'core', 'browser-client.html'));
+    console.log(`Serving browser-client.html from ${__dirname}`);
+    res.sendFile(path.join(__dirname, 'src', 'core', 'browser-client.html'));
 });
-  app.get('/file-viewer.html', (_req, res) => {
-    const cwd = process.cwd();
-    console.log(`Serving file-viewer.html from ${cwd}`);
-    res.sendFile(path.join(cwd, 'src', 'core', 'file-viewer.html'));
-  });
-  app.get('/git-diff-viewer.html', (_req, res) => {
-    const cwd = process.cwd();
-    console.log(`Serving git-diff-viewer.html from ${cwd}`);
-    res.sendFile(path.join(cwd, 'src', 'core', 'git-diff-viewer.html'));
-  });
 
   // WebSocket connection
   type EnrichedWebSocket = ws.WebSocket & { id: string; stop$: Subject<any>; messageWriterToRemoteClient: MessageWriter; };
