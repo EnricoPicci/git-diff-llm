@@ -43,7 +43,7 @@ function allDiffsForProject$(comparisonParams, executedCommands, languages, mess
         const msg = (0, message_writer_1.newInfoMessage)(msgText);
         messageWriter.write(msg);
         return (0, git_diffs_1.gitDiff$)(rec.projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, rec.File, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
-        executedCommands).pipe((0, rxjs_1.map)(diffLinesString => {
+        executedCommands, comparisonParams.user_id, comparisonParams.password).pipe((0, rxjs_1.map)(diffLinesString => {
             const diffLines = diffLinesString.toString();
             const _lines = diffLines.split('\n');
             const fileGitUrl = (0, git_diffs_1.buildFileGitUrl)(comparisonParams.url_to_repo, comparisonParams.from_tag_branch_commit.tag_branch_commit, rec.File);

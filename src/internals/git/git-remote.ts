@@ -6,7 +6,9 @@ export const DefaultNameOfGitRemote = 'default_name_of_git_remote'
 export type AddRemoteParams = {
     url_to_repo?: string
     git_remote_name?: string,
-    use_ssh?: boolean
+    use_ssh?: boolean,
+    user_id?: string,
+    password?: string,
 }
 // cd to project directory and add a remote to the project if the remote url is provided
 export function addRemote$(
@@ -22,6 +24,11 @@ export function addRemote$(
         // convert to ssh url if required (e.g. to avoid password prompts)
         if (params.use_ssh) {
             remoteUrl = convertHttpsToSshUrl(url_to_remote_repo)
+        } else if (params.user_id && params.password) {
+            const urlParts = new URL(url_to_remote_repo)
+            urlParts.username = params.user_id
+            urlParts.password = params.password
+            remoteUrl = urlParts.toString()
         }
         // the command must add git fetch the remote after the remote has been added
         commandIfRemoteExists = ` && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`

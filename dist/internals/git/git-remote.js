@@ -19,6 +19,12 @@ function addRemote$(projectDir, params, executedCommands) {
         if (params.use_ssh) {
             remoteUrl = (0, convert_ssh_https_url_1.convertHttpsToSshUrl)(url_to_remote_repo);
         }
+        else if (params.user_id && params.password) {
+            const urlParts = new URL(url_to_remote_repo);
+            urlParts.username = params.user_id;
+            urlParts.password = params.password;
+            remoteUrl = urlParts.toString();
+        }
         // the command must add git fetch the remote after the remote has been added
         commandIfRemoteExists = ` && git remote add ${baseRemoteName} ${remoteUrl} && git fetch ${baseRemoteName} --tags`;
     }

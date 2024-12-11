@@ -28,7 +28,9 @@ export function gitDiff$(
     to_tag_branch_commit: ComparisonEnd,
     file: string,
     use_ssh: boolean,
-    executedCommands: string[]
+    executedCommands: string[],
+    user_id?: string,
+    password?: string
 ) {
     
     return addRemotesAndCheckoutFromTagBranchCommit$(
@@ -36,7 +38,9 @@ export function gitDiff$(
         from_tag_branch_commit,
         to_tag_branch_commit,
         use_ssh,
-        executedCommands
+        executedCommands,
+        user_id,
+        password
     ).pipe(
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
@@ -71,13 +75,17 @@ export function gitDiffsNameOnly$(
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
     executedCommands: string[],
+    user_id?: string,
+    password?: string
 ) {
     return addRemotes$(
         projectDir,
         from_tag_branch_commit,
         to_tag_branch_commit,
         use_ssh,
-        executedCommands
+        executedCommands,
+        user_id,
+        password
     ).pipe(
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
@@ -112,13 +120,17 @@ export function gitRecsFileDiffs$(
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
     executedCommands: string[],
+    user_id?: string,
+    password?: string
 ) {
     return gitDiffsNameOnly$(
         projectDir,
         from_tag_branch_commit,
         to_tag_branch_commit,
         use_ssh,
-        executedCommands
+        executedCommands,
+        user_id,
+        password
     ).pipe(
         map(filesWithDiff => {
             const gitRecs: GitRec[] = filesWithDiff.split('\n').map(file => {
@@ -144,7 +156,9 @@ export function addRemotesAndCheckoutFromTagBranchCommit$(
     from_tag_branch_commit: ComparisonEnd, 
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
-    executedCommands: string[]
+    executedCommands: string[],
+    user_id?: string,
+    password?: string
 ) {
     // if we are testing, we don't want to checkout from a tag, branch or commit
     // because this can generate errors if the repo has uncommitted changes
@@ -155,6 +169,8 @@ export function addRemotesAndCheckoutFromTagBranchCommit$(
         to_tag_branch_commit, 
         use_ssh, 
         executedCommands,
+        user_id,
+        password,
         _checkout
     )
 }
@@ -170,17 +186,23 @@ export function addRemotes$(
     to_tag_branch_commit: ComparisonEnd, 
     use_ssh: boolean, 
     executedCommands: string[],
+    user_id?: string,
+    password?: string,
     checkout: boolean = false
 ) {
     const addRemoteParams_from: AddRemoteParams = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
         git_remote_name: from_tag_branch_commit.git_remote_name,
-        use_ssh
+        use_ssh,
+        user_id,
+        password
     }
     const addRemoteParams_to: AddRemoteParams = {
         url_to_repo: to_tag_branch_commit.url_to_repo,
         git_remote_name: to_tag_branch_commit.git_remote_name,
-        use_ssh
+        use_ssh,
+        user_id,
+        password
     }
     return addRemote$(
         projectDir,

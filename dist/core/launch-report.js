@@ -24,6 +24,8 @@ function launchGenerateReport(webSocket, messageWriterToRemoteClient, data, stop
     const use_ssh = data.use_ssh;
     const llmModel = data.llmModel;
     const diffsKey = data.diffsKey;
+    const user_id = data.user_id;
+    const password = data.password;
     const outputDirName = data.outputDirName;
     const promptFromClient = data.prompt;
     // first we set the values of from_tag_branch_commit and to_tag_branch_commit to the values they would have
@@ -60,6 +62,8 @@ ${JSON.stringify(data, null, 2)}`;
         url_to_repo,
         from_tag_branch_commit: from,
         to_tag_branch_commit: to,
+        user_id,
+        password,
         use_ssh
     };
     const promptTemplates = (0, prompt_templates_1.getDefaultPromptTemplates)();

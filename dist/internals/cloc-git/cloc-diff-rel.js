@@ -28,7 +28,7 @@ const clocGitDiffRecHeader = 'File,blank_same,blank_modified,blank_added,blank_r
 function comparisonResultFromClocDiffRelForProject$(comparisonParams, executedCommands, languages) {
     const projectDir = comparisonParams.projectDir;
     return clocDiffRel$(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
-    languages, executedCommands).pipe((0, rxjs_1.filter)(line => line.trim().length > 0), 
+    comparisonParams.user_id, comparisonParams.password, languages, executedCommands).pipe((0, rxjs_1.filter)(line => line.trim().length > 0), 
     // skip the first line which is the header line
     // File, == blank, != blank, + blank, - blank, == comment, != comment, + comment, - comment, == code, != code, + code, - code, "github.com/AlDanial/cloc v 2.00 T=0.0747981071472168 s"
     (0, rxjs_1.skip)(1), 
@@ -66,8 +66,8 @@ function comparisonResultFromClocDiffRelOrGitDiffForProject$(comparisonParams, e
 // these functions may be exported for testing purposes
 // this stream is not safe in concurrent execution and therefore shouls NOT be called by operators that work concurrently
 // e.g. mergeMap
-function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, languages, executedCommands = []) {
-    return (0, git_diffs_1.addRemotesAndCheckoutFromTagBranchCommit$)(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, user_id, password, languages, executedCommands = []) {
+    return (0, git_diffs_1.addRemotesAndCheckoutFromTagBranchCommit$)(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(to_tag_branch_commit);
         const _from_tag_branch_commit = (0, git_diffs_1.comparisonEndString)(from_tag_branch_commit);
         const command = `npx`;
@@ -104,7 +104,7 @@ function clocDiffRel$(projectDir, from_tag_branch_commit, to_tag_branch_commit, 
 function comparisonResultFromGitDiffForProject$(comparisonParams, executedCommands, languages) {
     const projectDir = comparisonParams.projectDir;
     return (0, git_diffs_1.gitRecsFileDiffs$)(projectDir, comparisonParams.from_tag_branch_commit, comparisonParams.to_tag_branch_commit, !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
-    executedCommands).pipe((0, rxjs_1.concatMap)(recs => {
+    executedCommands, comparisonParams.user_id, comparisonParams.password).pipe((0, rxjs_1.concatMap)(recs => {
         return (0, rxjs_1.from)(recs);
     }), (0, rxjs_1.map)(rec => {
         const fillUp = {

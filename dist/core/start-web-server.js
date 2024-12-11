@@ -166,13 +166,15 @@ function startWebServer() {
         });
     });
     app.post('/api/v1/add-remote', (req, res) => {
-        const { tempDir, remoteUrl, remoteName, use_ssh } = req.body;
+        const { tempDir, remoteUrl, remoteName, use_ssh, user_id, password } = req.body;
         // add the remote
         const executedCommands = [];
         const addRemoteParams = {
             url_to_repo: remoteUrl,
             git_remote_name: remoteName,
-            use_ssh
+            use_ssh,
+            user_id,
+            password
         };
         (0, git_remote_1.addRemote$)(tempDir, addRemoteParams, executedCommands).subscribe({
             next: () => {

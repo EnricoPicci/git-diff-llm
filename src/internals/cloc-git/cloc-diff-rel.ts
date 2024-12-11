@@ -39,6 +39,8 @@ export type ComparisonParams = {
     url_to_repo: string,
     from_tag_branch_commit: ComparisonEnd,
     to_tag_branch_commit: ComparisonEnd,
+    user_id?: string,
+    password?: string,
     use_ssh?: boolean
 }
 
@@ -52,6 +54,8 @@ export function comparisonResultFromClocDiffRelForProject$(
         comparisonParams.from_tag_branch_commit,
         comparisonParams.to_tag_branch_commit,
         !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
+        comparisonParams.user_id,
+        comparisonParams.password,
         languages,
         executedCommands
     ).pipe(
@@ -117,6 +121,8 @@ function clocDiffRel$(
     from_tag_branch_commit: ComparisonEnd,
     to_tag_branch_commit: ComparisonEnd,
     use_ssh: boolean,
+    user_id?: string,
+    password?: string,
     languages?: string[],
     executedCommands: string[] = []
 ) {
@@ -125,7 +131,9 @@ function clocDiffRel$(
         from_tag_branch_commit,
         to_tag_branch_commit,
         use_ssh,
-        executedCommands
+        executedCommands,
+        user_id,
+        password
     ).pipe(
         concatMap(() => {
             const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit)
@@ -175,7 +183,9 @@ export function comparisonResultFromGitDiffForProject$(
         comparisonParams.from_tag_branch_commit,
         comparisonParams.to_tag_branch_commit,
         !!comparisonParams.use_ssh, // the double negarion converts to boolean in case it is undefined
-        executedCommands
+        executedCommands,
+        comparisonParams.user_id,
+        comparisonParams.password
     ).pipe(
         concatMap(recs => {
             return from(recs)

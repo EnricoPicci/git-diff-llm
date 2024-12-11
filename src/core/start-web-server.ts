@@ -189,13 +189,15 @@ export function startWebServer() {
   });
 
   app.post('/api/v1/add-remote', (req: Request, res: Response) => {
-    const { tempDir, remoteUrl, remoteName, use_ssh } = req.body;
+    const { tempDir, remoteUrl, remoteName, use_ssh, user_id, password } = req.body;
     // add the remote
     const executedCommands: string[] = [];
     const addRemoteParams: AddRemoteParams = {
       url_to_repo: remoteUrl,
       git_remote_name: remoteName,
-      use_ssh
+      use_ssh,
+      user_id,
+      password
     };
 
     addRemote$(tempDir, addRemoteParams, executedCommands).subscribe({

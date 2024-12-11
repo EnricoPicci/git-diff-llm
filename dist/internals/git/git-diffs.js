@@ -21,8 +21,8 @@ const path_1 = __importDefault(require("path"));
 // execute git diff from a tag, branch or commit to another tag, branch or commit for a specific file
 // Eventually runs a command like this:
 // git diff refs/tags/first-tag refs/tags/second-tag -- path/to/file
-function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, use_ssh, executedCommands) {
-    return addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file, use_ssh, executedCommands, user_id, password) {
+    return addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);
         const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit);
         const command = `git`;
@@ -42,8 +42,8 @@ function gitDiff$(projectDir, from_tag_branch_commit, to_tag_branch_commit, file
     // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
     (0, rxjs_1.reduce)((acc, curr) => acc + curr, ''));
 }
-function gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
-    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.concatMap)(() => {
+function gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password) {
+    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password).pipe((0, rxjs_1.concatMap)(() => {
         const _to_tag_branch_commit = comparisonEndString(to_tag_branch_commit);
         const _from_tag_branch_commit = comparisonEndString(from_tag_branch_commit);
         const command = `git`;
@@ -62,8 +62,8 @@ function gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_com
     // reduce the output of the git diff command, which can be a buffer in case of a long diff story, to a single string
     (0, rxjs_1.reduce)((acc, curr) => acc + curr, ''), (0, rxjs_1.map)(diff => diff.trim()));
 }
-function gitRecsFileDiffs$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
-    return gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands).pipe((0, rxjs_1.map)(filesWithDiff => {
+function gitRecsFileDiffs$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password) {
+    return gitDiffsNameOnly$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password).pipe((0, rxjs_1.map)(filesWithDiff => {
         const gitRecs = filesWithDiff.split('\n').map(file => {
             const fullFilePath = `${path_1.default.join(projectDir, file)}`;
             const extension = file.split('.').pop() || '';
@@ -80,26 +80,30 @@ function gitRecsFileDiffs$(projectDir, from_tag_branch_commit, to_tag_branch_com
 // This function is useful when we want to add remotes and checkout from a tag, branch or commit
 // This function can not be tested safely because it checks out from a tag, branch or commit
 // and this can generate errors if the repo has uncommitted changes
-function addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands) {
+function addRemotesAndCheckoutFromTagBranchCommit$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password) {
     // if we are testing, we don't want to checkout from a tag, branch or commit
     // because this can generate errors if the repo has uncommitted changes
     const _checkout = (0, config_1.getConfig)().isTest ? false : true;
-    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, _checkout);
+    return addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password, _checkout);
 }
 // The checkout param is useful when we only want to add remotes
 // like in the case of tests where checking out can generate errors 
 // (e.g. "error: Your local changes to the following files would be overwritten by checkout" 
 // is an error that occurs if the test is run while the repo has uncommitted changes)
-function addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, checkout = false) {
+function addRemotes$(projectDir, from_tag_branch_commit, to_tag_branch_commit, use_ssh, executedCommands, user_id, password, checkout = false) {
     const addRemoteParams_from = {
         url_to_repo: from_tag_branch_commit.url_to_repo,
         git_remote_name: from_tag_branch_commit.git_remote_name,
-        use_ssh
+        use_ssh,
+        user_id,
+        password
     };
     const addRemoteParams_to = {
         url_to_repo: to_tag_branch_commit.url_to_repo,
         git_remote_name: to_tag_branch_commit.git_remote_name,
-        use_ssh
+        use_ssh,
+        user_id,
+        password
     };
     return (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_from, executedCommands).pipe((0, rxjs_1.concatMap)(() => (0, git_remote_1.addRemote$)(projectDir, addRemoteParams_to, executedCommands)), (0, rxjs_1.concatMap)(() => {
         // if checkout is false, return an empty observable - this is useful when we only want to add remotes

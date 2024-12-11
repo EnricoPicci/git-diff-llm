@@ -526,8 +526,10 @@
             const secondRepoUrl = document.getElementById('secondRepoUrl').value;
             // the remote name is the last part of the URL
             const remoteUrlParts = secondRepoUrl.split('/');
-            const remoteName = remoteUrlParts[remoteUrlParts.length - 1]; 
-            const _body = { tempDir, remoteName, use_ssh };
+            const remoteName = remoteUrlParts[remoteUrlParts.length - 1];
+            const user_id = document.getElementById('user-id').value;
+            const password = document.getElementById('password').value; 
+            const _body = { tempDir, remoteName, use_ssh, user_id, password };
             _body.remoteUrl = secondRepoUrl;
             console.log('Body:', _body);
             try {
@@ -583,6 +585,9 @@
             const llmModel = llmModelEl.value;
 
             const prompt = document.getElementById('prompt').value;
+
+            const user_id = document.getElementById('user-id').value;
+            const password = document.getElementById('password').value;
                                             
             const data = {
                 tempDir,
@@ -596,6 +601,8 @@
                 prompt,
                 llmModel,
                 diffsKey,
+                user_id,
+                password,
                 languages: document.getElementById('languages').value
             }
             const message = JSON.stringify({ action, data });
