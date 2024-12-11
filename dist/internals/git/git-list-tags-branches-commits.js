@@ -23,10 +23,18 @@ function listTags$(gitRepoPath, remote = 'origin') {
     const command = `cd ${gitRepoPath} && git ls-remote --tags --sort=-creatordate ${remote}`;
     return (0, execute_command_1.executeCommandObs$)('read tags', command).pipe((0, rxjs_1.map)((out) => {
         return out.split('\n').filter((line) => line.trim().length > 0);
-    }), (0, rxjs_1.map)((lines) => {
+    }), 
+    // accumulate all the lines in an array of arrays of lines before processing them
+    (0, rxjs_1.toArray)(), 
+    // flatten the array of arrays of lines to an array of lines
+    (0, rxjs_1.map)((lines) => lines.flat()), (0, rxjs_1.map)((lines) => {
         // if 'no message on stdout or stderr' is the first line, then return an empty array
         if (lines[0].includes('no message on stdout or stderr')) {
             return [];
+        }
+        // if the first line starts with 'from stderr:' remove the first line
+        if (lines[0].startsWith('from stderr:')) {
+            lines.shift();
         }
         return lines.map((line) => {
             return line.split('\t')[1].replace('refs/tags/', '');
@@ -51,7 +59,19 @@ function listBranches$(gitRepoPath, remote = 'origin') {
     const command = `cd ${gitRepoPath} && git ls-remote --heads --sort=-creatordate ${remote}`;
     return (0, execute_command_1.executeCommandObs$)('read branches', command).pipe((0, rxjs_1.map)((out) => {
         return out.split('\n').filter((line) => line.trim().length > 0);
-    }), (0, rxjs_1.map)((lines) => {
+    }), 
+    // accumulate all the lines in an array of arrays of lines before processing them
+    (0, rxjs_1.toArray)(), 
+    // flatten the array of arrays of lines to an array of lines
+    (0, rxjs_1.map)((lines) => lines.flat()), (0, rxjs_1.map)((lines) => {
+        // if 'no message on stdout or stderr' is the first line, then return an empty array
+        if (lines[0].includes('no message on stdout or stderr')) {
+            return [];
+        }
+        // if the first line starts with 'from stderr:' remove the first line
+        if (lines[0].startsWith('from stderr:')) {
+            lines.shift();
+        }
         return lines.map((line) => {
             return line.split('\t')[1].replace('refs/heads/', '');
         });

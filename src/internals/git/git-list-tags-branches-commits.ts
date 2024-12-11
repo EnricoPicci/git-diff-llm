@@ -1,4 +1,4 @@
-import { catchError, map, of } from "rxjs";
+import { catchError, map, of, toArray } from "rxjs";
 import { executeCommandObs$ } from "../execute-command/execute-command";
 
 export function listTags$(gitRepoPath: string, remote = 'origin') {
@@ -21,10 +21,18 @@ export function listTags$(gitRepoPath: string, remote = 'origin') {
         map((out) => {
             return out.split('\n').filter((line) => line.trim().length > 0);
         }),
+        // accumulate all the lines in an array of arrays of lines before processing them
+        toArray(),
+        // flatten the array of arrays of lines to an array of lines
+        map((lines) => lines.flat()),
         map((lines) => {
             // if 'no message on stdout or stderr' is the first line, then return an empty array
             if (lines[0].includes('no message on stdout or stderr')) {
                 return [];
+            }
+            // if the first line starts with 'from stderr:' remove the first line
+            if (lines[0].startsWith('from stderr:')) {
+                lines.shift();
             }
             return lines.map((line) => {
                 return line.split('\t')[1].replace('refs/tags/', '');
@@ -53,7 +61,19 @@ export function listBranches$(gitRepoPath: string, remote = 'origin') {
         map((out) => {
             return out.split('\n').filter((line) => line.trim().length > 0);
         }),
+        // accumulate all the lines in an array of arrays of lines before processing them
+        toArray(),
+        // flatten the array of arrays of lines to an array of lines
+        map((lines) => lines.flat()),
         map((lines) => {
+            // if 'no message on stdout or stderr' is the first line, then return an empty array
+            if (lines[0].includes('no message on stdout or stderr')) {
+                return [];
+            }
+            // if the first line starts with 'from stderr:' remove the first line
+            if (lines[0].startsWith('from stderr:')) {
+                lines.shift();
+            }
             return lines.map((line) => {
                 return line.split('\t')[1].replace('refs/heads/', '');
             });
