@@ -4,11 +4,31 @@ import { executeCommandObs$ } from '../execute-command/execute-command';
 import { convertHttpsToSshUrl } from './convert-ssh-https-url';
 
 // cloneRepo$ clones a repo from a given url to a given path and returns the path of the cloned repo
-export function cloneRepo$(url: string, repoPath: string, use_ssh: boolean) {
+export function cloneRepo$(
+    url: string, 
+    repoPath: string, 
+    use_ssh: boolean, 
+    user_id?: string,
+    password?: string,
+    accessToken?: string
+) {
     if (!url) throw new Error(`url is mandatory`);
     if (!repoPath) throw new Error(`Path is mandatory`);
 
-    url = use_ssh ? convertHttpsToSshUrl(url) : url
+    if (!use_ssh && accessToken) {
+        const urlParts = new URL(url);
+        urlParts.username = 'oauth2';
+        urlParts.password = accessToken;
+        url = urlParts.toString();
+    } else if (!use_ssh && user_id && password) {
+        const urlParts = new URL(url);
+        urlParts.username = user_id;
+        urlParts.password = password;
+        url = urlParts.toString();
+
+    } else if (use_ssh) {
+        url = convertHttpsToSshUrl(url);
+    }
 
     const command = `git clone ${url} ${repoPath.replaceAll(' ', '_')}`;
 

@@ -109,6 +109,12 @@
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
+
+        .inline-fields {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -120,10 +126,23 @@
     <form>
         <label for="repo-url">Repo URL:</label>
         <input type="text" id="repo-url" name="repo-url" value="https://github.com/EnricoPicci/git-diff-llm" class="input-field">
-        <div>
-            <label for="use-ssh-checkbox">Use SSH</label>
-            <input type="checkbox" id="use-ssh-checkbox" name="use-ssh-checkbox" onchange="setSsh()">
-            <button type="button" onclick="cloneRepo()">Clone</button>
+        
+        <div id="clone-div">
+            <div class="inline-fields">
+                <label for="user-id">User ID:</label>
+                <input type="text" id="user-id" name="user-id" class="input-field">
+                
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="input-field">
+            </div>
+            
+            <label for="access-token">Access Token</label>
+            <input type="text" id="access-token" name="access-token" placeholder="Provide the access token if the access the the git repo is restricted" class="input-field">
+            <div>
+                <label for="use-ssh-checkbox">Use SSH</label>
+                <input type="checkbox" id="use-ssh-checkbox" name="use-ssh-checkbox" onchange="setSsh()">
+                <button type="button" onclick="cloneRepo()">Clone</button>
+            </div>
         </div>
     </form>
     
@@ -341,6 +360,9 @@
 
         async function cloneRepo() {
             const repoUrl = document.getElementById('repo-url').value;
+            const user_id = document.getElementById('user-id').value;
+            const password = document.getElementById('password').value;
+            const accessToken = document.getElementById('access-token').value;
             const loadingSpinner = document.getElementById('loadingSpinner');
             loadingSpinner.style.display = 'block';
             try {
@@ -349,7 +371,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ repoUrl, use_ssh })
+                    body: JSON.stringify({ repoUrl, use_ssh, user_id, password, accessToken })
                 });
                 const data = await response.json();
                 tempDir = data.tempDir;
@@ -368,8 +390,14 @@
                 launchReportForm.style.display = 'block';
             } catch (error) {
                 console.error('Error:', error);
+                // add the error to the messages
+                displayMessage(error);
+                loadingSpinner.style.display = 'none';
             } finally {
                 loadingSpinner.style.display = 'none';
+                // hide clone-div
+                const cloneDiv = document.getElementById('clone-div');
+                cloneDiv.style.display = 'none';
             }
         }
         

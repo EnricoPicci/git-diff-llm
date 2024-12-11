@@ -102,13 +102,13 @@ function startWebServer() {
         res.send(promptTemplates);
     });
     app.post('/api/v1/clone-repo', (req, res) => {
-        const { repoUrl, use_ssh } = req.body;
+        const { repoUrl, use_ssh, user_id, password, accessToken } = req.body;
         // Create a temporary directory to clone the repo
         const tempDir = fs_1.default.mkdtempSync('git-diff-llm-');
         tempDirectories.push(tempDir);
         console.log(`Created temp directory: ${tempDir}`);
         // clone the repo
-        (0, git_clone_1.cloneRepo$)(repoUrl, tempDir, use_ssh).subscribe({
+        (0, git_clone_1.cloneRepo$)(repoUrl, tempDir, use_ssh, user_id, password, accessToken).subscribe({
             next: () => {
                 console.log(`Repo cloned to: ${tempDir}`);
                 // send the temp directory path as response in a JSON object
