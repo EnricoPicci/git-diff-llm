@@ -12,13 +12,13 @@ const ws_1 = __importDefault(require("ws"));
 const cors_1 = __importDefault(require("cors"));
 const archiver_1 = __importDefault(require("archiver"));
 const uuid_1 = require("uuid");
+const rxjs_1 = require("rxjs");
 const git_clone_1 = require("../internals/git/git-clone");
 const git_list_tags_branches_commits_1 = require("../internals/git/git-list-tags-branches-commits");
 const git_remote_1 = require("../internals/git/git-remote");
 const launch_report_1 = require("./launch-report");
 const chat_1 = require("./chat");
 const prompt_templates_1 = require("../internals/prompt-templates/prompt-templates");
-const rxjs_1 = require("rxjs");
 const stop_1 = require("./stop");
 const app = (0, express_1.default)();
 const port = 3000;
@@ -68,13 +68,19 @@ function startWebServer() {
     });
     const actions = {
         "generate-report": launch_report_1.launchGenerateReport,
-        "chat": chat_1.chat,
-        "chat-about-files": chat_1.chatAboutFiles$,
+        "chat-about-files": chat_1.chatAboutFiles,
         "stop-processing": stop_1.stopProcessing,
     };
     wss.on('connection', (ws) => {
         const connectionId = (0, uuid_1.v4)();
         ws['id'] = connectionId;
+        const messageWriterToRemoteClient = {
+            write: (msg) => {
+                console.log(`Message to client: ${JSON.stringify(msg)}`);
+                ws.send(JSON.stringify(msg));
+            }
+        };
+        ws['messageWriterToRemoteClient'] = messageWriterToRemoteClient;
         // stop$ is a Subject that can be used to stop the action - it is attached to each ws object
         ws['stop$'] = new rxjs_1.Subject();
         console.log(`New client connected with ID: ${connectionId}`);
@@ -93,7 +99,7 @@ function startWebServer() {
             // add the outputDirName to the data object - this is used for instance by the chat function
             // to save the chat to a file in the output directory which will be downloaded with the download endpoint
             data.outputDirName = outputDirName;
-            actionFunction(ws, message.data, ws['stop$']);
+            actionFunction(ws, ws['messageWriterToRemoteClient'], message.data, ws['stop$']);
         });
         ws.on('error', (error) => {
             console.error(`WebSocket error: ${error.message}`);

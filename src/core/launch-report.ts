@@ -13,7 +13,7 @@ import { getDefaultPromptTemplates } from "../internals/prompt-templates/prompt-
 
 
 const GitRemoteNameForSecondRepo = 'git-diff-llm-remote-name'
-export function launchGenerateReport(webSocket: ws.WebSocket, data: any, stop$: Observable<any>) {
+export function launchGenerateReport(webSocket: ws.WebSocket, messageWriterToRemoteClient: MessageWriter, data: any, stop$: Observable<any>) {
   // the client must provide these data - some properties must be undefined but this is the structure expected from the client
   const projectDir = data.tempDir
   const url_to_repo = data.url_to_repo
@@ -77,12 +77,6 @@ ${JSON.stringify(data, null, 2)}`
   }
 
   console.log('Generating report with params:', inputParams);
-  const messageWriterToRemoteClient: MessageWriter = {
-    write: (msg) => {
-      console.log(`Message to client: ${JSON.stringify(msg)}`);
-      webSocket.send(JSON.stringify(msg));
-    }
-  }
 
   writeAllDiffsForProjectWithExplanationToMarkdown$(inputParams, messageWriterToRemoteClient).pipe(
     concatMap(({ markdownFilePath }) => { 

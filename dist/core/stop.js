@@ -1,9 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.stopProcessing = stopProcessing;
-function stopProcessing(_webSocket, _data, stop$) {
+const message_writer_1 = require("../internals/message-writer/message-writer");
+function stopProcessing(_webSocket, messageWriterToRemoteClient, _data, stop$) {
     console.log('Stopping processing');
     stop$.next(null);
-    stop$.complete();
+    const msg = (0, message_writer_1.newInfoMessage)('Processing stopped');
+    msg.id = 'processing-stopped';
+    messageWriterToRemoteClient.write(msg);
 }
 //# sourceMappingURL=stop.js.map

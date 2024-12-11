@@ -714,6 +714,8 @@
             const data = { tempDir };
             const message = JSON.stringify({ action, data });
             sendWebsocketMessage(message);
+            const stopForm = document.getElementById('stop');
+            stopForm.style.display = 'none';
         }
 
         function downloadOutput() {
