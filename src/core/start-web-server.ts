@@ -7,7 +7,7 @@ import cors from 'cors';
 import archiver from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
 
-
+import { Subject } from 'rxjs';
 
 import { cloneRepo$ } from '../internals/git/git-clone';
 import { listTags$, listBranches$, listCommits$ } from '../internals/git/git-list-tags-branches-commits';
@@ -15,6 +15,7 @@ import { AddRemoteParams, addRemote$ } from '../internals/git/git-remote';
 import { launchGenerateReport } from './launch-report';
 import { chat, chatAboutFiles$ } from './chat';
 import { getDefaultPromptTemplates } from '../internals/prompt-templates/prompt-templates';
+import { stopProcessing } from './stop';
 
 const app = express();
 const port = 3000;
@@ -73,16 +74,19 @@ export function startWebServer() {
   });
 
   // WebSocket connection
-  type EnrichedWebSocket = ws.WebSocket & { id: string };
-  const actions: {[key: string]: (webSocket: EnrichedWebSocket, data: any) => void} = {
+  type EnrichedWebSocket = ws.WebSocket & { id: string; stop$: Subject<any> };
+  const actions: {[key: string]: (webSocket: EnrichedWebSocket, data: any, stop$: Subject<any>) => void} = {
     "generate-report": launchGenerateReport,
     "chat": chat,
     "chat-about-files": chatAboutFiles$,
+    "stop-processing": stopProcessing,
   }
 
   wss.on('connection', (ws: EnrichedWebSocket) => {
     const connectionId = uuidv4();
     ws['id'] = connectionId;
+    // stop$ is a Subject that can be used to stop the action - it is attached to each ws object
+    ws['stop$'] = new Subject();
     console.log(`New client connected with ID: ${connectionId}`);
     ws.send(JSON.stringify({ id: 'connection-established', data: connectionId  }));
     
@@ -102,7 +106,7 @@ export function startWebServer() {
       // add the outputDirName to the data object - this is used for instance by the chat function
       // to save the chat to a file in the output directory which will be downloaded with the download endpoint
       data.outputDirName = outputDirName;
-      actionFunction(ws, message.data);
+      actionFunction(ws, message.data, ws['stop$']);
     });
 
     ws.on('error', (error: Error) => {

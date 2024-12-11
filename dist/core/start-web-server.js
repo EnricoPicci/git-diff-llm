@@ -18,6 +18,8 @@ const git_remote_1 = require("../internals/git/git-remote");
 const launch_report_1 = require("./launch-report");
 const chat_1 = require("./chat");
 const prompt_templates_1 = require("../internals/prompt-templates/prompt-templates");
+const rxjs_1 = require("rxjs");
+const stop_1 = require("./stop");
 const app = (0, express_1.default)();
 const port = 3000;
 const server = http_1.default.createServer(app);
@@ -68,10 +70,13 @@ function startWebServer() {
         "generate-report": launch_report_1.launchGenerateReport,
         "chat": chat_1.chat,
         "chat-about-files": chat_1.chatAboutFiles$,
+        "stop-processing": stop_1.stopProcessing,
     };
     wss.on('connection', (ws) => {
         const connectionId = (0, uuid_1.v4)();
         ws['id'] = connectionId;
+        // stop$ is a Subject that can be used to stop the action - it is attached to each ws object
+        ws['stop$'] = new rxjs_1.Subject();
         console.log(`New client connected with ID: ${connectionId}`);
         ws.send(JSON.stringify({ id: 'connection-established', data: connectionId }));
         ws.on('message', (messageData) => {
@@ -88,7 +93,7 @@ function startWebServer() {
             // add the outputDirName to the data object - this is used for instance by the chat function
             // to save the chat to a file in the output directory which will be downloaded with the download endpoint
             data.outputDirName = outputDirName;
-            actionFunction(ws, message.data);
+            actionFunction(ws, message.data, ws['stop$']);
         });
         ws.on('error', (error) => {
             console.error(`WebSocket error: ${error.message}`);

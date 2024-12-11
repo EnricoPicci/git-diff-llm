@@ -11,7 +11,7 @@ const cloc_git_diff_rel_between_tag_branch_commit_1 = require("../internals/cloc
 const message_writer_1 = require("../internals/message-writer/message-writer");
 const prompt_templates_1 = require("../internals/prompt-templates/prompt-templates");
 const GitRemoteNameForSecondRepo = 'git-diff-llm-remote-name';
-function launchGenerateReport(webSocket, data) {
+function launchGenerateReport(webSocket, data, stop$) {
     // the client must provide these data - some properties must be undefined but this is the structure expected from the client
     const projectDir = data.tempDir;
     const url_to_repo = data.url_to_repo;
@@ -81,7 +81,11 @@ ${JSON.stringify(data, null, 2)}`;
     };
     (0, cloc_git_diff_rel_between_tag_branch_commit_1.writeAllDiffsForProjectWithExplanationToMarkdown$)(inputParams, messageWriterToRemoteClient).pipe((0, rxjs_1.concatMap)(({ markdownFilePath }) => {
         return (0, observable_fs_1.readLinesObs)(markdownFilePath);
-    })).subscribe({
+    }), 
+    // the processing is terminated when the observable stop$ emits a value
+    (0, rxjs_1.takeUntil)(stop$.pipe((0, rxjs_1.tap)(() => {
+        console.log('Stopping the report generation');
+    })))).subscribe({
         next: lines => {
             const mdContent = lines.join('\n');
             const msg = (0, message_writer_1.newInfoMessage)(mdContent);

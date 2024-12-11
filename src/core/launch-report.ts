@@ -1,7 +1,7 @@
 import path from "path"
 import ws from 'ws';
 
-import { concatMap } from "rxjs"
+import { concatMap, Observable, takeUntil, tap } from "rxjs"
 
 import { readLinesObs } from "observable-fs"
 
@@ -13,7 +13,7 @@ import { getDefaultPromptTemplates } from "../internals/prompt-templates/prompt-
 
 
 const GitRemoteNameForSecondRepo = 'git-diff-llm-remote-name'
-export function launchGenerateReport(webSocket: ws.WebSocket, data: any) {
+export function launchGenerateReport(webSocket: ws.WebSocket, data: any, stop$: Observable<any>) {
   // the client must provide these data - some properties must be undefined but this is the structure expected from the client
   const projectDir = data.tempDir
   const url_to_repo = data.url_to_repo
@@ -88,6 +88,12 @@ ${JSON.stringify(data, null, 2)}`
     concatMap(({ markdownFilePath }) => { 
       return readLinesObs(markdownFilePath)
     }),
+    // the processing is terminated when the observable stop$ emits a value
+    takeUntil(stop$.pipe(
+      tap(() => {
+        console.log('Stopping the report generation');
+      })
+    ))
   ).subscribe({
       next: lines => {
         const mdContent = lines.join('\n');
